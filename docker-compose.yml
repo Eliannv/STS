@@ -1,0 +1,44 @@
+services:
+  servidor:
+    build: ./servidor
+    container_name: optica-servidor
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./servidor:/app
+      - /app/node_modules
+    environment:
+      - DB_HOST=localhost
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=admin
+      - DB_NAME=STS
+      - JWT_SECRET=cambia_este_secreto_en_produccion_minimo_32_caracteres
+      - JWT_EXPIRES_IN=8h
+      - NODE_ENV=development
+      - PORT=3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17
+    container_name: optica-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: STS
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./servidor/sql/optica_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d STS"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:

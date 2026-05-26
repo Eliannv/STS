@@ -1,15 +1,16 @@
 import { useAuth } from '../context/AuthContext';
+import { Users, Notebook, Box, User, Truck, House } from 'lucide-react';
 
 export default function Dashboard() {
   const { usuario } = useAuth();
 
   const cards = [
-    { label: 'Clientes',          color: '#3498db', route: '/clientes',   icon: '👥' },
-    { label: 'Historial Clínico', color: '#27ae60', route: '/historial',  icon: '📋' },
-    { label: 'Productos',         color: '#9b59b6', route: '/productos',  icon: '📦' },
-    { label: 'Proveedores',       color: '#e67e22', route: '/proveedores',icon: '🚚' },
-    { label: 'Sucursales',        color: '#1abc9c', route: '/sucursales', icon: '🏠' },
-    { label: 'Usuarios',          color: '#e74c3c', route: '/usuarios',   icon: '👤' },
+    { label: 'Clientes',          color: '#3498db', route: '/clientes',   icon: <Users /> },
+    { label: 'Historial Clínico', color: '#27ae60', route: '/historial',  icon: <Notebook /> },
+    { label: 'Productos',         color: '#9b59b6', route: '/productos',  icon: <Box /> },
+    { label: 'Proveedores',       color: '#e67e22', route: '/proveedores',icon: <Truck /> },
+    { label: 'Sucursales',        color: '#1abc9c', route: '/sucursales', icon: <House /> },
+    { label: 'Usuarios',          color: '#e74c3c', route: '/usuarios',   icon: <User /> },
   ];
 
   return (
@@ -17,7 +18,7 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Bienvenido, {usuario?.nombre}</h1>
-          <p className="page-subtitle">Sistema de Gestión — Óptica Macías</p>
+          <p className="page-subtitle">Sales Technology System — Óptica Macías</p>
         </div>
       </div>
 

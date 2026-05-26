@@ -10,7 +10,7 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="navbar-brand">
         
-        <span>Óptica Macías</span>
+        <span>STS</span>
       </div>
 
       <div className="navbar-right">

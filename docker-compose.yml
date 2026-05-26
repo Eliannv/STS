@@ -1,18 +1,15 @@
 services:
   servidor:
     build: ./servidor
-    container_name: optica-servidor
+    container_name: sts-servidor
     ports:
       - "3000:3000"
     volumes:
       - ./servidor:/app
       - /app/node_modules
+    env_file:
+      - ./servidor/.env
     environment:
-      - DB_HOST=localhost
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=admin
-      - DB_NAME=STS
       - JWT_SECRET=cambia_este_secreto_en_produccion_minimo_32_caracteres
       - JWT_EXPIRES_IN=8h
       - NODE_ENV=development
@@ -23,7 +20,7 @@ services:
 
   postgres:
     image: postgres:17
-    container_name: optica-postgres
+    container_name: sts-postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -33,7 +30,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./servidor/sql/optica_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./servidor/sql/sts_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d STS"]
       interval: 5s

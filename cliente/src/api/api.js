@@ -13,7 +13,23 @@ async function request(method, path, body = null) {
   if (body) config.body = JSON.stringify(body);
 
   const res = await fetch(`${BASE_URL}${path}`, config);
-  const data = await res.json();
+  let data = null;
+  const contentType = res.headers.get('content-type') || '';
+
+  try {
+    if (contentType.includes('application/json')) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      data = text ? { mensaje: text } : null;
+    }
+  } catch {
+    data = null;
+  }
+
+  if (!data) {
+    data = { mensaje: `Error HTTP ${res.status}` };
+  }
 
   if (res.status === 401) {
     localStorage.removeItem('token');

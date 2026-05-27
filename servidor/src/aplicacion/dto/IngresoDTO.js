@@ -61,7 +61,8 @@ export class IngresoDTO {
 export class DetalleIngresoDTO {
   constructor({
     id, ingresoId, productoId, tipo,
-    codigo, nombre, grupo,
+    codigo, nombre, modelo, color, grupo,
+    pvp1, observacion,
     stockIngresado, costoUnitario, subtotal,
   } = {}) {
     this.id             = id;
@@ -70,10 +71,14 @@ export class DetalleIngresoDTO {
     this.tipo           = tipo          || 'EXISTENTE';
     this.codigo         = codigo        ?? null;
     this.nombre         = nombre        ?? null;
+    this.modelo         = modelo        ?? null;
+    this.color          = color         ?? null;
     this.grupo          = grupo         ?? null;
-    this.stockIngresado = parseInt(stockIngresado)    || 0;
-    this.costoUnitario  = parseFloat(costoUnitario)   || 0;
-    this.subtotal       = parseFloat(subtotal)         || 0;
+    this.pvp1           = pvp1 != null ? parseFloat(pvp1) : null;
+    this.observacion    = observacion   ?? null;
+    this.stockIngresado = parseInt(stockIngresado)  || 0;
+    this.costoUnitario  = parseFloat(costoUnitario) || 0;
+    this.subtotal       = parseFloat(subtotal)      || 0;
   }
 
   getId()             { return this.id; }
@@ -82,7 +87,11 @@ export class DetalleIngresoDTO {
   getTipo()           { return this.tipo; }
   getCodigo()         { return this.codigo; }
   getNombre()         { return this.nombre; }
+  getModelo()         { return this.modelo; }
+  getColor()          { return this.color; }
   getGrupo()          { return this.grupo; }
+  getPvp1()           { return this.pvp1; }
+  getObservacion()    { return this.observacion; }
   getStockIngresado() { return this.stockIngresado; }
   getCostoUnitario()  { return this.costoUnitario; }
   getSubtotal()       { return this.subtotal; }

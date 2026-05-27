@@ -1,67 +1,42 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
-
-const VACIO = { codigo: '', nombre: '', descripcion: '', precio: '', stock: '', stockMinimo: '', proveedorId: '', activo: true };
+import ProductoFormModal from '../../components/productos/ProductoFormModal';
 
 export default function Productos() {
   const { isAdmin } = useAuth();
-  const [lista, setLista] = useState([]);
-  const [buscar, setBuscar] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
+  const navigate    = useNavigate();
+  const [lista, setLista]       = useState([]);
+  const [buscar, setBuscar]     = useState('');
+  const [loading, setLoading]   = useState(true);
+  const [modal, setModal]       = useState(false);
   const [editando, setEditando] = useState(null);
-  const [form, setForm] = useState(VACIO);
-  const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [proveedores, setProveedores] = useState([]);
+  const [productoSel, setProductoSel] = useState(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
-    const url = buscar ? `/producto/lista?buscar=${encodeURIComponent(buscar)}` : '/producto/lista';
+    const url = buscar
+      ? `/producto/lista?buscar=${encodeURIComponent(buscar)}`
+      : '/producto/lista';
     const res = await api.get(url);
     if (res.ok) setLista(res.data.resultado || []);
     setLoading(false);
   }, [buscar]);
 
   useEffect(() => { const t = setTimeout(cargar, 300); return () => clearTimeout(t); }, [cargar]);
-  useEffect(() => {
-    api.get('/proveedor/lista').then(r => { if (r.ok) setProveedores(r.data.resultado || []); });
-  }, []);
 
-  function abrirNuevo() { setForm(VACIO); setEditando(null); setError(''); setModal(true); }
   function abrirEditar(p) {
-    setForm({ codigo: p.codigo, nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio, stock: p.stock, stockMinimo: p.stock_minimo || '', proveedorId: p.proveedor_id || '', activo: p.activo });
-    setEditando(p.id); setError(''); setModal(true);
-  }
-  function cerrar() { setModal(false); }
-  function handleChange(e) {
-    const { name, value, type, checked } = e.target;
-    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    setProductoSel(p);
+    setEditando(p.id);
+    setModal(true);
   }
 
-  async function guardar(e) {
-    e.preventDefault(); setSaving(true); setError('');
-    try {
-      const res = editando
-        ? await api.put('/producto/editar', { id: editando, ...form })
-        : await api.post('/producto/crear', form);
-      if (res.ok) { cerrar(); cargar(); }
-      else setError(res.data.mensaje || 'Error al guardar');
-    } catch { setError('Error de conexión'); }
-    finally { setSaving(false); }
-  }
-
-  async function eliminar(id) {
-    if (!confirm('¿Eliminar este producto?')) return;
-    const res = await api.delete('/producto/eliminar', { id });
-    if (res.ok) cargar();
-  }
+  function cerrar() { setModal(false); setEditando(null); setProductoSel(null); }
 
   function stockColor(p) {
-    if (p.stock <= 0) return '#e74c3c';
-    if (p.stock_minimo && p.stock <= p.stock_minimo) return '#f39c12';
-    return '#27ae60';
+    if (p.stock <= 0) return 'var(--danger-color)';
+    return 'var(--success-color)';
   }
 
   return (
@@ -69,10 +44,33 @@ export default function Productos() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Productos</h1>
-          <p className="page-subtitle">Catálogo de productos</p>
+          <p className="page-subtitle">Catálogo de productos — ordenado por código</p>
         </div>
-        {isAdmin && <button className="btn btn-primary" onClick={abrirNuevo}>+ Nuevo producto</button>}
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={() => navigate('/ingresos/nuevo')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+              <line x1="12" y1="22" x2="12" y2="12"/><line x1="3.3" y1="7" x2="12" y2="12"/><line x1="20.7" y1="7" x2="12" y2="12"/>
+            </svg>
+            Nuevo ingreso
+          </button>
+        )}
       </div>
+
+      {isAdmin && (
+        <div style={{
+          background: 'linear-gradient(135deg, #e8f4fd 0%, #d6eaf8 100%)',
+          border: '1px solid #aed6f1', borderRadius: 'var(--radius-md)',
+          padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10,
+          fontSize: 13, color: '#1a5276',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Para agregar nuevos productos al catálogo, crea un nuevo ingreso y agrega los productos desde allí.
+        </div>
+      )}
 
       <div className="card">
         <div className="card-header">
@@ -85,24 +83,39 @@ export default function Productos() {
         <div className="table-container">
           {loading ? <div className="spinner-wrapper"><div className="spinner"/></div> : (
             <table>
-              <thead><tr><th>Código</th><th>Nombre</th><th>Precio</th><th>Stock</th><th>Estado</th>{isAdmin && <th>Acciones</th>}</tr></thead>
+              <thead>
+                <tr>
+                  <th>Código</th><th>Nombre</th><th>Grupo</th>
+                  <th>Costo</th><th>PVP1</th><th>Stock</th>
+                  <th>Estado</th>{isAdmin && <th>Acciones</th>}
+                </tr>
+              </thead>
               <tbody>
                 {lista.length === 0
-                  ? <tr><td colSpan={6} className="empty-state">Sin resultados</td></tr>
+                  ? <tr><td colSpan={8} className="empty-state">Sin resultados</td></tr>
                   : lista.map(p => (
                     <tr key={p.id}>
-                      <td><code style={{ background: '#f0f4ff', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>{p.codigo}</code></td>
-                      <td><strong>{p.nombre}</strong><br/><small style={{ color: 'var(--text-secondary)' }}>{p.descripcion}</small></td>
-                      <td>${parseFloat(p.precio).toFixed(2)}</td>
-                      <td><span style={{ fontWeight: 700, color: stockColor(p) }}>{p.stock}</span></td>
+                      <td>
+                        <code style={{ background: '#f0f4ff', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>
+                          {p.codigo || '—'}
+                        </code>
+                      </td>
+                      <td>
+                        <strong>{p.nombre}</strong>
+                        {p.modelo && <><br/><small style={{ color: 'var(--text-secondary)' }}>{p.modelo}{p.color ? ` · ${p.color}` : ''}</small></>}
+                      </td>
+                      <td style={{ color: 'var(--text-secondary)' }}>{p.grupo || '—'}</td>
+                      <td>${parseFloat(p.costo || 0).toFixed(2)}</td>
+                      <td>
+                        ${parseFloat(p.pvp1 || 0).toFixed(2)}
+                        {p.iva > 0 && <small style={{ color: 'var(--text-muted)', marginLeft: 4 }}>+{p.iva}%</small>}
+                      </td>
+                      <td><span style={{ fontWeight: 700, color: stockColor(p) }}>{p.stock ?? 0}</span></td>
                       <td><span className={`chip ${p.activo ? 'chip-active' : 'chip-inactive'}`}>{p.activo ? 'Activo' : 'Inactivo'}</span></td>
                       {isAdmin && (
-                        <td style={{ display: 'flex', gap: 4 }}>
+                        <td>
                           <button className="btn-icon" onClick={() => abrirEditar(p)} title="Editar">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                          </button>
-                          <button className="btn-icon danger" onClick={() => eliminar(p.id)} title="Eliminar">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                           </button>
                         </td>
                       )}
@@ -115,62 +128,13 @@ export default function Productos() {
         </div>
       </div>
 
-      {modal && (
-        <div className="modal-overlay" onClick={cerrar}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <span className="modal-title">{editando ? 'Editar producto' : 'Nuevo producto'}</span>
-              <button className="btn-icon" onClick={cerrar}>✕</button>
-            </div>
-            <form onSubmit={guardar}>
-              <div className="modal-body">
-                {error && <div className="alert alert-error">{error}</div>}
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label">Código *</label>
-                    <input className="form-control" name="codigo" value={form.codigo} onChange={handleChange} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Nombre *</label>
-                    <input className="form-control" name="nombre" value={form.nombre} onChange={handleChange} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Precio *</label>
-                    <input className="form-control" type="number" step="0.01" name="precio" value={form.precio} onChange={handleChange} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Stock</label>
-                    <input className="form-control" type="number" name="stock" value={form.stock} onChange={handleChange} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Stock mínimo</label>
-                    <input className="form-control" type="number" name="stockMinimo" value={form.stockMinimo} onChange={handleChange} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Proveedor</label>
-                    <select className="form-control" name="proveedorId" value={form.proveedorId} onChange={handleChange}>
-                      <option value="">Sin proveedor</option>
-                      {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group full">
-                    <label className="form-label">Descripción</label>
-                    <textarea className="form-control" name="descripcion" value={form.descripcion} onChange={handleChange} rows={2} />
-                  </div>
-                  <div className="form-group" style={{ justifyContent: 'center' }}>
-                    <label className="form-label">Activo</label>
-                    <input type="checkbox" name="activo" checked={form.activo} onChange={handleChange} style={{ width: 18, height: 18 }} />
-                  </div>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={cerrar}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ProductoFormModal
+        abierto={modal}
+        editando={editando}
+        productoInicial={productoSel}
+        onCerrar={cerrar}
+        onGuardado={() => cargar()}
+      />
     </div>
   );
 }

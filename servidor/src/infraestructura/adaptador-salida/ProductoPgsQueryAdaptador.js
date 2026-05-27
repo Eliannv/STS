@@ -20,7 +20,7 @@ export default class ProductoPgsQueryAdaptador extends ProductoSalidaQueryPuerto
       FROM productos p
       LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
       WHERE ${whereClause}
-      ORDER BY p.nombre ASC`;
+      ORDER BY p.codigo ASC NULLS LAST, p.created_at DESC`;
 
     try {
       const { rows } = await pool.query(sql, params);

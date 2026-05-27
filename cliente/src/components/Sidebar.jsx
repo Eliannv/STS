@@ -43,6 +43,7 @@ const allMenuItems = [
     ),
     children: [
       { label: 'Productos', route: '/productos' },
+      { label: 'Ingresos',  route: '/ingresos'  },
     ],
   },
   // SUCURSALES

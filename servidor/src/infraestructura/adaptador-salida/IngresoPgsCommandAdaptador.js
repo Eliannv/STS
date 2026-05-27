@@ -28,12 +28,13 @@ export default class IngresoPgsCommandAdaptador extends IngresoSalidaCommandPuer
       for (const det of detalles) {
         await client.query(`
           INSERT INTO detalle_ingresos
-            (ingreso_id, producto_id, tipo, codigo, nombre, grupo,
-             stock_ingresado, costo_unitario, subtotal)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+            (ingreso_id, producto_id, tipo, codigo, nombre, modelo, color, grupo,
+             pvp1, observacion, stock_ingresado, costo_unitario, subtotal)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
           [
             ingresoCreado.id, det.productoId, det.tipo,
-            det.codigo, det.nombre, det.grupo,
+            det.codigo, det.nombre, det.modelo, det.color, det.grupo,
+            det.pvp1, det.observacion,
             det.stockIngresado, det.costoUnitario, det.subtotal,
           ]
         );
@@ -122,16 +123,19 @@ export default class IngresoPgsCommandAdaptador extends IngresoSalidaCommandPuer
           );
 
         } else if (det.tipo === 'NUEVO') {
-          // Crear el nuevo producto
+          // Crear el nuevo producto con todos los campos capturados
+          const pvp1Val = det.pvp1 ?? det.costo_unitario;
           const { rows: [nuevoProducto] } = await client.query(`
             INSERT INTO productos
-              (codigo, nombre, grupo, stock, tipo_control_stock, costo, pvp1,
-               iva, precio_con_iva, proveedor_id, ingreso_id, activo)
-            VALUES ($1,$2,$3,$4,'NORMAL',$5,0,0,$5,$6,$7,true)
+              (codigo, nombre, modelo, color, grupo, stock, tipo_control_stock,
+               costo, pvp1, iva, precio_con_iva, observacion,
+               proveedor_id, ingreso_id, activo)
+            VALUES ($1,$2,$3,$4,$5,$6,'NORMAL',$7,$8,0,$8,$9,$10,$11,true)
             RETURNING id`,
             [
-              det.codigo, det.nombre, det.grupo, det.stock_ingresado,
-              det.costo_unitario, ingreso.proveedor_id, id,
+              det.codigo, det.nombre, det.modelo, det.color, det.grupo,
+              det.stock_ingresado, det.costo_unitario, pvp1Val,
+              det.observacion, ingreso.proveedor_id, id,
             ]
           );
           // Enlazar detalle con el producto recién creado
@@ -188,14 +192,15 @@ export default class IngresoPgsCommandAdaptador extends IngresoSalidaCommandPuer
   async guardarDetalle(detalle) {
     const sql = `
       INSERT INTO detalle_ingresos
-        (ingreso_id, producto_id, tipo, codigo, nombre, grupo,
-         stock_ingresado, costo_unitario, subtotal)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        (ingreso_id, producto_id, tipo, codigo, nombre, modelo, color, grupo,
+         pvp1, observacion, stock_ingresado, costo_unitario, subtotal)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
       RETURNING *`;
     try {
       const { rows } = await pool.query(sql, [
         detalle.ingresoId, detalle.productoId, detalle.tipo,
-        detalle.codigo, detalle.nombre, detalle.grupo,
+        detalle.codigo, detalle.nombre, detalle.modelo, detalle.color, detalle.grupo,
+        detalle.pvp1, detalle.observacion,
         detalle.stockIngresado, detalle.costoUnitario, detalle.subtotal,
       ]);
       return { estado: 'ok', resultado: rows[0] };
@@ -208,15 +213,18 @@ export default class IngresoPgsCommandAdaptador extends IngresoSalidaCommandPuer
   async actualizarDetalle(detalle) {
     const sql = `
       UPDATE detalle_ingresos SET
-        producto_id = $1, tipo = $2, codigo = $3, nombre = $4, grupo = $5,
-        stock_ingresado = $6, costo_unitario = $7, subtotal = $8
-      WHERE id = $9
+        producto_id = $1, tipo = $2, codigo = $3, nombre = $4,
+        modelo = $5, color = $6, grupo = $7,
+        pvp1 = $8, observacion = $9,
+        stock_ingresado = $10, costo_unitario = $11, subtotal = $12
+      WHERE id = $13
       RETURNING *`;
     try {
       const { rows } = await pool.query(sql, [
-        detalle.productoId, detalle.tipo, detalle.codigo,
-        detalle.nombre, detalle.grupo, detalle.stockIngresado,
-        detalle.costoUnitario, detalle.subtotal, detalle.id,
+        detalle.productoId, detalle.tipo, detalle.codigo, detalle.nombre,
+        detalle.modelo, detalle.color, detalle.grupo,
+        detalle.pvp1, detalle.observacion,
+        detalle.stockIngresado, detalle.costoUnitario, detalle.subtotal, detalle.id,
       ]);
       if (rows.length === 0) return { estado: 'error', resultado: 'Detalle no encontrado' };
       return { estado: 'ok', resultado: rows[0] };

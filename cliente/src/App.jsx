@@ -8,6 +8,9 @@ import Productos from './pages/productos/Productos';
 import Proveedores from './pages/proveedores/Proveedores';
 import Sucursales from './pages/sucursales/Sucursales';
 import Usuarios from './pages/usuarios/Usuarios';
+import Ingresos from './pages/ingresos/Ingresos';
+import CrearIngreso from './pages/ingresos/CrearIngreso';
+import AgregarProductosIngreso from './pages/ingresos/AgregarProductosIngreso';
 
 export default function App() {
   return (
@@ -22,6 +25,9 @@ export default function App() {
             <Route path="/proveedores" element={<Proveedores />} />
             <Route path="/sucursales" element={<Sucursales />} />
             <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/ingresos" element={<Ingresos />} />
+            <Route path="/ingresos/nuevo" element={<CrearIngreso />} />
+            <Route path="/ingresos/:id/productos" element={<AgregarProductosIngreso />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

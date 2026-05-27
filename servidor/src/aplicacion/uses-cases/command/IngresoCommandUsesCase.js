@@ -36,8 +36,8 @@ export default class IngresoCommandUsesCase {
 
     const detalles = dtoIngreso.getDetalles().map(d => new DetalleIngreso(
       null, null,
-      d.productoId, d.tipo, d.codigo, d.nombre, d.grupo,
-      d.stockIngresado, d.costoUnitario, d.subtotal
+      d.productoId, d.tipo, d.codigo, d.nombre, d.modelo, d.color, d.grupo,
+      d.pvp1, d.observacion, d.stockIngresado, d.costoUnitario, d.subtotal
     ));
 
     return await this.adaptadorBDSalida.guardar(ingreso, detalles);
@@ -115,7 +115,11 @@ export default class IngresoCommandUsesCase {
       tipo,
       dtoDetalle.getCodigo(),
       dtoDetalle.getNombre(),
+      dtoDetalle.getModelo(),
+      dtoDetalle.getColor(),
       dtoDetalle.getGrupo(),
+      dtoDetalle.getPvp1(),
+      dtoDetalle.getObservacion(),
       dtoDetalle.getStockIngresado(),
       dtoDetalle.getCostoUnitario(),
       dtoDetalle.getSubtotal()
@@ -139,7 +143,11 @@ export default class IngresoCommandUsesCase {
       dtoDetalle.getTipo(),
       dtoDetalle.getCodigo(),
       dtoDetalle.getNombre(),
+      dtoDetalle.getModelo(),
+      dtoDetalle.getColor(),
       dtoDetalle.getGrupo(),
+      dtoDetalle.getPvp1(),
+      dtoDetalle.getObservacion(),
       dtoDetalle.getStockIngresado(),
       dtoDetalle.getCostoUnitario(),
       dtoDetalle.getSubtotal()

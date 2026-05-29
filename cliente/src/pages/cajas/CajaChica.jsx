@@ -1,0 +1,227 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../../api/api';
+import { useAuth } from '../../context/AuthContext';
+import AbrirCajaChicaModal from '../../components/cajas/AbrirCajaChicaModal';
+
+const FMT   = v => `$${parseFloat(v || 0).toFixed(2)}`;
+const FECHA = s => {
+  if (!s) return '—';
+  const d = new Date(s + 'T00:00:00');
+  return isNaN(d) ? s : d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+const ESTADO_BADGE = {
+  ABIERTA: { bg: '#d4edda', color: '#155724' },
+  CERRADA: { bg: '#f8d7da', color: '#721c24' },
+};
+
+function KpiCard({ label, value, color = '#3498db', subtext }) {
+  return (
+    <div style={{
+      background: '#fff', border: '1px solid #e9ecef', borderRadius: 10,
+      padding: '16px 20px', borderTop: `3px solid ${color}`,
+    }}>
+      <div style={{ fontSize: 11, color: '#6c757d', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: '#2c3e50' }}>{value}</div>
+      {subtext && <div style={{ fontSize: 11, color: '#6c757d', marginTop: 4 }}>{subtext}</div>}
+    </div>
+  );
+}
+
+export default function CajaChica() {
+  const navigate    = useNavigate();
+  const { isAdmin } = useAuth();
+
+  const [lista,      setLista]      = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [filtroEstado,    setFiltroEstado]    = useState('');
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState('');
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
+  const [modalAbrir, setModalAbrir] = useState(false);
+  const [pagina, setPagina]   = useState(1);
+  const POR_PAGINA = 15;
+
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (filtroEstado)     params.set('estado',     filtroEstado);
+    if (filtroFechaDesde) params.set('fechaDesde', filtroFechaDesde);
+    if (filtroFechaHasta) params.set('fechaHasta', filtroFechaHasta);
+    const res = await api.get(`/caja-chica/lista${params.toString() ? '?' + params : ''}`);
+    if (res.ok) setLista(res.data.resultado || []);
+    setLoading(false);
+  }, [filtroEstado, filtroFechaDesde, filtroFechaHasta]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  function limpiarFiltros() {
+    setFiltroEstado(''); setFiltroFechaDesde(''); setFiltroFechaHasta('');
+    setPagina(1);
+  }
+
+  // KPIs
+  const totalCajas       = lista.length;
+  const cajasAbiertas    = lista.filter(c => c.estado === 'ABIERTA').length;
+  const totalSaldoActual = lista.reduce((s, c) => s + parseFloat(c.monto_actual || 0), 0);
+  const totalSaldoInicial = lista.reduce((s, c) => s + parseFloat(c.monto_inicial || 0), 0);
+  const gastoTotal        = totalSaldoInicial - totalSaldoActual;
+
+  // Paginación
+  const totalPaginas  = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
+  const listaVisible  = lista.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+
+  return (
+    <div className="page">
+
+      {/* ═══ HEADER ═══ */}
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Caja Chica</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '4px 0 0' }}>Gestión diaria de cajas operativas</p>
+        </div>
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={() => setModalAbrir(true)}>
+            + Abrir Nueva Caja
+          </button>
+        )}
+      </div>
+
+      {/* ═══ FILTROS ═══ */}
+      <div style={{ background: '#fff', border: '1px solid #e9ecef', borderRadius: 10, padding: '18px 20px', marginBottom: 20 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 14px' }}>Filtros de Búsqueda</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 12, fontWeight: 600 }}>Estado</label>
+            <select value={filtroEstado} onChange={e => { setFiltroEstado(e.target.value); setPagina(1); }}
+              style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13, background: '#fff' }}>
+              <option value="">Todos</option>
+              <option value="ABIERTA">Abierta</option>
+              <option value="CERRADA">Cerrada</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 12, fontWeight: 600 }}>Fecha desde</label>
+            <input type="date" value={filtroFechaDesde} onChange={e => { setFiltroFechaDesde(e.target.value); setPagina(1); }}
+              style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13 }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 12, fontWeight: 600 }}>Fecha hasta</label>
+            <input type="date" value={filtroFechaHasta} onChange={e => { setFiltroFechaHasta(e.target.value); setPagina(1); }}
+              style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13 }} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
+          <button className="btn btn-ghost btn-sm" onClick={limpiarFiltros}>✕ Limpiar filtros</button>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            {!loading && `${lista.length} caja${lista.length !== 1 ? 's' : ''} encontrada${lista.length !== 1 ? 's' : ''}`}
+          </span>
+        </div>
+      </div>
+
+      {/* ═══ KPIs ═══ */}
+      {!loading && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+          <KpiCard label="Total cajas"    value={totalCajas}          color="#3498db" />
+          <KpiCard label="Abiertas"       value={cajasAbiertas}       color="#28a745" subtext={`${totalCajas - cajasAbiertas} cerradas`} />
+          <KpiCard label="Saldo total"    value={FMT(totalSaldoActual)} color="#17a2b8" />
+          <KpiCard label="Capital inicial" value={FMT(totalSaldoInicial)} color="#6c757d" />
+          <KpiCard label="Total gastado"  value={FMT(gastoTotal > 0 ? gastoTotal : 0)} color="#e67e22" />
+        </div>
+      )}
+
+      {/* ═══ LOADING ═══ */}
+      {loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 60, flexDirection: 'column', gap: 12 }}>
+          <div className="spinner" />
+          <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>Cargando cajas chicas...</span>
+        </div>
+      )}
+
+      {/* ═══ TABLA ═══ */}
+      {!loading && (
+        <div style={{ background: '#fff', border: '1px solid #e9ecef', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead style={{ background: '#f8f9fa' }}>
+                <tr>
+                  {['Fecha', 'Estado', 'Monto inicial', 'Monto actual', 'Gastado', 'Usuario', 'Cerrado por', 'Acciones'].map(h => (
+                    <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600, color: '#495057', borderBottom: '1px solid #dee2e6', whiteSpace: 'nowrap' }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {listaVisible.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+                      No hay cajas chicas registradas
+                    </td>
+                  </tr>
+                ) : listaVisible.map(caja => {
+                  const gastado = parseFloat(caja.monto_inicial || 0) - parseFloat(caja.monto_actual || 0);
+                  const badge   = ESTADO_BADGE[caja.estado] || {};
+                  return (
+                    <tr key={caja.id} style={{ borderBottom: '1px solid #f0f0f0' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f8f9fa'}
+                      onMouseLeave={e => e.currentTarget.style.background = ''}>
+                      <td style={{ padding: '12px 14px', fontWeight: 500 }}>{FECHA(caja.fecha)}</td>
+                      <td style={{ padding: '12px 14px' }}>
+                        <span style={{ ...badge, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600 }}>
+                          {caja.estado}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 14px' }}>{FMT(caja.monto_inicial)}</td>
+                      <td style={{ padding: '12px 14px', fontWeight: 600, color: parseFloat(caja.monto_actual) < 10 ? '#dc3545' : '#28a745' }}>
+                        {FMT(caja.monto_actual)}
+                      </td>
+                      <td style={{ padding: '12px 14px', color: gastado > 0 ? '#e67e22' : '#6c757d' }}>
+                        {FMT(Math.max(0, gastado))}
+                      </td>
+                      <td style={{ padding: '12px 14px', color: '#6c757d' }}>{caja.usuario_nombre || '—'}</td>
+                      <td style={{ padding: '12px 14px', color: '#6c757d' }}>{caja.cerrado_por_nombre || '—'}</td>
+                      <td style={{ padding: '12px 14px' }}>
+                        <button className="btn btn-ghost btn-sm"
+                          onClick={() => navigate(`/caja-chica/${caja.id}`)}>
+                          Ver detalle →
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Paginación */}
+          {lista.length > POR_PAGINA && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderTop: '1px solid #dee2e6' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                Página {pagina} de {totalPaginas} · {lista.length} registros
+              </span>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}>‹ Anterior</button>
+                {Array.from({ length: totalPaginas }, (_, i) => i + 1)
+                  .filter(p => Math.abs(p - pagina) <= 2)
+                  .map(p => (
+                    <button key={p} className={`btn btn-sm ${p === pagina ? 'btn-primary' : 'btn-ghost'}`}
+                      onClick={() => setPagina(p)} style={{ minWidth: 32 }}>{p}</button>
+                  ))
+                }
+                <button className="btn btn-ghost btn-sm" onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas}>Siguiente ›</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal abrir caja */}
+      <AbrirCajaChicaModal
+        abierto={modalAbrir}
+        onCerrar={() => setModalAbrir(false)}
+        onAbierta={caja => { cargar(); navigate(`/caja-chica/${caja.id}`); }}
+      />
+    </div>
+  );
+}

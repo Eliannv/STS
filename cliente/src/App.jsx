@@ -11,6 +11,15 @@ import Usuarios from './pages/usuarios/Usuarios';
 import Ingresos from './pages/ingresos/Ingresos';
 import CrearIngreso from './pages/ingresos/CrearIngreso';
 import AgregarProductosIngreso from './pages/ingresos/AgregarProductosIngreso';
+import VerIngreso from './pages/ingresos/VerIngreso';
+import FichaCliente from './pages/clientes/FichaCliente';
+import Ventas from './pages/ventas/Ventas';
+import CrearVenta from './pages/ventas/CrearVenta';
+import CobrarDeuda from './pages/ventas/CobrarDeuda';
+import CajaChica from './pages/cajas/CajaChica';
+import VerCajaChica from './pages/cajas/VerCajaChica';
+import CajaBanco from './pages/cajas/CajaBanco';
+import VerCajaBanco from './pages/cajas/VerCajaBanco';
 
 export default function App() {
   return (
@@ -21,13 +30,22 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/clientes" element={<Clientes />} />
+            <Route path="/clientes/:id/ficha" element={<FichaCliente />} />
             <Route path="/productos" element={<Productos />} />
             <Route path="/proveedores" element={<Proveedores />} />
             <Route path="/sucursales" element={<Sucursales />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/ingresos" element={<Ingresos />} />
             <Route path="/ingresos/nuevo" element={<CrearIngreso />} />
+            <Route path="/ingresos/:id" element={<VerIngreso />} />
             <Route path="/ingresos/:id/productos" element={<AgregarProductosIngreso />} />
+            <Route path="/facturas" element={<Ventas />} />
+            <Route path="/facturas/nueva" element={<CrearVenta />} />
+            <Route path="/facturas/cobrar" element={<CobrarDeuda />} />
+            <Route path="/caja-chica" element={<CajaChica />} />
+            <Route path="/caja-chica/:id" element={<VerCajaChica />} />
+            <Route path="/caja-banco" element={<CajaBanco />} />
+            <Route path="/caja-banco/:id" element={<VerCajaBanco />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -20,6 +20,13 @@
   font-weight: 700;
   color: var(--secondary-color);
 }
+
+.navbar-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
 .navbar-brand svg { stroke: var(--primary-color); }
 .navbar-right { display: flex; align-items: center; gap: 12px; }
 .navbar-user { display: flex; flex-direction: column; align-items: flex-end; }

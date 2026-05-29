@@ -46,6 +46,36 @@ const allMenuItems = [
       { label: 'Ingresos',  route: '/ingresos'  },
     ],
   },
+  // FACTURAS
+  {
+    label: 'Facturas',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <line x1="12" y1="1" x2="12" y2="23"/>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+    ),
+    children: [
+      { label: 'Todas las facturas', route: '/facturas'        },
+      { label: 'Nueva factura',      route: '/facturas/nueva'  },
+      { label: 'Cobrar deuda',       route: '/facturas/cobrar' },
+    ],
+  },
+  // CAJA
+  {
+    label: 'Caja',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect width="20" height="12" x="2" y="6" rx="2"/>
+        <circle cx="12" cy="12" r="2"/>
+        <path d="M6 12h.01M18 12h.01"/>
+      </svg>
+    ),
+    children: [
+      { label: 'Caja Chica', route: '/caja-chica' },
+      { label: 'Caja Banco', route: '/caja-banco', adminOnly: true },
+    ],
+  },
   // SUCURSALES
   {
     label: 'Sucursales',

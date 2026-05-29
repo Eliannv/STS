@@ -150,17 +150,62 @@ export default function AgregarProductosIngreso() {
 
   async function finalizar() {
     if (detalles.length === 0) { setError('Agrega al menos un producto antes de finalizar'); return; }
-    if (!confirm('¿Finalizar el ingreso? Esto actualizará el stock de los productos.')) return;
+
+    const result = await Swal.fire({
+        title: '¿Estás seguro?',
+        text: 'No podrás revertir esta acción',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, finalizar',
+        cancelButtonText: 'Cancelar'
+      });
+
+    if (!result.isConfirmed) return;
     setFinalizando(true); setError('');
     try {
       const res = await api.put('/ingreso/finalizar', { id: parseInt(id) });
+      
       if (res.ok) {
         navigate('/ingresos');
-      } else {
+
+        await Swal.fire({
+            title: 'Finalizado',
+            text: 'El ingreso fue finalizado correctamente',
+            icon: 'success',
+            timer: 3000,
+            toast: true,
+              position: 'top-end',
+            showConfirmButton: false
+          });
+
+      } 
+      else {
+        Swal.fire({
+            title: 'Error',
+            text: res.data.mensaje || 'Error al finalizar',
+            icon: 'error',
+            timer: 3000,
+            toast: true,
+              position: 'top-end',
+            showConfirmButton: false
+          });
+
         setError(res.data.mensaje || 'Error al finalizar');
       }
     } catch {
-      setError('Error de conexión');
+      Swal.fire({
+          title: 'Error',
+          text: 'Error de conexión',
+          icon: 'error',
+          timer: 3000,
+            toast: true,
+              position: 'top-end',
+          showConfirmButton: false
+        });
+  
+      setError(error.message || 'Error al finalizar');
     } finally {
       setFinalizando(false);
     }

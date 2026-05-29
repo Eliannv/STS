@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import ClienteFormModal from '../../components/clientes/ClienteFormModal';
@@ -7,6 +8,7 @@ import Swal from 'sweetalert2';
 
 export default function Clientes() {
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [lista, setLista] = useState([]);
   const [buscar, setBuscar] = useState('');
   const [loading, setLoading] = useState(true);
@@ -149,6 +151,18 @@ export default function Clientes() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                          <button
+                            className="btn-icon"
+                            title="Ficha clínica"
+                            onClick={() => navigate(`/clientes/${c.id}/ficha`)}
+                            style={{ color: '#2980b9' }}
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                              <polyline points="14 2 14 8 20 8"/>
+                              <path d="M10 13h4"/><path d="M10 17h4"/>
+                            </svg>
+                          </button>
                           <button className="btn-icon" onClick={() => abrirEditar(c)} title="Editar">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                           </button>

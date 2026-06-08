@@ -11,12 +11,6 @@ coverage/
 .vite/
 
 # Environment files and secrets
-.env
-.env.*
-!.env.example
-servidor/.env
-servidor/.env.*
-!servidor/.env.example
 *.key
 *.pem
 *.p12
@@ -55,4 +49,4 @@ temp/
 *.db
 
 # Docker / local overrides
-docker-compose.override.yml
+

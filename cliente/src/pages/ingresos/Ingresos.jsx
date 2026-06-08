@@ -116,6 +116,13 @@ export default function Ingresos() {
             <label className="form-label">Hasta</label>
             <input type="date" className="form-control" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} />
           </div>
+        </div>
+      </div>
+
+      {/* Tabla */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">{lista.length} ingresos</span>
           {(buscar || estado || fechaDesde || fechaHasta) && (
             <button
               className="btn btn-ghost btn-sm"
@@ -124,13 +131,6 @@ export default function Ingresos() {
               Limpiar filtros
             </button>
           )}
-        </div>
-      </div>
-
-      {/* Tabla */}
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">{lista.length} ingresos</span>
         </div>
         <div className="table-container">
           {loading ? <div className="spinner-wrapper"><div className="spinner"/></div> : (

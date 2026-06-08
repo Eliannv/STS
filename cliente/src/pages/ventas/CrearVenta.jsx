@@ -310,12 +310,16 @@ export default function CrearVenta() {
       </div>
 
       {/* ── BARRA CLIENTE ── */}
-      <div style={S.cliBar}>
+      <div style={{ background: '#fff', borderBottom: '1px solid #dee2e6', padding: '7px 16px', flexShrink: 0 }}>
 
-        {/* Búsqueda cliente — ancho fijo */}
-        <div style={{ position: 'relative', width: 280, flexShrink: 0 }} ref={dropCliRef}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#6c757d', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 }}>CLIENTE:</div>
-          <div style={{ position: 'relative' }}>
+        {/* Label encima */}
+        <div style={S.lbl}>Cliente:</div>
+
+        {/* Fila alineada */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+
+          {/* Búsqueda cliente */}
+          <div style={{ position: 'relative', width: 280, flexShrink: 0 }} ref={dropCliRef}>
             <svg style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }}
               width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -329,55 +333,53 @@ export default function CrearVenta() {
             />
             {cargandoCli && <div style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}><div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} /></div>}
             {clienteSel && <button onClick={limpiarCliente} style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#aaa', fontSize: 13, padding: 0 }}>✕</button>}
+
+            {/* Dropdown */}
+            {dropCliOpen && clientesFound.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: '#fff', border: '1px solid #dee2e6', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: 220, overflowY: 'auto', marginTop: 2 }}>
+                {clientesFound.map(c => (
+                  <button key={c.id} onClick={() => seleccionarCliente(c)}
+                    style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f5f8ff'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{c.nombres} {c.apellidos}</div>
+                      <div style={{ fontSize: 11, color: '#6c757d' }}>{c.cedula || 'Sin cédula'} · {c.telefono || ''}</div>
+                    </div>
+                    {c.tiene_deuda && <span style={S.badge('#fde8e8', '#e74c3c')}>Con deuda</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Dropdown */}
-          {dropCliOpen && clientesFound.length > 0 && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: '#fff', border: '1px solid #dee2e6', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: 220, overflowY: 'auto', marginTop: 2 }}>
-              {clientesFound.map(c => (
-                <button key={c.id} onClick={() => seleccionarCliente(c)}
-                  style={{ width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f5f8ff'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{c.nombres} {c.apellidos}</div>
-                    <div style={{ fontSize: 11, color: '#6c757d' }}>{c.cedula || 'Sin cédula'} · {c.telefono || ''}</div>
-                  </div>
-                  {c.tiene_deuda && <span style={S.badge('#fde8e8', '#e74c3c')}>Con deuda</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+          {/* Crear cliente */}
+          <button className="btn btn-primary btn-sm" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+            onClick={() => setModalCliente(true)}>
+            + Crear cliente
+          </button>
 
-        {/* Crear cliente */}
-        <button className="btn btn-primary btn-sm" style={{ flexShrink: 0, whiteSpace: 'nowrap', alignSelf: 'flex-end' }}
-          onClick={() => setModalCliente(true)}>
-          + Crear cliente
-        </button>
-
-        {/* Historial */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, alignSelf: 'flex-end' }}>
-          <span style={{ fontSize: 12, color: '#6c757d' }}>Historial:</span>
-          {clienteSel ? (
-            <>
+          {/* Historial */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: '#6c757d' }}>Historial:</span>
+            {clienteSel ? (
               <button
                 onClick={() => setModalHistorial(true)}
                 style={{ ...S.badge(historialList.length > 0 ? '#dbeafe' : '#f1f3f5', historialList.length > 0 ? '#1d4ed8' : '#6c757d'), fontSize: 12, padding: '3px 9px', border: 'none', cursor: 'pointer' }}
-                title="Ver historial clínico del cliente"
-              >
-                {historialList.length > 0 ? `📋 ${historialList.length} registro${historialList.length !== 1 ? 's' : ''}` : '📋 Sin historial'}
+                title="Ver historial clínico del cliente">
+                {historialList.length > 0 ? `📋 ${historialList.length} registro${historialList.length !== 1 ? 's' : ''}` : 'Sin historial'}
               </button>
-            </>
-          ) : (
-            <span style={{ ...S.badge('#f1f3f5', '#6c757d'), fontSize: 12, padding: '3px 9px' }}>CLIENTE OPCIONAL</span>
-          )}
-          {clienteSel?.tiene_deuda && <span style={S.badge('#fde8e8', '#e74c3c')}>⚠ Con deuda</span>}
-        </div>
+            ) : (
+              <span style={{ ...S.badge('#f1f3f5', '#6c757d'), fontSize: 12, padding: '3px 9px' }}>CLIENTE OPCIONAL</span>
+            )}
+            {clienteSel?.tiene_deuda && <span style={S.badge('#fde8e8', '#e74c3c')}>⚠ Con deuda</span>}
+          </div>
 
-        {/* Periodo */}
-        <div style={{ fontSize: 12, color: '#6c757d', alignSelf: 'flex-end', whiteSpace: 'nowrap' }}>
-          Periodo <strong>{new Date().toLocaleDateString('es-EC', { month: 'long', year: 'numeric' })}</strong>
+          {/* Periodo */}
+          <div style={{ fontSize: 12, color: '#6c757d', whiteSpace: 'nowrap' }}>
+            Periodo <strong>{new Date().toLocaleDateString('es-EC', { month: 'long', year: 'numeric' })}</strong>
+          </div>
+
         </div>
       </div>
 

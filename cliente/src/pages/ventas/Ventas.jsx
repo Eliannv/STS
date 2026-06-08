@@ -168,6 +168,13 @@ export default function Ventas() {
             <label className="form-label">Hasta</label>
             <input type="date" className="form-control" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} />
           </div>
+        </div>
+      </div>
+
+      {/* Tabla */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">{lista.length} registro{lista.length !== 1 ? 's' : ''}</span>
           {hayFiltros && (
             <button className="btn btn-ghost btn-sm" onClick={limpiarFiltros} style={{ marginBottom: 1 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -176,13 +183,6 @@ export default function Ventas() {
               Limpiar
             </button>
           )}
-        </div>
-      </div>
-
-      {/* Tabla */}
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">{lista.length} registro{lista.length !== 1 ? 's' : ''}</span>
         </div>
         <div className="table-container">
           {loading ? (

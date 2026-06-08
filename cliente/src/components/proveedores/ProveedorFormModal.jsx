@@ -39,6 +39,9 @@ export default function ProveedorFormModal({ abierto, editando, proveedorInicial
         saldo:             p.saldo              ?? '0',
         activo:            p.activo             ?? true,
       });
+    } else if (!editando && proveedorInicial?.nombre) {
+      // Modo nuevo con nombre pre-cargado (ej. desde importación Excel)
+      setForm({ ...VACIO, nombre: proveedorInicial.nombre });
     } else {
       setForm(VACIO);
     }

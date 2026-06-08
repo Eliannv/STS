@@ -46,15 +46,7 @@ export default function Productos() {
           <h1 className="page-title">Productos</h1>
           <p className="page-subtitle">Catálogo de productos — ordenado por código</p>
         </div>
-        {isAdmin && (
-          <button className="btn btn-primary" onClick={() => navigate('/ingresos/nuevo')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
-              <line x1="12" y1="22" x2="12" y2="12"/><line x1="3.3" y1="7" x2="12" y2="12"/><line x1="20.7" y1="7" x2="12" y2="12"/>
-            </svg>
-            Nuevo ingreso
-          </button>
-        )}
+        
       </div>
 
       {isAdmin && (

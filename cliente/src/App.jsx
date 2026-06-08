@@ -10,6 +10,7 @@ import Sucursales from './pages/sucursales/Sucursales';
 import Usuarios from './pages/usuarios/Usuarios';
 import Ingresos from './pages/ingresos/Ingresos';
 import CrearIngreso from './pages/ingresos/CrearIngreso';
+import ImportarIngreso from './pages/ingresos/ImportarIngreso';
 import AgregarProductosIngreso from './pages/ingresos/AgregarProductosIngreso';
 import VerIngreso from './pages/ingresos/VerIngreso';
 import FichaCliente from './pages/clientes/FichaCliente';
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/ingresos" element={<Ingresos />} />
             <Route path="/ingresos/nuevo" element={<CrearIngreso />} />
+            <Route path="/ingresos/importar" element={<ImportarIngreso />} />
             <Route path="/ingresos/:id" element={<VerIngreso />} />
             <Route path="/ingresos/:id/productos" element={<AgregarProductosIngreso />} />
             <Route path="/facturas" element={<Ventas />} />

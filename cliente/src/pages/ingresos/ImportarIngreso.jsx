@@ -33,6 +33,13 @@ function parsearFecha(val) {
   return HOY;
 }
 
+function esTextoNoNumerico(rawVal) {
+  if (rawVal === '' || rawVal == null) return false;
+  if (typeof rawVal === 'number') return false;
+  const str = String(rawVal).replace(/[$,\s]/g, '');
+  return str !== '' && isNaN(parseFloat(str));
+}
+
 function leerExcel(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -57,28 +64,100 @@ function leerExcel(file) {
         if (!proveedor)     throw new Error('No se encontró el proveedor en C3');
         if (!numeroFactura) throw new Error('No se encontró el N° de factura en E3');
 
-        const productos = [];
+        const rechazadas   = [];
+        const advertencias = [];
+        const productosBrutos = [];
         let row = 6;
+
         while (true) {
-          const nombre = String(get('C', row) || '').trim();
-          const codigo = String(get('B', row) || '').trim();
+          const nombre   = String(get('C', row) || '').trim();
+          const codigo   = String(get('B', row) || '').trim();
           if (!nombre && !codigo) break;
 
-          const cantidad = parsearNumero(get('A', row)) || 1;
+          const cantidadRaw = get('A', row);
+          const costoRaw    = get('G', row);
+          const pvp1Raw     = get('H', row);
+
+          // Campos numéricos con texto
+          if (esTextoNoNumerico(cantidadRaw)) {
+            rechazadas.push({ fila: row, motivo: `Cantidad no es un número válido ("${cantidadRaw}")` });
+            row++; continue;
+          }
+          if (esTextoNoNumerico(costoRaw)) {
+            rechazadas.push({ fila: row, motivo: `Costo no es un número válido ("${costoRaw}")` });
+            row++; continue;
+          }
+
           const modelo   = String(get('D', row) || '').trim();
           const color    = String(get('E', row) || '').trim();
           const grupoRaw = String(get('F', row) || '').trim().toUpperCase();
-          const grupo    = GRUPOS.includes(grupoRaw) ? grupoRaw : 'VARIOS';
-          const costo    = parsearNumero(get('G', row));
-          const pvp1     = parsearNumero(get('H', row));
+          const cantidad = parsearNumero(cantidadRaw) || 0;
+          const costo    = parsearNumero(costoRaw);
+          const pvp1     = parsearNumero(pvp1Raw);
 
-          productos.push({ cantidad, codigo, nombre, modelo, color, grupo, costo, pvp1 });
+          // Modelo vacío → rechazar
+          if (!modelo) {
+            rechazadas.push({ fila: row, motivo: 'Modelo vacío' });
+            row++; continue;
+          }
+          // Grupo vacío → rechazar
+          if (!grupoRaw) {
+            rechazadas.push({ fila: row, motivo: 'Grupo vacío' });
+            row++; continue;
+          }
+          // Costo <= 0 → rechazar
+          if (costo <= 0) {
+            rechazadas.push({ fila: row, motivo: `Costo en cero o negativo (${costo})` });
+            row++; continue;
+          }
+          // Cantidad <= 0 → rechazar
+          if (cantidad <= 0) {
+            rechazadas.push({ fila: row, motivo: `Cantidad en cero o negativa (${cantidad})` });
+            row++; continue;
+          }
+          // Color vacío → advertencia (no bloquear)
+          if (!color) {
+            advertencias.push({ fila: row, mensaje: 'Color vacío, se importará sin color' });
+          }
+          // PVP menor al costo → advertencia
+          if (pvp1 > 0 && pvp1 < costo) {
+            advertencias.push({ fila: row, mensaje: `PVP ($${pvp1}) es menor al costo ($${costo})` });
+          }
+
+          const grupo = GRUPOS.includes(grupoRaw) ? grupoRaw : 'VARIOS';
+          productosBrutos.push({ fila: row, cantidad, codigo, nombre, modelo, color, grupo, costo, pvp1 });
           row++;
         }
 
-        if (productos.length === 0) throw new Error('No se encontraron productos en el archivo (desde fila 6)');
+        if (productosBrutos.length === 0 && rechazadas.length === 0) {
+          throw new Error('No se encontraron productos en el archivo (desde fila 6)');
+        }
 
-        resolve({ proveedor, numeroFactura, fecha, productos });
+        // Unificar duplicados dentro del mismo Excel (mismo modelo+color+grupo)
+        const mapaUnificado = new Map();
+        for (const p of productosBrutos) {
+          const clave = `${p.modelo.toLowerCase()}|${(p.color || '').toLowerCase()}|${p.grupo.toLowerCase()}`;
+          if (mapaUnificado.has(clave)) {
+            const existente = mapaUnificado.get(clave);
+            const totalStock = existente.cantidad + p.cantidad;
+            const costoPromedio = +((existente.cantidad * existente.costo + p.cantidad * p.costo) / totalStock).toFixed(4);
+            advertencias.push({
+              fila: p.fila,
+              mensaje: `Duplicado con fila ${existente.fila} (${p.modelo} / ${p.color} / ${p.grupo}) → unificados (cantidad sumada, costo promediado)`,
+            });
+            existente.cantidad = totalStock;
+            existente.costo    = costoPromedio;
+          } else {
+            mapaUnificado.set(clave, { ...p });
+          }
+        }
+
+        const productos = [...mapaUnificado.values()];
+        if (productos.length === 0) {
+          throw new Error('Todas las filas fueron rechazadas. Corrige el archivo e intenta de nuevo.');
+        }
+
+        resolve({ proveedor, numeroFactura, fecha, productos, rechazadas, advertencias });
       } catch (err) {
         reject(err);
       }
@@ -132,10 +211,13 @@ export default function ImportarIngreso() {
   const [iva, setIva]                   = useState('0');
   const [tipoCompra, setTipoCompra]     = useState('CONTADO');
   const [productos, setProductos]       = useState([]);
+  const [rechazadas, setRechazadas]     = useState([]);
+  const [advertencias, setAdvertencias] = useState([]);
   const [errorPaso2, setErrorPaso2]     = useState('');
 
   const [guardando, setGuardando] = useState(false);
   const [resultado, setResultado] = useState(null);
+  const [reporte, setReporte]     = useState(null);
 
   // Modal crear proveedor
   const [modalProv, setModalProv] = useState(false);
@@ -166,13 +248,20 @@ export default function ImportarIngreso() {
       setFacturaDup(dup);
       setValidandoFac(false);
 
+      // Buscar existencia por modelo+color+grupo (regla de unicidad)
       const enriquecidos = await Promise.all(leido.productos.map(async (p) => {
-        if (!p.codigo) return { ...p, estado: 'NUEVO', productoId: null };
-        const res = await api.get(`/producto/lista?buscar=${encodeURIComponent(p.codigo)}`);
-        const encontrado = (res.data?.resultado || []).find(
-          prod => (prod.codigo || '').toLowerCase() === p.codigo.toLowerCase()
-        );
-        return { ...p, estado: encontrado ? 'EXISTENTE' : 'NUEVO', productoId: encontrado?.id || null };
+        const params = new URLSearchParams({
+          modelo: p.modelo || '',
+          color:  p.color  || '',
+          grupo:  p.grupo  || '',
+        });
+        const res = await api.get(`/producto/buscar-unico?${params}`);
+        const encontrado = res.ok ? res.data.resultado : null;
+        return {
+          ...p,
+          estado:     encontrado ? 'EXISTENTE' : 'NUEVO',
+          productoId: encontrado?.id || null,
+        };
       }));
 
       setDatos(leido);
@@ -180,6 +269,8 @@ export default function ImportarIngreso() {
       setFlete('0');
       setIva('0');
       setProductos(enriquecidos);
+      setRechazadas(leido.rechazadas || []);
+      setAdvertencias(leido.advertencias || []);
       setPaso(2);
     } catch (err) {
       setErrorPaso1(err.message || 'Error al leer el archivo');
@@ -244,6 +335,7 @@ export default function ImportarIngreso() {
       }
 
       setResultado(resFin.data.resultado);
+      setReporte(resFin.data.reporte || null);
     } catch (err) {
       setErrorPaso2(err.message || 'Error inesperado');
       setGuardando(false);
@@ -458,6 +550,34 @@ export default function ImportarIngreso() {
             <div style={{ padding: '16px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {errorPaso2 && <div className="alert alert-error">{errorPaso2}</div>}
+
+              {/* Filas rechazadas */}
+              {rechazadas.length > 0 && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px' }}>
+                  <div style={{ fontWeight: 700, color: '#dc2626', marginBottom: 6, fontSize: 13 }}>
+                    ❌ {rechazadas.length} fila{rechazadas.length > 1 ? 's' : ''} rechazada{rechazadas.length > 1 ? 's' : ''}
+                  </div>
+                  {rechazadas.map((r, i) => (
+                    <div key={i} style={{ fontSize: 12, color: '#7f1d1d', marginTop: 2 }}>
+                      • Fila {r.fila}: {r.motivo}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Advertencias */}
+              {advertencias.length > 0 && (
+                <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 14px' }}>
+                  <div style={{ fontWeight: 700, color: '#b45309', marginBottom: 6, fontSize: 13 }}>
+                    ⚠️ {advertencias.length} advertencia{advertencias.length > 1 ? 's' : ''}
+                  </div>
+                  {advertencias.map((a, i) => (
+                    <div key={i} style={{ fontSize: 12, color: '#78350f', marginTop: 2 }}>
+                      • Fila {a.fila}: {a.mensaje}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Datos detectados — barra compacta */}
               <section>
@@ -731,11 +851,38 @@ export default function ImportarIngreso() {
               <>
                 <PartyPopper size={48} style={{ color: '#16a34a', marginBottom: 12 }} />
                 <h4 style={{ fontWeight: 700, fontSize: 22, marginBottom: 8, color: '#15803d' }}>¡Importación exitosa!</h4>
-                <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 28, maxWidth: 400, margin: '0 auto 28px' }}>
-                  Se creó el ingreso{' '}
+                <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20, maxWidth: 400, margin: '0 auto 20px' }}>
+                  Ingreso{' '}
                   <strong>{resultado.id_personalizado || `#${resultado.id}`}</strong>{' '}
-                  con <strong>{productos.length}</strong> líneas de productos. El inventario ha sido actualizado.
+                  creado y stock actualizado.
                 </p>
+
+                {/* Reporte final */}
+                <div style={{
+                  display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20,
+                }}>
+                  {reporte && (
+                    <>
+                      <div style={{ background: '#dcfce7', color: '#15803d', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700 }}>
+                        ✅ {reporte.productosCreados} producto{reporte.productosCreados !== 1 ? 's' : ''} creado{reporte.productosCreados !== 1 ? 's' : ''}
+                      </div>
+                      <div style={{ background: '#dbeafe', color: '#1e40af', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700 }}>
+                        🔄 {reporte.productosActualizados} producto{reporte.productosActualizados !== 1 ? 's' : ''} actualizado{reporte.productosActualizados !== 1 ? 's' : ''} (stock sumado)
+                      </div>
+                    </>
+                  )}
+                  {rechazadas.length > 0 && (
+                    <div style={{ background: '#fef2f2', color: '#dc2626', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700 }}>
+                      ❌ {rechazadas.length} fila{rechazadas.length !== 1 ? 's' : ''} rechazada{rechazadas.length !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                  {advertencias.length > 0 && (
+                    <div style={{ background: '#fffbeb', color: '#b45309', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700 }}>
+                      ⚠️ {advertencias.length} advertencia{advertencias.length !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                   <button className="btn btn-ghost" onClick={() => navigate('/ingresos')}>
                     Ver todos los ingresos

@@ -49,4 +49,12 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
       ...respuesta, traceId: req.traceId
     });
   }
+
+  async buscarPorModeloColorGrupo(req, res) {
+    const { modelo, color, grupo } = req.query;
+    const respuesta = await this.queryUC.buscarPorModeloColorGrupo(modelo, color, grupo);
+    return res.status(respuesta.estado === 'ok' ? 200 : 404).json({
+      ...respuesta, traceId: req.traceId
+    });
+  }
 }

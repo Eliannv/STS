@@ -46,4 +46,24 @@ export default class ProductoPgsQueryAdaptador extends ProductoSalidaQueryPuerto
       return { estado: 'error', resultado: null };
     }
   }
+
+  async buscarPorModeloColorGrupo(modelo, color, grupo) {
+    const sql = `
+      SELECT p.*, pr.nombre AS proveedor_nombre
+      FROM productos p
+      LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
+      WHERE p.activo = true
+        AND LOWER(TRIM(p.modelo)) = LOWER(TRIM($1))
+        AND LOWER(TRIM(COALESCE(p.color, ''))) = LOWER(TRIM(COALESCE($2, '')))
+        AND LOWER(TRIM(p.grupo))  = LOWER(TRIM($3))
+      LIMIT 1`;
+    try {
+      const { rows } = await pool.query(sql, [modelo || '', color || '', grupo || '']);
+      if (rows.length === 0) return { estado: 'error', resultado: null };
+      return { estado: 'ok', resultado: rows[0] };
+    } catch (error) {
+      console.error('Error buscarPorModeloColorGrupo:', error.message);
+      return { estado: 'error', resultado: null };
+    }
+  }
 }

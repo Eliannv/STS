@@ -25,5 +25,9 @@ router.delete('/eliminar',
   authMiddleware('ADMINISTRADOR'),
   (req, res) => productoControlador.eliminar(req, res));
 
+router.get('/buscar-unico',
+  authMiddleware(),
+  (req, res) => productoControlador.buscarPorModeloColorGrupo(req, res));
+
 export default router;
 

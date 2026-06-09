@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/api';
+import Swal from 'sweetalert2';
 
 const VACIO = {
   codigo: '', nombre: '', modelo: '', color: '', grupo: '',
@@ -63,6 +64,39 @@ export default function ProductoFormModal({ abierto, editando, productoInicial, 
   async function guardar(e) {
     e.preventDefault();
     if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return; }
+    if (!form.modelo.trim()) { setError('El modelo es obligatorio'); return; }
+    if (!form.grupo.trim())  { setError('El grupo es obligatorio'); return; }
+
+    const costo = parseFloat(form.costo) || 0;
+    const pvp1  = parseFloat(form.pvp1)  || 0;
+
+    // Costo en 0 o negativo → advertir y pedir confirmación
+    if (costo <= 0) {
+      const result = await Swal.fire({
+        title: 'Costo en cero',
+        text: 'El costo es 0 o negativo. ¿Deseas continuar?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f97316',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, continuar',
+        cancelButtonText: 'Cancelar',
+      });
+      if (!result.isConfirmed) return;
+    }
+
+    // PVP menor al costo → solo advertir (no bloquear)
+    if (pvp1 > 0 && pvp1 < costo) {
+      await Swal.fire({
+        title: 'PVP menor al costo',
+        text: `El precio de venta ($${pvp1.toFixed(2)}) es menor al costo ($${costo.toFixed(2)}). Puedes continuar.`,
+        icon: 'warning',
+        confirmButtonColor: '#3498db',
+        confirmButtonText: 'Entendido',
+        timer: 4000,
+      });
+    }
+
     setSaving(true); setError('');
     try {
       const payload = { ...form };

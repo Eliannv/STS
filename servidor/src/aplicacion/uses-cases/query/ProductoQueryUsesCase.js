@@ -15,4 +15,9 @@ export default class ProductoQueryUsesCase {
     if (!id) return { estado: 'error', resultado: null };
     return await this.adaptadorBDSalida.buscarPorId(id);
   }
+
+  async buscarPorModeloColorGrupo(modelo, color, grupo) {
+    if (!modelo || !grupo) return { estado: 'error', resultado: null };
+    return await this.adaptadorBDSalida.buscarPorModeloColorGrupo(modelo, color, grupo);
+  }
 }

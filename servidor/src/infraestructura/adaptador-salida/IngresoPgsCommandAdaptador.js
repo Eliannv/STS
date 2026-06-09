@@ -110,39 +110,94 @@ export default class IngresoPgsCommandAdaptador extends IngresoSalidaCommandPuer
       }
 
       // 3. Procesar cada detalle
+      let productosCreados   = 0;
+      let productosActualizados = 0;
+
       for (const det of detalles) {
         if (det.tipo === 'EXISTENTE' && det.producto_id) {
-          // Actualizar stock y costo del producto existente
+          // Obtener stock y costo actuales para calcular promedio ponderado
+          const { rows: [prod] } = await client.query(
+            'SELECT stock, costo FROM productos WHERE id = $1',
+            [det.producto_id]
+          );
+          const stockActual = parseFloat(prod?.stock || 0);
+          const costoActual = parseFloat(prod?.costo || 0);
+          const stockNuevo  = parseFloat(det.stock_ingresado);
+          const costoNuevo  = parseFloat(det.costo_unitario);
+          const costoPromedio = (stockActual + stockNuevo) > 0
+            ? +((stockActual * costoActual + stockNuevo * costoNuevo) / (stockActual + stockNuevo)).toFixed(4)
+            : costoNuevo;
+
           await client.query(`
             UPDATE productos SET
               stock = stock + $1,
               costo = $2,
               updated_at = NOW()
             WHERE id = $3`,
-            [det.stock_ingresado, det.costo_unitario, det.producto_id]
+            [stockNuevo, costoPromedio, det.producto_id]
           );
+          productosActualizados++;
 
         } else if (det.tipo === 'NUEVO') {
-          // Crear el nuevo producto con todos los campos capturados
-          const pvp1Val = det.pvp1 ?? det.costo_unitario;
-          const { rows: [nuevoProducto] } = await client.query(`
-            INSERT INTO productos
-              (codigo, nombre, modelo, color, grupo, stock, tipo_control_stock,
-               costo, pvp1, iva, precio_con_iva, observacion,
-               proveedor_id, ingreso_id, activo)
-            VALUES ($1,$2,$3,$4,$5,$6,'NORMAL',$7,$8,0,$8,$9,$10,$11,true)
-            RETURNING id`,
-            [
-              det.codigo, det.nombre, det.modelo, det.color, det.grupo,
-              det.stock_ingresado, det.costo_unitario, pvp1Val,
-              det.observacion, ingreso.proveedor_id, id,
-            ]
+          // Verificar unicidad: modelo + color + grupo
+          const { rows: existentes } = await client.query(`
+            SELECT id, stock, costo FROM productos
+            WHERE activo = true
+              AND LOWER(TRIM(modelo)) = LOWER(TRIM($1))
+              AND LOWER(TRIM(COALESCE(color, ''))) = LOWER(TRIM(COALESCE($2, '')))
+              AND LOWER(TRIM(grupo))  = LOWER(TRIM($3))
+            LIMIT 1`,
+            [det.modelo || '', det.color || '', det.grupo || '']
           );
-          // Enlazar detalle con el producto recién creado
-          await client.query(
-            'UPDATE detalle_ingresos SET producto_id = $1 WHERE id = $2',
-            [nuevoProducto.id, det.id]
-          );
+
+          if (existentes.length > 0) {
+            // Producto duplicado → actualizar con promedio ponderado
+            const prod = existentes[0];
+            const stockActual = parseFloat(prod.stock || 0);
+            const costoActual = parseFloat(prod.costo || 0);
+            const stockNuevo  = parseFloat(det.stock_ingresado);
+            const costoNuevo  = parseFloat(det.costo_unitario);
+            const costoPromedio = (stockActual + stockNuevo) > 0
+              ? +((stockActual * costoActual + stockNuevo * costoNuevo) / (stockActual + stockNuevo)).toFixed(4)
+              : costoNuevo;
+
+            await client.query(`
+              UPDATE productos SET
+                stock = stock + $1,
+                costo = $2,
+                updated_at = NOW()
+              WHERE id = $3`,
+              [stockNuevo, costoPromedio, prod.id]
+            );
+            // Enlazar detalle con el producto existente
+            await client.query(
+              'UPDATE detalle_ingresos SET producto_id = $1, tipo = $2 WHERE id = $3',
+              [prod.id, 'EXISTENTE', det.id]
+            );
+            productosActualizados++;
+          } else {
+            // Crear el nuevo producto
+            const pvp1Val = det.pvp1 ?? det.costo_unitario;
+            const { rows: [nuevoProducto] } = await client.query(`
+              INSERT INTO productos
+                (codigo, nombre, modelo, color, grupo, stock, tipo_control_stock,
+                 costo, pvp1, iva, precio_con_iva, observacion,
+                 proveedor_id, ingreso_id, activo)
+              VALUES ($1,$2,$3,$4,$5,$6,'NORMAL',$7,$8,0,$8,$9,$10,$11,true)
+              RETURNING id`,
+              [
+                det.codigo, det.nombre, det.modelo, det.color, det.grupo,
+                det.stock_ingresado, det.costo_unitario, pvp1Val,
+                det.observacion, ingreso.proveedor_id, id,
+              ]
+            );
+            // Enlazar detalle con el producto recién creado
+            await client.query(
+              'UPDATE detalle_ingresos SET producto_id = $1 WHERE id = $2',
+              [nuevoProducto.id, det.id]
+            );
+            productosCreados++;
+          }
         }
       }
 
@@ -160,7 +215,15 @@ export default class IngresoPgsCommandAdaptador extends IngresoSalidaCommandPuer
       );
 
       await client.query('COMMIT');
-      return { estado: 'ok', resultado: finalizado };
+      return {
+        estado: 'ok',
+        resultado: finalizado,
+        reporte: {
+          productosCreados,
+          productosActualizados,
+          totalProcesados: detalles.length,
+        },
+      };
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('Error finalizar ingreso:', error.message);

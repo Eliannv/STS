@@ -107,9 +107,48 @@ export default function AgregarProductosIngreso() {
     if (detalle.tipo === 'EXISTENTE' && !detalle.productoId) {
       setError('Selecciona un producto existente'); return;
     }
-    if (detalle.tipo === 'NUEVO' && !detalle.nombre.trim()) {
-      setError('El nombre del producto es obligatorio'); return;
+    if (detalle.tipo === 'NUEVO') {
+      if (!detalle.nombre.trim()) {
+        setError('El nombre del producto es obligatorio'); return;
+      }
+      if (!detalle.modelo.trim()) {
+        setError('El modelo es obligatorio para los productos nuevos'); return;
+      }
+      if (!detalle.grupo.trim()) {
+        setError('El grupo es obligatorio para los productos nuevos'); return;
+      }
     }
+
+    const costo = parseFloat(detalle.costoUnitario) || 0;
+    const pvp1  = parseFloat(detalle.pvp1) || 0;
+
+    // Costo en 0 o negativo → advertir y pedir confirmación
+    if (costo <= 0) {
+      const result = await Swal.fire({
+        title: 'Costo en cero',
+        text: '¿El costo unitario es 0. ¿Estás seguro de continuar?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f97316',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, continuar',
+        cancelButtonText: 'Cancelar',
+      });
+      if (!result.isConfirmed) return;
+    }
+
+    // PVP menor al costo → solo advertir (no bloquear)
+    if (pvp1 > 0 && pvp1 < costo) {
+      await Swal.fire({
+        title: 'PVP menor al costo',
+        text: `El precio de venta ($${pvp1.toFixed(2)}) es menor al costo ($${costo.toFixed(2)}). Puedes continuar pero revisa los precios.`,
+        icon: 'warning',
+        confirmButtonColor: '#3498db',
+        confirmButtonText: 'Entendido',
+        timer: 4000,
+      });
+    }
+
     setSaving(true); setError('');
     try {
       const body = {

@@ -2,6 +2,22 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import pool from './infraestructura/base-dato/Postgresql.js';
+
+/* ── Migraciones automáticas ── */
+async function ejecutarMigraciones() {
+  const client = await pool.connect();
+  try {
+    await client.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS historial_clinico_id INTEGER`);
+    await client.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS fecha_pago TIMESTAMPTZ`);
+    console.log('✅ Migraciones de facturas OK');
+  } catch (e) {
+    console.warn('⚠ Migración facturas omitida:', e.message);
+  } finally {
+    client.release();
+  }
+}
+ejecutarMigraciones();
 
 import { traceMiddleWare } from './infraestructura/middleware/TraceMiddleware.js';
 import { timeMiddleware }  from './infraestructura/middleware/TimeMiddleware.js';

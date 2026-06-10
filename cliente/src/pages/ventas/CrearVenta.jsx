@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import ClienteFormModal from '../../components/clientes/ClienteFormModal';
 import HistorialListModal from '../../components/historial/HistorialListModal';
 import { imprimirTicketVenta } from '../../utils/ticketVenta';
-import { Search, ShoppingCart } from 'lucide-react';
+import { Search, ShoppingCart, FileText, X } from 'lucide-react';
 
 /* ─────────────── helpers ─────────────── */
 const FMT      = v => `$${parseFloat(v || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`;
@@ -87,6 +87,11 @@ export default function CrearVenta() {
   const [montoRecibido, setMontoRecibido] = useState('');
   const [esCredito,     setEsCredito]     = useState(false);
   const [observacion,   setObservacion]   = useState('');
+  const [fechaCustom,   setFechaCustom]   = useState('');
+  const [horaCustom,    setHoraCustom]    = useState('');
+
+  /* ── historial clínico seleccionado para la venta ── */
+  const [historialSel, setHistorialSel] = useState(null);
 
   /* ── consumidor final ── */
   const [consumidorFinalId, setConsumidorFinalId] = useState(null);
@@ -102,6 +107,20 @@ export default function CrearVenta() {
   /* ── guardar ── */
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState('');
+
+  /* ── inicializar fecha/hora al seleccionar Transferencia o Tarjeta ── */
+  useEffect(() => {
+    if (metodoPago === 'Transferencia' || metodoPago === 'Tarjeta') {
+      if (!fechaCustom) {
+        const now = new Date();
+        setFechaCustom(now.toISOString().slice(0, 10));
+        setHoraCustom(now.toTimeString().slice(0, 5));
+      }
+    } else {
+      setFechaCustom('');
+      setHoraCustom('');
+    }
+  }, [metodoPago]); // eslint-disable-line
 
   /* ── cerrar dropdown cliente ── */
   useEffect(() => {
@@ -135,12 +154,23 @@ export default function CrearVenta() {
   function seleccionarCliente(c) {
     setClienteSel(c); setBuscarCliente(`${c.nombres} ${c.apellidos}`);
     setDropCliOpen(false); setClientesFound([]);
-    api.get(`/historial/lista/${c.id}`).then(r => { if (r.ok) setHistorialList(r.data.resultado || []); });
+    setHistorialSel(null);
+    api.get(`/historial-clinico/cliente/${c.id}`).then(async r => {
+      if (r.ok) {
+        setHistorialList(r.data.resultado || []);
+        return;
+      }
+      // Compatibilidad con implementaciones antiguas del backend
+      const alt = await api.get(`/historial/lista/${c.id}`);
+      if (alt.ok) setHistorialList(alt.data.resultado || []);
+      else setHistorialList([]);
+    });
   }
 
   function limpiarCliente() {
     setClienteSel(null); setBuscarCliente(''); setClientesFound([]);
     setHistorialList([]); setDropCliOpen(false);
+    setHistorialSel(null);
   }
 
   /* ── cargar productos ── */
@@ -190,22 +220,33 @@ export default function CrearVenta() {
     if (!prod) return;
     setCarrito(prev => {
       const idx = prev.findIndex(i => i.id === prod.id);
+      const maxStock = prod.stock ?? null;
       if (idx >= 0) {
         const n = [...prev];
-        n[idx] = { ...n[idx], cantidad: n[idx].cantidad + 1 };
+        const nuevaCant = n[idx].cantidad + 1;
+        n[idx] = { ...n[idx], cantidad: maxStock !== null ? Math.min(nuevaCant, maxStock) : nuevaCant };
         return n;
       }
-      return [...prev, { id: prod.id, nombre: prod.nombre, precio: parseFloat(prod.pvp1 || prod.costo || 0), cantidad: 1, esServicio: false }];
+      return [...prev, { id: prod.id, nombre: prod.nombre, precio: parseFloat(prod.pvp1 || prod.costo || 0), cantidad: 1, esServicio: false, stock: maxStock }];
     });
   }
 
   function cambiarCantidad(id, delta) {
-    setCarrito(prev => prev.map(i => i.id === id ? { ...i, cantidad: Math.max(1, i.cantidad + delta) } : i));
+    setCarrito(prev => prev.map(i => {
+      if (i.id !== id) return i;
+      const nuevaCant = Math.max(1, i.cantidad + delta);
+      const max = (!i.esServicio && i.stock !== null) ? i.stock : Infinity;
+      return { ...i, cantidad: Math.min(nuevaCant, max) };
+    }));
   }
 
   function setCantidad(id, val) {
     const q = parseInt(val);
-    if (!isNaN(q) && q >= 1) setCarrito(prev => prev.map(i => i.id === id ? { ...i, cantidad: q } : i));
+    if (!isNaN(q) && q >= 1) setCarrito(prev => prev.map(i => {
+      if (i.id !== id) return i;
+      const max = (!i.esServicio && i.stock !== null) ? i.stock : Infinity;
+      return { ...i, cantidad: Math.min(q, max) };
+    }));
   }
 
   function setPrecioServicio(id, val) {
@@ -243,6 +284,12 @@ export default function CrearVenta() {
       vuelto   > 0         ? `Vuelto: ${FMT(vuelto)}` : '',
     ].filter(Boolean).join(' | ') || null;
 
+    // Construir fecha personalizada para Transferencia/Tarjeta
+    let fechaPago = null;
+    if ((metodoPago === 'Transferencia' || metodoPago === 'Tarjeta') && fechaCustom) {
+      fechaPago = `${fechaCustom}T${horaCustom || '00:00'}:00`;
+    }
+
     if (consumidorFinal && !consumidorFinalId) {
       setSaving(false);
       setError('No se encontró el cliente "Consumidor Final" en la base de datos. Por favor créalo primero.');
@@ -250,15 +297,18 @@ export default function CrearVenta() {
     }
 
     const res = await api.post('/factura/crear', {
-      clienteId:     consumidorFinal ? consumidorFinalId : clienteSel?.id,
-      nombreCliente: consumidorFinal ? 'Consumidor Final' : (clienteSel ? `${clienteSel.nombres} ${clienteSel.apellidos}` : null),
-      tipo:          esCredito ? 'CREDITO' : 'CONTADO',
-      estado:        estadoFinal,
-      subtotal:      subtotalBruto,
-      total:         totalFinal,
+      clienteId:          consumidorFinal ? consumidorFinalId : clienteSel?.id,
+      nombreCliente:      consumidorFinal ? 'Consumidor Final' : (clienteSel ? `${clienteSel.nombres} ${clienteSel.apellidos}` : null),
+      tipo:               esCredito ? 'CREDITO' : 'CONTADO',
+      estado:             estadoFinal,
+      subtotal:           subtotalBruto,
+      total:              totalFinal,
       saldoPendiente,
       metodoPago,
-      observacion:   obs,
+      observacion:        obs,
+      historialClinicoId: historialSel?.id || null,
+      fechaPago,
+      items:              carrito.map(it => ({ id: it.id, cantidad: it.cantidad, esServicio: it.esServicio || false })),
     });
     setSaving(false);
     if (res.ok) {
@@ -360,20 +410,82 @@ export default function CrearVenta() {
           </button>
 
           {/* Historial */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, color: '#6c757d' }}>Historial:</span>
-            {clienteSel ? (
-              <button
-                onClick={() => setModalHistorial(true)}
-                style={{ ...S.badge(historialList.length > 0 ? '#dbeafe' : '#f1f3f5', historialList.length > 0 ? '#1d4ed8' : '#6c757d'), fontSize: 12, padding: '3px 9px', border: 'none', cursor: 'pointer' }}
-                title="Ver historial clínico del cliente">
-                {historialList.length > 0 ? `📋 ${historialList.length} registro${historialList.length !== 1 ? 's' : ''}` : 'Sin historial'}
-              </button>
-            ) : (
-              <span style={{ ...S.badge('#f1f3f5', '#6c757d'), fontSize: 12, padding: '3px 9px' }}>CLIENTE OPCIONAL</span>
-            )}
-            {clienteSel?.tiene_deuda && <span style={S.badge('#fde8e8', '#e74c3c')}>⚠ Con deuda</span>}
-          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+  <span
+    style={{
+      fontSize: 12,
+      color: '#64748b',
+      fontWeight: 500
+    }}
+  >
+    Historial:
+  </span>
+
+  {clienteSel ? (
+    <>
+      <button
+        onClick={() => setModalHistorial(true)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          height: 28,
+          padding: '0 12px',
+          borderRadius: 999,
+          border: '1px solid #cbd5e1',
+          background: historialSel ? '#e0f2fe' : '#f8fafc',
+          color: historialSel ? '#0369a1' : '#475569',
+          fontSize: 12,
+          fontWeight: 600,
+          cursor: 'pointer',
+          transition: 'all .15s ease'
+        }}
+        title="Seleccionar o cambiar historial clínico"
+      >
+        <FileText size={14} />
+
+        {historialSel
+          ? `HC ${new Date(historialSel.created_at).toLocaleDateString('es-EC')}`
+          : 'Seleccionar historial'}
+      </button>
+
+      {historialSel && (
+        <button
+          onClick={() => setHistorialSel(null)}
+          title="Quitar historial seleccionado"
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            border: '1px solid #e2e8f0',
+            background: '#fff',
+            color: '#64748b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <X size={12} />
+        </button>
+      )}
+    </>
+  ) : (
+    <span
+      style={{
+        fontSize: 11,
+        padding: '4px 10px',
+        borderRadius: 999,
+        background: '#f8fafc',
+        color: '#64748b',
+        border: '1px solid #e2e8f0',
+        fontWeight: 600
+      }}
+    >
+      CLIENTE OPCIONAL
+    </span>
+  )}
+</div>
 
           {/* Periodo */}
           <div style={{ fontSize: 12, color: '#6c757d', whiteSpace: 'nowrap' }}>
@@ -487,6 +599,7 @@ export default function CrearVenta() {
                   <tr>
                     <th style={S.thCell}>Código</th>
                     <th style={S.thCell}>Nombre</th>
+                    <th style={S.thCell}>Modelo</th>
                     <th style={S.thCell}>Grupo</th>
                     <th style={S.thCell}>Proveedor</th>
                     <th style={{ ...S.thCell, textAlign: 'right' }}>Costo</th>
@@ -508,6 +621,7 @@ export default function CrearVenta() {
                       >
                         <td style={{ ...S.tdCell(sel), color: '#6c757d', fontSize: 12 }}>{p.codigo || '—'}</td>
                         <td style={{ ...S.tdCell(sel), fontWeight: 600 }}>{p.nombre}</td>
+                        <td style={{ ...S.tdCell(sel), color: '#6c757d', fontSize: 12 }}>{p.modelo || '—'}</td>
                         <td style={{ ...S.tdCell(sel), color: '#6c757d', fontSize: 12 }}>{p.grupo || '—'}</td>
                         <td style={{ ...S.tdCell(sel), color: '#6c757d', fontSize: 12 }}>{p.proveedor_nombre || '—'}</td>
                         <td style={{ ...S.tdCell(sel), textAlign: 'right', color: '#6c757d' }}>${parseFloat(p.costo || 0).toFixed(2)}</td>
@@ -569,7 +683,14 @@ export default function CrearVenta() {
               <div key={item.id} style={{ padding: '8px 12px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 7 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.nombre}</div>
-                  {item.esServicio && <div style={{ fontSize: 10, color: '#6c757d' }}>SERVICIO</div>}
+                  {item.esServicio
+                    ? <div style={{ fontSize: 10, color: '#6c757d' }}>SERVICIO</div>
+                    : item.stock !== null && (
+                      <div style={{ fontSize: 10, fontWeight: 600, color: item.cantidad >= item.stock ? '#e74c3c' : '#6c757d' }}>
+                        Stock: {item.stock}
+                      </div>
+                    )
+                  }
                 </div>
                 {/* Precio: estático para productos, editable para servicios */}
                 {item.esServicio ? (
@@ -655,6 +776,40 @@ export default function CrearVenta() {
                 {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
+
+            {/* Fecha y hora personalizadas — solo Transferencia / Tarjeta */}
+            {(metodoPago === 'Transferencia' || metodoPago === 'Tarjeta') && (() => {
+              const hoy = new Date();
+              const mm  = String(hoy.getMonth() + 1).padStart(2, '0');
+              const yyyy = hoy.getFullYear();
+              const minFecha = `${yyyy}-${mm}-01`;
+              const ultimoDia = new Date(yyyy, hoy.getMonth() + 1, 0).getDate();
+              const maxFecha = `${yyyy}-${mm}-${String(ultimoDia).padStart(2, '0')}`;
+              return (
+                <div style={{ marginBottom: 7, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+                  <div>
+                    <label style={S.lbl}>FECHA PAGO</label>
+                    <input
+                      type="date"
+                      min={minFecha}
+                      max={maxFecha}
+                      value={fechaCustom}
+                      onChange={e => setFechaCustom(e.target.value)}
+                      style={S.input}
+                    />
+                  </div>
+                  <div>
+                    <label style={S.lbl}>HORA PAGO</label>
+                    <input
+                      type="time"
+                      value={horaCustom}
+                      onChange={e => setHoraCustom(e.target.value)}
+                      style={S.input}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Referencia de pago — aparece y se activa según método */}
             <div style={{ marginBottom: 7 }}>
@@ -794,6 +949,7 @@ export default function CrearVenta() {
         abierto={modalHistorial}
         cliente={clienteSel}
         onCerrar={() => setModalHistorial(false)}
+        onSeleccionar={h => setHistorialSel(h)}
       />
 
       {/* ════ MODAL ÉXITO VENTA ════ */}

@@ -864,10 +864,10 @@ export default function ImportarIngreso() {
                   {reporte && (
                     <>
                       <div style={{ background: '#dcfce7', color: '#15803d', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700 }}>
-                        ✅ {reporte.productosCreados} producto{reporte.productosCreados !== 1 ? 's' : ''} creado{reporte.productosCreados !== 1 ? 's' : ''}
+                        {reporte.productosCreados} producto{reporte.productosCreados !== 1 ? 's' : ''} creado{reporte.productosCreados !== 1 ? 's' : ''}
                       </div>
                       <div style={{ background: '#dbeafe', color: '#1e40af', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700 }}>
-                        🔄 {reporte.productosActualizados} producto{reporte.productosActualizados !== 1 ? 's' : ''} actualizado{reporte.productosActualizados !== 1 ? 's' : ''} (stock sumado)
+                        {reporte.productosActualizados} producto{reporte.productosActualizados !== 1 ? 's' : ''} actualizado{reporte.productosActualizados !== 1 ? 's' : ''} (stock sumado)
                       </div>
                     </>
                   )}

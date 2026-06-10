@@ -26,6 +26,9 @@ export default class FacturaCommandUsesCase {
       dto.getUsuarioId(),
       dto.getNombreCliente(),
       dto.getMetodoPago(),
+      dto.getHistorialClinicoId(),
+      dto.getFechaPago(),
+      dto.getItems(),
     );
     return this._adaptador.guardar(venta);
   }

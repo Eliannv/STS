@@ -15,15 +15,28 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
       const { rows: [facturaCreada] } = await client.query(`
         INSERT INTO facturas
           (cliente_id, cliente_nombre, metodo_pago, tipo_venta, estado_pago,
-           subtotal, total, saldo_pendiente, abonado, es_credito, observacion, usuario_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+           subtotal, total, saldo_pendiente, abonado, es_credito, observacion, usuario_id,
+           historial_clinico_id, fecha_pago)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING *, estado_pago AS estado, tipo_venta AS tipo
       `, [
         venta.clienteId, venta.nombreCliente, venta.metodoPago || 'EFECTIVO',
         venta.tipo, venta.estado || 'PENDIENTE',
         venta.subtotal, venta.total, venta.saldoPendiente,
         abonado, esCredito, venta.observacion, venta.usuarioId,
+        venta.historialClinicoId || null,
+        venta.fechaPago || null,
       ]);
+
+      // Deducir stock de productos vendidos
+      for (const item of (venta.items || [])) {
+        if (item.id && !item.esServicio) {
+          await client.query(
+            `UPDATE productos SET stock = GREATEST(0, stock - $1) WHERE id = $2`,
+            [parseInt(item.cantidad) || 1, item.id]
+          );
+        }
+      }
 
       // Actualizar flag de deuda en cliente si hay saldo pendiente
       if (venta.saldoPendiente > 0) {

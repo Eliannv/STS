@@ -46,9 +46,9 @@ const allMenuItems = [
       { label: 'Ingresos',  route: '/ingresos'  },
     ],
   },
-  // FACTURAS
+  // VENTAS
   {
-    label: 'Facturas',
+    label: 'Venta',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <line x1="12" y1="1" x2="12" y2="23"/>
@@ -56,8 +56,8 @@ const allMenuItems = [
       </svg>
     ),
     children: [
-      { label: 'Todas las facturas', route: '/facturas'        },
-      { label: 'Nueva factura',      route: '/facturas/nueva'  },
+      { label: 'Facturas', route: '/facturas'        },
+      { label: 'Venta POS',      route: '/facturas/nueva'  },
       { label: 'Cobrar deuda',       route: '/facturas/cobrar' },
     ],
   },

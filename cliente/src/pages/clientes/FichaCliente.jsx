@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
@@ -7,7 +7,7 @@ import ClienteFormModal from '../../components/clientes/ClienteFormModal';
 
 /* --- helpers --- */
 function fmtFecha(f) {
-  if (!f) return '\u2014';
+  if (!f) return '—';
   const d = new Date(f + (f.includes('T') ? '' : 'T00:00:00'));
   return isNaN(d) ? f : d.toLocaleDateString('es-EC');
 }
@@ -16,7 +16,7 @@ function fmtMoney(v) {
   return isNaN(n) ? '$0.00' : '$' + n.toFixed(2);
 }
 function fmtGrad(v) {
-  if (v === '' || v === null || v === undefined) return '\u2014';
+  if (v === '' || v === null || v === undefined) return '—';
   const n = parseFloat(v);
   return isNaN(n) ? String(v) : (n >= 0 ? '+' + n.toFixed(2) : n.toFixed(2));
 }
@@ -150,7 +150,7 @@ function VentaFormModal({ abierto, editandoId, ventaInicial, clienteId, onCerrar
               onChange={e => setForm(p => ({ ...p, saldoPendiente: e.target.value }))} />
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: 'span 2' }}>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>Observaci\u00f3n</span>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>Observación</span>
             <textarea className="input" rows="2" value={form.observacion}
               onChange={e => setForm(p => ({ ...p, observacion: e.target.value }))} />
           </label>
@@ -231,19 +231,19 @@ export default function FichaCliente() {
   }, [tab, cargarVentas]);
 
   async function eliminarHistorial(hid) {
-    if (!confirm('\u00bfEliminar este historial cl\u00ednico?')) return;
+    if (!confirm('¿Eliminar este historial clínico?')) return;
     const res = await api.delete('/historial-clinico/eliminar', { id: hid });
     if (res.ok) cargarHistoriales();
   }
 
   async function eliminarVenta(vid) {
-    if (!confirm('\u00bfEliminar esta venta?')) return;
+    if (!confirm('¿Eliminar esta venta?')) return;
     const res = await api.delete('/factura/eliminar', { id: vid });
     if (res.ok) cargarVentas();
   }
 
   async function cobrarVenta(vid) {
-    if (!confirm('\u00bfMarcar esta venta como PAGADA?')) return;
+    if (!confirm('¿Marcar esta venta como PAGADA?')) return;
     const res = await api.put('/factura/cobrar/' + vid);
     if (res.ok) cargarVentas();
   }
@@ -256,11 +256,11 @@ export default function FichaCliente() {
     const frecDoctor = doctores.length
       ? Object.entries(doctores.reduce((acc, d) => { acc[d] = (acc[d] || 0) + 1; return acc; }, {}))
           .sort((a, b) => b[1] - a[1])[0][0]
-      : '\u2014';
+      : '—';
     return {
       total: historiales.length,
-      primero: fechas.length ? fmtFecha(fechas.reduce((a, b) => a < b ? a : b).toISOString()) : '\u2014',
-      ultimo:  fechas.length ? fmtFecha(fechas.reduce((a, b) => a > b ? a : b).toISOString()) : '\u2014',
+      primero: fechas.length ? fmtFecha(fechas.reduce((a, b) => a < b ? a : b).toISOString()) : '—',
+      ultimo:  fechas.length ? fmtFecha(fechas.reduce((a, b) => a > b ? a : b).toISOString()) : '—',
       doctor:  frecDoctor,
     };
   })();
@@ -271,7 +271,7 @@ export default function FichaCliente() {
   if (error || !cliente) return (
     <div className="page">
       <div className="alert alert-error">{error || 'Cliente no encontrado.'}</div>
-      <button className="btn btn-ghost" style={{ marginTop: 12 }} onClick={() => navigate('/clientes')}>\u2190 Volver</button>
+      <button className="btn btn-ghost" style={{ marginTop: 12 }} onClick={() => navigate('/clientes')}>← Volver</button>
     </div>
   );
 
@@ -317,9 +317,9 @@ export default function FichaCliente() {
                 </svg>{cliente.email}
               </span>}
               <span style={BADGE(tieneHistorial ? 'rgba(46,204,113,0.25)' : 'rgba(255,255,255,0.12)', tieneHistorial ? '#a9f0c9' : 'rgba(255,255,255,0.7)')}>
-                {tieneHistorial ? '\u2713 Con historial' : 'Sin historial'}
+                {tieneHistorial ? '✓ Con historial' : 'Sin historial'}
               </span>
-              {cliente.tiene_deuda && <span style={BADGE('rgba(255,150,0,0.3)', '#ffd080')}>\u26a0 Con deuda</span>}
+              {cliente.tiene_deuda && <span style={BADGE('rgba(255,150,0,0.3)', '#ffd080')}>⚠ Con deuda</span>}
             </div>
           </div>
         </div>
@@ -352,13 +352,13 @@ export default function FichaCliente() {
         display: 'flex', gap: 0,
       }}>
         {[
-          { key: 'informacion', label: 'Informaci\u00f3n',
+          { key: 'informacion', label: 'Información',
             icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
             badge: null },
-          { key: 'historial', label: 'Historial Cl\u00ednico',
+          { key: 'historial', label: 'Historial Clínico',
             icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13h4"/><path d="M10 17h4"/></svg>,
-            badge: tieneHistorial ? { text: '\u2713', color: '#27ae60' } : null },
-          { key: 'facturas', label: 'Facturaci\u00f3n',
+            badge: tieneHistorial ? { text: '✓', color: '#27ae60' } : null },
+          { key: 'facturas', label: 'Facturación',
             icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>,
             badge: cliente.tiene_deuda ? { text: '!', color: '#e67e22' } : null },
         ].map(t => (
@@ -390,14 +390,14 @@ export default function FichaCliente() {
             <section>
               <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                Informaci\u00f3n Personal
+                Información Personal
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px 24px' }}>
-                <InfoItem label="Nombres">{cliente.nombres || '\u2014'}</InfoItem>
-                <InfoItem label="Apellidos">{cliente.apellidos || '\u2014'}</InfoItem>
-                <InfoItem label="C\u00e9dula">{cliente.cedula || '\u2014'}</InfoItem>
-                <InfoItem label="Tel\u00e9fono">{cliente.telefono || '\u2014'}</InfoItem>
-                <InfoItem label="Email">{cliente.email || '\u2014'}</InfoItem>
+                <InfoItem label="Nombres">{cliente.nombres || '—'}</InfoItem>
+                <InfoItem label="Apellidos">{cliente.apellidos || '—'}</InfoItem>
+                <InfoItem label="Cédula">{cliente.cedula || '—'}</InfoItem>
+                <InfoItem label="Teléfono">{cliente.telefono || '—'}</InfoItem>
+                <InfoItem label="Email">{cliente.email || '—'}</InfoItem>
                 <InfoItem label="Fecha de Nacimiento">{fmtFecha(cliente.fecha_nacimiento)}</InfoItem>
               </div>
             </section>
@@ -405,13 +405,13 @@ export default function FichaCliente() {
             <section>
               <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                Ubicaci\u00f3n
+                Ubicación
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px 24px' }}>
-                <InfoItem label="Pa\u00eds">{cliente.pais || '\u2014'}</InfoItem>
-                <InfoItem label="Provincia">{cliente.provincia || '\u2014'}</InfoItem>
-                <InfoItem label="Ciudad">{cliente.ciudad || '\u2014'}</InfoItem>
-                <InfoItem label="Direcci\u00f3n">{cliente.direccion || '\u2014'}</InfoItem>
+                <InfoItem label="País">{cliente.pais || '—'}</InfoItem>
+                <InfoItem label="Provincia">{cliente.provincia || '—'}</InfoItem>
+                <InfoItem label="Ciudad">{cliente.ciudad || '—'}</InfoItem>
+                <InfoItem label="Dirección">{cliente.direccion || '—'}</InfoItem>
               </div>
             </section>
             <div style={{ borderTop: '1px solid var(--border-color)' }} />
@@ -421,19 +421,19 @@ export default function FichaCliente() {
                 Estado
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px 24px' }}>
-                <InfoItem label="Historial Cl\u00ednico">
+                <InfoItem label="Historial Clínico">
                   <span style={BADGE(tieneHistorial ? '#d4edda' : '#fff3cd', tieneHistorial ? '#155724' : '#856404')}>
                     {tieneHistorial ? 'Registrado' : 'Sin historial'}
                   </span>
                 </InfoItem>
-                <InfoItem label="Cr\u00e9dito Personal">
+                <InfoItem label="Crédito Personal">
                   <span style={BADGE(cliente.tiene_credito ? '#d4edda' : '#f8f9fa', cliente.tiene_credito ? '#155724' : '#6c757d')}>
-                    {cliente.tiene_credito ? 'Con cr\u00e9dito' : 'Sin cr\u00e9dito'}
+                    {cliente.tiene_credito ? 'Con crédito' : 'Sin crédito'}
                   </span>
                 </InfoItem>
                 <InfoItem label="Deuda">
                   <span style={BADGE(cliente.tiene_deuda ? '#fff3cd' : '#f8f9fa', cliente.tiene_deuda ? '#856404' : '#6c757d')}>
-                    {cliente.tiene_deuda ? '\u26a0 Con deuda' : 'Sin deuda'}
+                    {cliente.tiene_deuda ? '⚠ Con deuda' : 'Sin deuda'}
                   </span>
                 </InfoItem>
                 <InfoItem label="Estado">
@@ -455,7 +455,7 @@ export default function FichaCliente() {
                 {[
                   { label: 'Total registros', val: statsHistorial.total, icon: '\uD83D\uDCCB' },
                   { label: 'Primer chequeo', val: statsHistorial.primero, icon: '\uD83D\uDCC5' },
-                  { label: '\u00daltimo chequeo', val: statsHistorial.ultimo, icon: '\uD83D\uDDD3' },
+                  { label: 'Último chequeo', val: statsHistorial.ultimo, icon: '📅' },
                   { label: 'Doctor frecuente', val: statsHistorial.doctor, icon: '\uD83D\uDC68\u200D\u2695\uFE0F' },
                 ].map(s => (
                   <div key={s.label} style={{
@@ -471,9 +471,9 @@ export default function FichaCliente() {
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Historial Cl\u00ednico</h3>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Historial Clínico</h3>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-                  {cliente.nombres} {cliente.apellidos}{cliente.cedula ? ' \u2014 ' + cliente.cedula : ''}
+                  {cliente.nombres} {cliente.apellidos}{cliente.cedula ? ' — ' + cliente.cedula : ''}
                 </p>
               </div>
               <button className="btn btn-primary"
@@ -490,7 +490,7 @@ export default function FichaCliente() {
                       <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
                       <polyline points="14 2 14 8 20 8"/><path d="M10 13h4"/><path d="M10 17h4"/>
                     </svg>
-                    <p>No hay historiales cl\u00ednicos registrados</p>
+                    <p>No hay historiales clínicos registrados</p>
                     <button className="btn btn-primary" style={{ marginTop: 12 }}
                       onClick={() => { setHistorialSeleccionado(null); setEditandoHistorialId(null); setFormHistorialAbierto(true); }}>
                       Crear primer historial
@@ -517,14 +517,14 @@ export default function FichaCliente() {
                             <td style={{ padding: '10px 12px', fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtFecha(h.fecha_chequeo || h.created_at)}</td>
                             <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'monospace' }}>{fmtGrad(h.od_esfera)}</td>
                             <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'monospace' }}>{fmtGrad(h.od_cilindro)}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.od_eje ? h.od_eje + '\u00b0' : '\u2014'}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.od_avsc || '\u2014'}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.od_avcc || '\u2014'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.od_eje ? h.od_eje + '°' : '—'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.od_avsc || '—'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.od_avcc || '—'}</td>
                             <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'monospace' }}>{fmtGrad(h.oi_esfera)}</td>
                             <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'monospace' }}>{fmtGrad(h.oi_cilindro)}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.oi_eje ? h.oi_eje + '\u00b0' : '\u2014'}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.dp || '\u2014'}</td>
-                            <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{h.doctor || '\u2014'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.oi_eje ? h.oi_eje + '°' : '—'}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.dp || '—'}</td>
+                            <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{h.doctor || '—'}</td>
                             <td style={{ padding: '10px 12px' }}>
                               <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                                 <button className="btn-icon" title="Editar"
@@ -594,7 +594,7 @@ export default function FichaCliente() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Ventas / Facturas</h3>
               <button className="btn btn-primary"
-                onClick={() => { setVentaSeleccionada(null); setEditandoVentaId(null); setFormVentaAbierto(true); }}>
+                onClick={() => navigate(`/facturas/nueva?clienteId=${id}`)}>
                 + Nueva venta
               </button>
             </div>
@@ -608,7 +608,7 @@ export default function FichaCliente() {
                     </svg>
                     <p>No hay ventas registradas</p>
                     <button className="btn btn-primary" style={{ marginTop: 12 }}
-                      onClick={() => { setVentaSeleccionada(null); setEditandoVentaId(null); setFormVentaAbierto(true); }}>
+                      onClick={() => navigate(`/facturas/nueva?clienteId=${id}`)}>
                       Registrar primera venta
                     </button>
                   </div>
@@ -629,7 +629,7 @@ export default function FichaCliente() {
                             <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: 12, color: 'var(--text-muted)' }}>
                               {v.id_personalizado || '#' + v.id}
                             </td>
-                            <td style={{ padding: '10px 14px', fontWeight: 600 }}>{v.numero_factura || '\u2014'}</td>
+                            <td style={{ padding: '10px 14px', fontWeight: 600 }}>{v.numero_factura || '—'}</td>
                             <td style={{ padding: '10px 14px' }}>
                               <span style={BADGE((TIPO_BADGE[v.tipo] || {}).bg || '#f8f9fa', (TIPO_BADGE[v.tipo] || {}).color || '#333')}>
                                 {v.tipo}
@@ -655,6 +655,13 @@ export default function FichaCliente() {
                                     </svg>
                                   </button>
                                 )}
+                                <button className="btn-icon" title="Ver factura" style={{ color: '#1a56db' }}
+                                  onClick={() => navigate(`/facturas/${v.id}`)}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                  </svg>
+                                </button>
                                 <button className="btn-icon" title="Editar"
                                   onClick={() => { setVentaSeleccionada(v); setEditandoVentaId(v.id); setFormVentaAbierto(true); }}>
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

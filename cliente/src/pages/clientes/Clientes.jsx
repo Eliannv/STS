@@ -124,12 +124,13 @@ export default function Clientes() {
                 <tr>
                   <th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Email</th>
                   <th style={{ textAlign: 'center' }}>Historial</th>
+                  <th style={{ textAlign: 'center' }}>Deuda</th>
                   <th style={{ textAlign: 'center' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {lista.length === 0
-                  ? <tr><td colSpan={6} className="empty-state">Sin resultados</td></tr>
+                  ? <tr><td colSpan={7} className="empty-state">Sin resultados</td></tr>
                   : lista.map(c => (
                     <tr key={c.id}>
                       <td><strong>{c.nombres} {c.apellidos}</strong></td>
@@ -148,6 +149,19 @@ export default function Clientes() {
                           </span>
                           Ver historial
                         </button>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {c.tiene_deuda
+                          ? <button
+                              className="btn btn-sm"
+                              style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffc107', fontSize: 12, padding: '3px 10px', borderRadius: 20, fontWeight: 700, cursor: 'pointer' }}
+                              title="Ver deuda del cliente"
+                              onClick={() => navigate(`/facturas/cobrar?clienteId=${c.id}`)}
+                            >
+                              Cobrar deuda
+                            </button>
+                          : <span style={{ fontSize: 12, color: '#adb5bd' }}>—</span>
+                        }
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>

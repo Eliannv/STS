@@ -10,6 +10,7 @@ async function ejecutarMigraciones() {
   try {
     await client.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS historial_clinico_id INTEGER`);
     await client.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS fecha_pago TIMESTAMPTZ`);
+    await client.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'`);
     console.log('✅ Migraciones de facturas OK');
   } catch (e) {
     console.warn('⚠ Migración facturas omitida:', e.message);

@@ -56,9 +56,9 @@ const allMenuItems = [
       </svg>
     ),
     children: [
-      { label: 'Facturas', route: '/facturas'        },
-      { label: 'Venta POS',      route: '/facturas/nueva'  },
-      { label: 'Cobrar deuda',       route: '/facturas/cobrar' },
+      { label: 'Facturas',     route: '/facturas',        end: true },
+      { label: 'Venta POS',   route: '/facturas/nueva',  end: true },
+      { label: 'Cobrar deuda', route: '/facturas/cobrar', end: true },
     ],
   },
   // CAJA
@@ -197,6 +197,7 @@ export default function Sidebar() {
                       <li key={child.route} className="submenu-item">
                         <NavLink
                           to={child.route}
+                          end={!!child.end}
                           className={({ isActive }) => `submenu-link ${isActive ? 'active' : ''}`}
                         >
                           {child.label}

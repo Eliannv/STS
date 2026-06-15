@@ -142,7 +142,15 @@ export default function CrearVenta() {
     if (term.length < 2) { setClientesFound([]); setDropCliOpen(false); return; }
     setCargandoCli(true);
     const r = await api.get(`/cliente/lista?buscar=${encodeURIComponent(term)}`);
-    if (r.ok) { setClientesFound(r.data.resultado?.slice(0, 8) || []); setDropCliOpen(true); }
+    if (r.ok) {
+      const todos = r.data.resultado || [];
+      const sinCF = todos.filter(c => {
+        const fullName = `${c.nombres || ''} ${c.apellidos || ''}`.trim().toLowerCase().replace(/\s+/g, ' ');
+        return fullName !== 'consumidor final';
+      });
+      setClientesFound(sinCF.slice(0, 8));
+      setDropCliOpen(true);
+    }
     setCargandoCli(false);
   }, []);
 
@@ -227,7 +235,7 @@ export default function CrearVenta() {
         n[idx] = { ...n[idx], cantidad: maxStock !== null ? Math.min(nuevaCant, maxStock) : nuevaCant };
         return n;
       }
-      return [...prev, { id: prod.id, nombre: prod.nombre, precio: parseFloat(prod.pvp1 || prod.costo || 0), cantidad: 1, esServicio: false, stock: maxStock }];
+      return [...prev, { id: prod.id, nombre: prod.nombre, codigo: prod.codigo || prod.idInterno || '', precio: parseFloat(prod.pvp1 || prod.costo || 0), cantidad: 1, esServicio: false, stock: maxStock }];
     });
   }
 
@@ -308,7 +316,15 @@ export default function CrearVenta() {
       observacion:        obs,
       historialClinicoId: historialSel?.id || null,
       fechaPago,
-      items:              carrito.map(it => ({ id: it.id, cantidad: it.cantidad, esServicio: it.esServicio || false })),
+      items: carrito.map(it => ({
+        id:              it.esServicio ? null : it.id,
+        codigo:          it.codigo || '',
+        nombre:          it.nombre,
+        cantidad:        it.cantidad,
+        precio_unitario: it.precio,
+        precio_total:    it.precio * it.cantidad,
+        esServicio:      it.esServicio || false,
+      })),
     });
     setSaving(false);
     if (res.ok) {

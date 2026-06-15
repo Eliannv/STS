@@ -38,7 +38,7 @@ function generarCodigoBarras(texto) {
   return `<div style="font-family:monospace;font-size:11px;letter-spacing:2px;text-align:center;margin-top:4px">${texto}</div>`;
 }
 
-function generarHTMLTicket({ venta, items }) {
+export function generarHTMLTicket({ venta, items }) {
   const facturaNo = venta.id_personalizado || venta.numero_factura || String(venta.id || '');
   const cliente   = venta.nombre_cliente   || 'CONSUMIDOR FINAL';
   const metodo    = venta.metodo_pago      || 'Efectivo';
@@ -180,4 +180,126 @@ export function imprimirTicketVenta({ venta, items = [] }) {
     w.addEventListener('afterprint', safeClose);
     setTimeout(safeClose, 3000);
   };
+}
+
+/* ─────────────── TICKET ABONO / COBRO DEUDA ─────────────── */
+
+function generarHTMLTicketAbono({ factura, abono, saldoAnterior, saldoNuevo, cliente, metodoPago, referencia, fechaPago }) {
+  const facturaNo   = factura.id_personalizado || String(factura.id || '');
+  const clienteNom  = cliente?.nombres ? `${cliente.nombres} ${cliente.apellidos}` : (factura.cliente_nombre || 'CONSUMIDOR FINAL');
+  const fecha       = formatFecha(fechaPago || new Date().toISOString());
+  const abonadoPrev = formatMonto(parseFloat(factura.total || 0) - parseFloat(saldoAnterior || 0));
+  const abonadoTotal = formatMonto(parseFloat(factura.total || 0) - parseFloat(saldoNuevo || 0));
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Comprobante Abono</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Courier New',Courier,monospace; font-size:12px; width:80mm; padding:4mm 3mm; color:#000; }
+  .t-center { text-align:center; }
+  .t-bold   { font-weight:bold; }
+  .t-small  { font-size:10px; }
+  .t-large  { font-size:14px; }
+  .t-hr     { border:none; border-top:1px dashed #000; margin:4px 0; }
+  .t-kv     { display:flex; justify-content:space-between; margin:1px 0; }
+  .t-kv span{ flex:1; }
+  .t-kv span:last-child{ text-align:right; }
+  @media print { @page { margin:0; size:80mm auto; } body { padding:2mm; } }
+</style>
+</head>
+<body>
+  <div class="t-center t-bold t-large">${EMPRESA.nombre}</div>
+  <div class="t-center t-small">RUC: ${EMPRESA.ruc}</div>
+  <div class="t-center t-small">${EMPRESA.ciudad}</div>
+  <div class="t-center t-small">Telf: ${EMPRESA.telefono}</div>
+  <hr class="t-hr">
+  <div class="t-center t-bold">COMPROBANTE DE ABONO</div>
+  <hr class="t-hr">
+  <div class="t-small">
+    <div><b>FACTURA No:</b> ${facturaNo}</div>
+    <div><b>Fecha:</b> ${fecha}</div>
+    <div><b>Cliente:</b> ${clienteNom}</div>
+    ${cliente?.telefono ? `<div><b>Tel:</b> ${cliente.telefono}</div>` : ''}
+    <div><b>Método pago:</b> ${metodoPago || 'Efectivo'}</div>
+    ${referencia ? `<div><b>Referencia:</b> ${referencia}</div>` : ''}
+  </div>
+  <hr class="t-hr">
+  <div class="t-kv t-small"><span>Total factura</span><span>$${formatMonto(factura.total)}</span></div>
+  <div class="t-kv t-small"><span>Abonado anterior</span><span>$${abonadoPrev}</span></div>
+  <div class="t-kv t-small"><span>Abono realizado</span><span>$${formatMonto(abono)}</span></div>
+  <div class="t-kv t-small"><span>Abonado total</span><span>$${abonadoTotal}</span></div>
+  <hr class="t-hr">
+  <div class="t-kv t-bold"><span>SALDO</span><span>$${formatMonto(saldoNuevo)}</span></div>
+  <div class="t-center t-small" style="margin-top:6px">${parseFloat(saldoNuevo) <= 0 ? '✅ DEUDA CANCELADA' : '⚠️ SALDO PENDIENTE'}</div>
+  <hr class="t-hr">
+  <div class="t-center t-small">Gracias</div>
+  <div class="t-center t-small">Conserve este comprobante</div>
+  <hr class="t-hr">
+  ${generarCodigoBarras(facturaNo)}
+</body>
+</html>`;
+}
+
+/**
+ * Abre ventana emergente e imprime el comprobante de abono.
+ *
+ * @param {object} params
+ * @param {object} params.factura       — objeto factura con id, total, etc.
+ * @param {number} params.abono         — monto abonado ahora
+ * @param {number} params.saldoAnterior — saldo antes del abono
+ * @param {number} params.saldoNuevo    — saldo después del abono
+ * @param {object} params.cliente       — objeto cliente { nombres, apellidos, telefono }
+ * @param {string} params.metodoPago    — método de pago
+ * @param {string} [params.referencia]  — código de transferencia o dígitos tarjeta
+ * @param {string} [params.fechaPago]   — ISO string de la fecha real del pago
+ */
+export function imprimirTicketAbono({ factura, abono, saldoAnterior, saldoNuevo, cliente, metodoPago, referencia, fechaPago }) {
+  const html = generarHTMLTicketAbono({ factura, abono, saldoAnterior, saldoNuevo, cliente, metodoPago, referencia, fechaPago });
+  const w = window.open('', 'TICKET_ABONO', 'height=700,width=400,scrollbars=yes');
+  if (!w) { alert('No se pudo abrir la ventana de impresión. Permite ventanas emergentes.'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.onload = () => {
+    w.focus(); w.print();
+    const safeClose = () => { try { w.close(); } catch (_) {} };
+    w.addEventListener('afterprint', safeClose);
+    setTimeout(safeClose, 3000);
+  };
+}
+
+/* ─────────────── TICKET REIMPRIMIR FACTURA ─────────────── */
+
+/**
+ * Genera y abre el ticket de impresión para una factura existente
+ * (para reimprimir desde VerFactura).
+ *
+ * @param {object} factura — objeto factura con todos sus campos
+ * @param {Array}  items   — array de ítems de la factura
+ */
+export function imprimirTicketFactura({ factura, items = [] }) {
+  const ventaObj = {
+    id:               factura.id,
+    id_personalizado: factura.id_personalizado,
+    numero_factura:   factura.numero_factura,
+    nombre_cliente:   factura.cliente_nombre,
+    metodo_pago:      factura.metodo_pago,
+    subtotal:         factura.subtotal,
+    descuento:        factura.descuento,
+    total:            factura.total,
+    saldo_pendiente:  factura.saldo_pendiente,
+    created_at:       factura.fecha_pago || factura.created_at,
+    tipo:             factura.tipo,
+  };
+  const itemsObj = (items || []).map(it => ({
+    codigo:          it.idInterno || it.codigo || '',
+    nombre:          it.nombre,
+    cantidad:        it.cantidad,
+    precio_unitario: it.precio_unitario || it.precioUnitario || 0,
+    precio_total:    it.precio_total    || it.precioTotal    || 0,
+  }));
+  imprimirTicketVenta({ venta: ventaObj, items: itemsObj });
 }

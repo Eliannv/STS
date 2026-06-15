@@ -16,8 +16,8 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
         INSERT INTO facturas
           (cliente_id, cliente_nombre, metodo_pago, tipo_venta, estado_pago,
            subtotal, total, saldo_pendiente, abonado, es_credito, observacion, usuario_id,
-           historial_clinico_id, fecha_pago)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+           historial_clinico_id, fecha_pago, items)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING *, estado_pago AS estado, tipo_venta AS tipo
       `, [
         venta.clienteId, venta.nombreCliente, venta.metodoPago || 'EFECTIVO',
@@ -26,6 +26,7 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
         abonado, esCredito, venta.observacion, venta.usuarioId,
         venta.historialClinicoId || null,
         venta.fechaPago || null,
+        JSON.stringify(venta.items || []),
       ]);
 
       // Deducir stock de productos vendidos

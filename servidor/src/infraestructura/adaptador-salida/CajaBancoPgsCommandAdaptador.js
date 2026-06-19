@@ -97,8 +97,8 @@ export default class CajaBancoPgsCommandAdaptador extends CajaBancoSalidaCommand
         saldoAnterior,
         nuevoSaldo,
         dto.getDescripcion(),
-        dto.getReferencia(),
-        dto.getVentaId(),
+        null,  // referencia_id: no usamos este campo por ahora
+        null,  // venta_id: no aplica para cierre de caja chica
         dto.getUsuarioId(),
         dto.getUsuarioNombre(),
       ]);

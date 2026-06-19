@@ -276,8 +276,8 @@ export default function CrearVenta() {
   const descMonto      = parseFloat((subtotalBruto * descPct / 100).toFixed(2));
   const totalFinal     = Math.max(0, parseFloat((subtotalBruto - descMonto).toFixed(2)));
   const montoNum       = parseFloat(montoRecibido) || 0;
-  const saldoPendiente = esCredito ? parseFloat(Math.max(0, totalFinal - montoNum).toFixed(2)) : 0;
-  const vuelto         = !esCredito && montoNum > totalFinal ? parseFloat((montoNum - totalFinal).toFixed(2)) : 0;
+  const saldoPendiente = parseFloat(Math.max(0, totalFinal - montoNum).toFixed(2));
+  const vuelto         = saldoPendiente === 0 && montoNum > totalFinal ? parseFloat((montoNum - totalFinal).toFixed(2)) : 0;
   const estadoFinal    = saldoPendiente > 0 ? 'PENDIENTE' : 'PAGADA';
 
   /* ── guardar ── */
@@ -307,7 +307,7 @@ export default function CrearVenta() {
     const res = await api.post('/factura/crear', {
       clienteId:          consumidorFinal ? consumidorFinalId : clienteSel?.id,
       nombreCliente:      consumidorFinal ? 'Consumidor Final' : (clienteSel ? `${clienteSel.nombres} ${clienteSel.apellidos}` : null),
-      tipo:               esCredito ? 'CREDITO' : 'CONTADO',
+      tipo:               (esCredito || saldoPendiente > 0) ? 'CREDITO' : 'CONTADO',
       estado:             estadoFinal,
       subtotal:           subtotalBruto,
       total:              totalFinal,

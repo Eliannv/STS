@@ -39,10 +39,34 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
         }
       }
 
+      // Registrar pago inicial en facturas_deudas si hay abonado > 0
+      if (abonado > 0 && venta.saldoPendiente >= 0) {
+        await client.query(`
+          INSERT INTO facturas_deudas
+            (factura_id, factura_id_personalizado, cliente_id, cliente_nombre,
+             metodo_pago, fecha_pago, monto_pagado, total_factura, saldo_restante,
+             usuario_id, es_credito, estado_pago)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        `, [
+          facturaCreada.id,
+          facturaCreada.id_personalizado,
+          venta.clienteId,
+          venta.nombreCliente,
+          venta.metodoPago || 'EFECTIVO',
+          venta.fechaPago || new Date(),
+          abonado,
+          venta.total,
+          venta.saldoPendiente,
+          venta.usuarioId || null,
+          esCredito,
+          venta.estado || 'PENDIENTE'
+        ]);
+      }
+
       // Actualizar flag de deuda en cliente si hay saldo pendiente
       if (venta.saldoPendiente > 0) {
         await client.query(`
-          UPDATE clientes SET tiene_deuda = true, updated_at = NOW() WHERE id = $1
+          UPDATE clientes SET tiene_deuda = true, ultima_actualizacion_deuda = NOW(), updated_at = NOW() WHERE id = $1
         `, [venta.clienteId]);
       }
 

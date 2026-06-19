@@ -7,7 +7,7 @@ import CajaBancoControlador         from '../adaptador-entrada/CajaBancoControla
 
 const commandAdaptador = new CajaBancoPgsCommandAdaptador();
 const queryAdaptador   = new CajaBancoPgsQueryAdaptador();
-const commandUC        = new CajaBancoCommandUsesCase(commandAdaptador);
+const commandUC        = new CajaBancoCommandUsesCase(commandAdaptador, queryAdaptador);
 const queryUC          = new CajaBancoQueryUsesCase(queryAdaptador);
 
 export const cajaBancoControlador = new CajaBancoControlador(commandUC, queryUC);

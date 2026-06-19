@@ -78,6 +78,21 @@ export default class CajaBancoPgsQueryAdaptador extends CajaBancoSalidaQueryPuer
     }
   }
 
+  /** Busca cajas banco por mes (YYYY-MM) — retorna array */
+  async buscarPorMes(mes) {
+    try {
+      const { rows } = await pool.query(`
+        SELECT * FROM cajas_banco
+        WHERE DATE_TRUNC('month', fecha)::date = DATE_TRUNC('month', $1::date)::date AND activo = TRUE
+        ORDER BY created_at DESC
+      `, [mes + '-01']);
+      return rows;
+    } catch (error) {
+      console.error('Error buscarPorMes caja banco:', error.message);
+      return [];
+    }
+  }
+
   /** Lista movimientos de una caja banco, ordenados del más reciente al más antiguo */
   async listarMovimientos(cajaId) {
     try {

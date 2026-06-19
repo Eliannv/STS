@@ -80,10 +80,7 @@ export default function Ventas() {
   }
 
   async function handleCobrar(v) {
-    if (!confirm(`¿Marcar la factura ${v.id_personalizado || '#' + v.id} como PAGADA? Se saldará la deuda de ${FMT(v.saldo_pendiente)}.`)) return;
-    const res = await api.put(`/factura/cobrar/${v.id}`);
-    if (res.ok) cargar();
-    else alert(res.data?.resultado || 'Error al cobrar');
+    navigate(`/facturas/cobrar?clienteId=${v.cliente_id}`);
   }
 
   function limpiarFiltros() {
@@ -205,7 +202,7 @@ export default function Ventas() {
                   <th>Método Pago</th>
                   <th>Tipo</th>
                   <th>Total</th>
-                  <th>Abono</th>
+                  <th>Saldo Pendiente</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
@@ -237,9 +234,9 @@ export default function Ventas() {
                       </td>
                       <td style={{ fontWeight: 600 }}>{FMT(v.total)}</td>
                       <td>
-                        {parseFloat(v.abonado) > 0
-                          ? <span style={{ color: '#27ae60', fontWeight: 600 }}>{FMT(v.abonado)}</span>
-                          : <span style={{ color: '#aaa' }}>—</span>
+                        {parseFloat(v.saldo_pendiente) > 0
+                          ? <span style={{ color: '#e74c3c', fontWeight: 700 }}>{FMT(v.saldo_pendiente)}</span>
+                          : <span style={{ color: '#27ae60', fontWeight: 700 }}>✓ {FMT(0)}</span>
                         }
                       </td>
                       <td>

@@ -82,6 +82,21 @@ export default class CajaChicaPgsQueryAdaptador extends CajaChicaSalidaQueryPuer
     }
   }
 
+  /** Busca cajas chicas por fecha (YYYY-MM-DD) — retorna array */
+  async buscarPorFecha(fecha) {
+    try {
+      const { rows } = await pool.query(`
+        SELECT * FROM cajas_chicas
+        WHERE DATE(fecha) = DATE($1) AND activo = TRUE
+        ORDER BY created_at DESC
+      `, [fecha]);
+      return rows;
+    } catch (error) {
+      console.error('Error buscarPorFecha caja chica:', error.message);
+      return [];
+    }
+  }
+
   /** Lista movimientos de una caja chica, ordenados del más reciente al más antiguo */
   async listarMovimientos(cajaId) {
     try {

@@ -47,22 +47,23 @@ export default class FacturaControlador extends FacturaEntradaPuerto {
         }
       }
 
-      // ── Integración con Caja Banco (TRANSFERENCIA) ──
-      if (metodoPago === 'transferencia' && total > 0 && this.cajaBancoQueryUC && this.cajaBancoCommandUC) {
+      // ── Integración con Caja Banco (TRANSFERENCIA, TARJETA) ──
+      if ((metodoPago === 'transferencia' || metodoPago === 'tarjeta') && abonado > 0 && this.cajaBancoQueryUC && this.cajaBancoCommandUC) {
         try {
-          console.log('🔵 Buscando caja banco abierta para transferencia...');
+          console.log('🔵 Buscando caja banco abierta para', metodoPago, '...');
           const cajaRes = await this.cajaBancoQueryUC.cajaAbierta();
           console.log('📦 Respuesta cajaAbierta:', cajaRes);
           
           if (cajaRes.estado === 'ok' && cajaRes.resultado?.id) {
             console.log('✅ Caja banco encontrada:', cajaRes.resultado.id);
             
+            const categoria = metodoPago === 'transferencia' ? 'TRANSFERENCIA_CLIENTE' : 'OTRO_INGRESO';
             const movimientoData = {
               cajaBancoId:   cajaRes.resultado.id,
               tipo:          'INGRESO',
-              categoria:     'TRANSFERENCIA_CLIENTE',
-              descripcion:   `Venta por transferencia - ${factura.cliente_nombre || 'Cliente'}`,
-              monto:         total,
+              categoria:     categoria,
+              descripcion:   `Venta por ${metodoPago} - ${factura.cliente_nombre || 'Cliente'} - Factura #${factura.id_personalizado || factura.id}`,
+              monto:         abonado,
               ventaId:       factura.id,
               usuarioId:     req.usuario?.id ?? null,
               usuarioNombre: req.usuario?.nombre ?? null,

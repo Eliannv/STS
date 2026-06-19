@@ -18,6 +18,8 @@ export default class CajaBancoControlador extends CajaBancoEntradaPuerto {
   async cerrar(req, res) {
     const datos = {
       ...req.body,
+      // Aceptar tanto "id" como "cajaBancoId"
+      id: req.body.id ?? req.body.cajaBancoId,
       usuarioId:        req.usuario?.id,
       cerradoPorId:     req.usuario?.id,
       cerradoPorNombre: req.usuario?.nombre,

@@ -71,6 +71,7 @@ import proveedorRutas        from './infraestructura/rutas/moduloProveedorRutas.
 import productoRutas         from './infraestructura/rutas/moduloProductoRutas.js';
 import ingresoRutas          from './infraestructura/rutas/moduloIngresoRutas.js';
 import facturaRutas          from './infraestructura/rutas/moduloFacturaRutas.js';
+import cobroDeudaRutas       from './infraestructura/rutas/moduloCobroDeudaRutas.js';
 import cajaChicaRutas        from './infraestructura/rutas/moduloCajaChicaRutas.js';
 import cajaBancoRutas        from './infraestructura/rutas/moduloCajaBancoRutas.js';
 
@@ -92,6 +93,7 @@ app.use('/api/proveedor',         proveedorRutas);
 app.use('/api/producto',          productoRutas);
 app.use('/api/ingreso',           ingresoRutas);
 app.use('/api/factura',            facturaRutas);
+app.use('/api/cobro-deuda',       cobroDeudaRutas);
 app.use('/api/caja-chica',        cajaChicaRutas);
 app.use('/api/caja-banco',        cajaBancoRutas);
 

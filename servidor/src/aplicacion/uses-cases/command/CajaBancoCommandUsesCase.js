@@ -3,8 +3,9 @@ import CajaBanco from '../../../dominio/entidades/CajaBanco.js';
 import { CajaBancoDTO, MovimientoCajaBancoDTO } from '../../dto/CajaBancoDTO.js';
 
 export default class CajaBancoCommandUsesCase {
-  constructor(adaptador) {
-    this._adaptador = adaptador;
+  constructor(adaptadorCommand, adaptadorQuery) {
+    this._adaptadorCommand = adaptadorCommand;
+    this._adaptadorQuery = adaptadorQuery;
   }
 
   /** Abrir (crear) una nueva caja banco */
@@ -12,6 +13,22 @@ export default class CajaBancoCommandUsesCase {
     const dto = new CajaBancoDTO(datos);
     if (!dto.getFecha())     return { estado: 'error', resultado: 'La fecha es requerida' };
     if (!dto.getUsuarioId()) return { estado: 'error', resultado: 'El usuario es requerido' };
+
+    // ── Validar que no exista otra Caja Banco para el mismo mes ──
+    if (this._adaptadorQuery) {
+      console.log('🔍 Verificando si ya existe una Caja Banco para este mes...');
+      const fechaFormato = new Date(dto.getFecha()).toISOString().substring(0, 7); // YYYY-MM
+      const cajaExistente = await this._adaptadorQuery.buscarPorMes(fechaFormato);
+      
+      if (cajaExistente && cajaExistente.length > 0) {
+        console.log('❌ Ya existe una Caja Banco para el mes:', fechaFormato);
+        return { 
+          estado: 'error', 
+          resultado: `Ya existe una Caja Banco abierta o cerrada para ${fechaFormato}. Ciérrala primero o abre una nueva el siguiente mes.`
+        };
+      }
+      console.log('✅ No existe Caja Banco para este mes, procediendo...');
+    }
 
     const caja = new CajaBanco(
       null,
@@ -24,7 +41,7 @@ export default class CajaBancoCommandUsesCase {
       dto.getObservacion(),
       true,
     );
-    return this._adaptador.abrir(caja);
+    return this._adaptadorCommand.abrir(caja);
   }
 
   /** Cerrar la caja banco */
@@ -32,7 +49,7 @@ export default class CajaBancoCommandUsesCase {
     const dto = new CajaBancoDTO(datos);
     if (!dto.getId()) return { estado: 'error', resultado: 'El id es requerido' };
 
-    return this._adaptador.cerrar(dto.getId(), {
+    return this._adaptadorCommand.cerrar(dto.getId(), {
       cerradoEn:        new Date(),
       cerradoPorId:     dto.getCerradoPorId()     || dto.getUsuarioId(),
       cerradoPorNombre: dto.getCerradoPorNombre() || dto.getUsuarioNombre(),
@@ -59,7 +76,7 @@ export default class CajaBancoCommandUsesCase {
     if (!(dto.getMonto() > 0))  return { estado: 'error', resultado: 'El monto debe ser mayor a 0' };
 
     console.log('✅ Validaciones pasadas, llamando adaptador...');
-    const resultado = await this._adaptador.registrarMovimiento(dto);
+    const resultado = await this._adaptadorCommand.registrarMovimiento(dto);
     console.log('📤 Resultado del adaptador:', resultado);
     return resultado;
   }
@@ -67,6 +84,6 @@ export default class CajaBancoCommandUsesCase {
   /** Eliminar un movimiento y revertir el saldo */
   async eliminarMovimiento(movimientoId) {
     if (!movimientoId) return { estado: 'error', resultado: 'movimientoId es requerido' };
-    return this._adaptador.eliminarMovimiento(movimientoId);
+    return this._adaptadorCommand.eliminarMovimiento(movimientoId);
   }
 }

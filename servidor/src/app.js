@@ -8,17 +8,55 @@ import pool from './infraestructura/base-dato/Postgresql.js';
 async function ejecutarMigraciones() {
   const client = await pool.connect();
   try {
-    await client.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS historial_clinico_id INTEGER`);
-    await client.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS fecha_pago TIMESTAMPTZ`);
-    await client.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'`);
-    console.log('✅ Migraciones de facturas OK');
+    await client.query('BEGIN');
+    
+    // Migración 1: historial_clinico_id
+    try {
+      await client.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS historial_clinico_id INTEGER`);
+    } catch (e) {
+      console.warn('⚠ Columna historial_clinico_id:', e.message);
+    }
+    
+    // Migración 2: fecha_pago
+    try {
+      await client.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS fecha_pago TIMESTAMPTZ`);
+    } catch (e) {
+      console.warn('⚠ Columna fecha_pago:', e.message);
+    }
+    
+    // Migración 3: items
+    try {
+      await client.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'`);
+    } catch (e) {
+      console.warn('⚠ Columna items:', e.message);
+    }
+    
+    // Migración 4: venta_id en movimientos_cajas_banco
+    try {
+      await client.query(`
+        ALTER TABLE movimientos_cajas_banco 
+        ADD COLUMN IF NOT EXISTS venta_id INTEGER 
+        REFERENCES facturas(id) ON DELETE SET NULL
+      `);
+    } catch (e) {
+      console.warn('⚠ Columna venta_id:', e.message);
+    }
+    
+    await client.query('COMMIT');
+    console.log('✅ Todas las migraciones completadas');
   } catch (e) {
-    console.warn('⚠ Migración facturas omitida:', e.message);
+    await client.query('ROLLBACK');
+    console.warn('⚠ Error en migraciones:', e.message);
   } finally {
     client.release();
   }
 }
-ejecutarMigraciones();
+
+// Ejecutar migraciones con manejo de errores
+ejecutarMigraciones().catch(err => {
+  console.error('❌ Fallo crítico en migraciones:', err.message);
+  // No hacer crash, continuar
+});
 
 import { traceMiddleWare } from './infraestructura/middleware/TraceMiddleware.js';
 import { timeMiddleware }  from './infraestructura/middleware/TimeMiddleware.js';

@@ -442,6 +442,7 @@ CREATE TABLE movimientos_cajas_banco (
   saldo_nuevo    NUMERIC(14,2)        NOT NULL,
   descripcion    VARCHAR(255),
   referencia_id  INTEGER,
+  venta_id       INTEGER              REFERENCES facturas(id) ON DELETE SET NULL,
   usuario_id     INTEGER              REFERENCES usuarios(id) ON DELETE SET NULL,
   usuario_nombre VARCHAR(150),
   created_at     TIMESTAMPTZ          DEFAULT NOW()

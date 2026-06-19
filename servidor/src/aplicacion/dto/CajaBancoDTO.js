@@ -37,7 +37,7 @@ export class CajaBancoDTO {
 export class MovimientoCajaBancoDTO {
   constructor({
     id, cajaBancoId, fecha, tipo, categoria, monto,
-    saldoAnterior, saldoNuevo, descripcion, referencia,
+    saldoAnterior, saldoNuevo, descripcion, referencia, ventaId,
     usuarioId, usuarioNombre,
   } = {}) {
     this._id             = id             ?? null;
@@ -50,6 +50,7 @@ export class MovimientoCajaBancoDTO {
     this._saldoNuevo     = saldoNuevo     ?? 0;
     this._descripcion    = descripcion    ?? null;
     this._referencia     = referencia     ?? null;
+    this._ventaId        = ventaId        ?? null;
     this._usuarioId      = usuarioId      ?? null;
     this._usuarioNombre  = usuarioNombre  ?? null;
   }
@@ -64,6 +65,7 @@ export class MovimientoCajaBancoDTO {
   getSaldoNuevo()    { return this._saldoNuevo; }
   getDescripcion()   { return this._descripcion; }
   getReferencia()    { return this._referencia; }
+  getVentaId()       { return this._ventaId; }
   getUsuarioId()     { return this._usuarioId; }
   getUsuarioNombre() { return this._usuarioNombre; }
 }

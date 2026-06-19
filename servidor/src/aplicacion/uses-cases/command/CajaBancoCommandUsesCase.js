@@ -45,12 +45,23 @@ export default class CajaBancoCommandUsesCase {
    */
   async registrarMovimiento(datos) {
     const dto = new MovimientoCajaBancoDTO(datos);
+    console.log('🟡 CajaBancoCommandUsesCase.registrarMovimiento - DTO creado:', {
+      cajaBancoId: dto.getCajaBancoId(),
+      tipo: dto.getTipo(),
+      categoria: dto.getCategoria(),
+      monto: dto.getMonto(),
+      ventaId: dto.getVentaId(),
+    });
+    
     if (!dto.getCajaBancoId())  return { estado: 'error', resultado: 'cajaBancoId es requerido' };
     if (!dto.getTipo())         return { estado: 'error', resultado: 'tipo es requerido (INGRESO | EGRESO)' };
     if (!dto.getCategoria())    return { estado: 'error', resultado: 'categoria es requerida' };
     if (!(dto.getMonto() > 0))  return { estado: 'error', resultado: 'El monto debe ser mayor a 0' };
 
-    return this._adaptador.registrarMovimiento(dto);
+    console.log('✅ Validaciones pasadas, llamando adaptador...');
+    const resultado = await this._adaptador.registrarMovimiento(dto);
+    console.log('📤 Resultado del adaptador:', resultado);
+    return resultado;
   }
 
   /** Eliminar un movimiento y revertir el saldo */

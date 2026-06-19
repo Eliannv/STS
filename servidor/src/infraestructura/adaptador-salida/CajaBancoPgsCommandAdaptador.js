@@ -65,10 +65,12 @@ export default class CajaBancoPgsCommandAdaptador extends CajaBancoSalidaCommand
     try {
       await client.query('BEGIN');
 
+      console.log('🔍 [CajaBancoPgsCommandAdaptador] Buscando caja banco con id:', dto.getCajaBancoId());
       const { rows: [caja] } = await client.query(
         `SELECT id, estado, saldo_actual FROM cajas_banco WHERE id = $1 AND activo = TRUE`,
         [dto.getCajaBancoId()]
       );
+      console.log('📦 [CajaBancoPgsCommandAdaptador] Caja encontrada:', caja);
       if (!caja)                     { await client.query('ROLLBACK'); return { estado: 'error', resultado: 'Caja banco no encontrada' }; }
       if (caja.estado === 'CERRADA') { await client.query('ROLLBACK'); return { estado: 'error', resultado: 'No se puede registrar en una caja cerrada' }; }
 
@@ -78,11 +80,13 @@ export default class CajaBancoPgsCommandAdaptador extends CajaBancoSalidaCommand
         ? saldoAnterior + monto
         : Math.max(0, saldoAnterior - monto);
 
+      console.log('💰 [CajaBancoPgsCommandAdaptador] Cálculo:', { saldoAnterior, monto, nuevoSaldo });
+
       const { rows: [mov] } = await client.query(`
         INSERT INTO movimientos_cajas_banco
           (caja_banco_id, fecha, tipo, categoria, monto, saldo_anterior, saldo_nuevo,
-           descripcion, referencia, usuario_id, usuario_nombre)
-        VALUES ($1, COALESCE($2, NOW()), $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           descripcion, referencia_id, venta_id, usuario_id, usuario_nombre)
+        VALUES ($1, COALESCE($2, NOW()), $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING *
       `, [
         dto.getCajaBancoId(),
@@ -94,20 +98,27 @@ export default class CajaBancoPgsCommandAdaptador extends CajaBancoSalidaCommand
         nuevoSaldo,
         dto.getDescripcion(),
         dto.getReferencia(),
+        dto.getVentaId(),
         dto.getUsuarioId(),
         dto.getUsuarioNombre(),
       ]);
+
+      console.log('✅ [CajaBancoPgsCommandAdaptador] Movimiento insertado:', mov.id);
 
       await client.query(
         `UPDATE cajas_banco SET saldo_actual = $1, updated_at = NOW() WHERE id = $2`,
         [nuevoSaldo, dto.getCajaBancoId()]
       );
 
+      console.log('✅ [CajaBancoPgsCommandAdaptador] Saldo actualizado');
+
       await client.query('COMMIT');
+      console.log('✅ [CajaBancoPgsCommandAdaptador] Transacción completada');
       return { estado: 'ok', resultado: mov };
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error('Error registrar movimiento caja banco:', error.message);
+      console.error('❌ [CajaBancoPgsCommandAdaptador] Error:', error.message);
+      console.error('   Stack:', error.stack);
       return { estado: 'error', resultado: 'Error al registrar el movimiento' };
     } finally {
       client.release();

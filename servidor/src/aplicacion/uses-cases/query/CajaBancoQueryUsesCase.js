@@ -21,4 +21,9 @@ export default class CajaBancoQueryUsesCase {
     if (!cajaId) return { estado: 'error', resultado: 'cajaId es requerido' };
     return this._adaptador.listarMovimientos(cajaId);
   }
+
+  async buscarMovimientoPorVentaId(ventaId) {
+    if (!ventaId) return { estado: 'error', resultado: 'ventaId es requerido' };
+    return this._adaptador.buscarMovimientoPorVentaId(ventaId);
+  }
 }

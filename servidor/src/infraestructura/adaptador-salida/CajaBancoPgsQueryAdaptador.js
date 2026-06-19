@@ -92,4 +92,19 @@ export default class CajaBancoPgsQueryAdaptador extends CajaBancoSalidaQueryPuer
       return { estado: 'error', resultado: 'Error al obtener los movimientos' };
     }
   }
+
+  /** Busca movimientos relacionados a una venta por venta_id */
+  async buscarMovimientoPorVentaId(ventaId) {
+    try {
+      const { rows } = await pool.query(`
+        SELECT * FROM movimientos_cajas_banco
+        WHERE venta_id = $1
+        ORDER BY created_at DESC
+      `, [ventaId]);
+      return { estado: 'ok', resultado: rows };
+    } catch (error) {
+      console.error('Error buscarMovimientoPorVentaId:', error.message);
+      return { estado: 'error', resultado: 'Error al buscar movimientos de la venta' };
+    }
+  }
 }

@@ -98,6 +98,20 @@ export default function VerFactura() {
     });
   }, [id]);
 
+  const [anulando, setAnulando] = useState(false);
+
+  async function anularFactura() {
+    if (!window.confirm(`¿Anular la factura ${factura.id_personalizado || '#' + factura.id}?\n\nEsto marcará la factura como ANULADA y restaurará el stock de los productos.`)) return;
+    setAnulando(true);
+    const r = await api.put(`/factura/anular/${factura.id}`);
+    if (r.ok) {
+      setFactura(prev => ({ ...prev, estado: 'ANULADA', saldo_pendiente: 0 }));
+    } else {
+      alert(r.data?.resultado || 'Error al anular la factura');
+    }
+    setAnulando(false);
+  }
+
   function reimprimir() {
     if (!factura) return;
     const items = mapItems(factura.items);
@@ -165,6 +179,19 @@ export default function VerFactura() {
             </svg>
             Ver cliente
           </button>
+          {factura.estado !== 'ANULADA' && (
+            <button
+              className="btn btn-sm"
+              style={{ background: '#dc3545', color: '#fff', border: 'none' }}
+              onClick={anularFactura}
+              disabled={anulando}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              {anulando ? 'Anulando...' : 'Anular'}
+            </button>
+          )}
           <button className="btn btn-primary btn-sm" onClick={reimprimir}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="6 9 6 2 18 2 18 9"/>

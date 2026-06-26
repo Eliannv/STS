@@ -33,6 +33,10 @@ router.put('/cobrar/:id',
   authMiddleware(),
   (req, res) => facturaControlador.cobrar(req, res));
 
+router.put('/anular/:id',
+  authMiddleware('ADMINISTRADOR'),
+  (req, res) => facturaControlador.anular(req, res));
+
 router.delete('/eliminar',
   authMiddleware('ADMINISTRADOR'),
   (req, res) => facturaControlador.eliminar(req, res));

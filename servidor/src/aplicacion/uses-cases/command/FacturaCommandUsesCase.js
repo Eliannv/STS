@@ -59,6 +59,11 @@ export default class FacturaCommandUsesCase {
     return this._adaptador.cobrar(id);
   }
 
+  async anular(id) {
+    if (!id) return { estado: 'error', resultado: 'id es requerido' };
+    return this._adaptador.anular(id);
+  }
+
   async eliminar(id) {
     if (!id) return { estado: 'error', resultado: 'id es requerido' };
     return this._adaptador.eliminar(id);

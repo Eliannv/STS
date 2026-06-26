@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import ProductoFormModal from '../../components/productos/ProductoFormModal';
+import { exportarProductosExcel } from '../../utils/exportarExcel';
 
 export default function Productos() {
   const { isAdmin } = useAuth();
   const navigate    = useNavigate();
   const [lista, setLista]       = useState([]);
   const [buscar, setBuscar]     = useState('');
+  const [orden, setOrden]       = useState('codigo'); // 'codigo' | 'recientes'
   const [loading, setLoading]   = useState(true);
   const [modal, setModal]       = useState(false);
   const [editando, setEditando] = useState(null);
@@ -23,6 +25,20 @@ export default function Productos() {
     if (res.ok) setLista(res.data.resultado || []);
     setLoading(false);
   }, [buscar]);
+
+  const listaOrdenada = useMemo(() => {
+    const copia = [...lista];
+    if (orden === 'recientes') {
+      copia.sort((a, b) => {
+        const da = new Date(a.created_at || 0);
+        const db = new Date(b.created_at || 0);
+        return db - da;
+      });
+    } else {
+      copia.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '', 'es', { numeric: true }));
+    }
+    return copia;
+  }, [lista, orden]);
 
   useEffect(() => { const t = setTimeout(cargar, 300); return () => clearTimeout(t); }, [cargar]);
 
@@ -66,10 +82,35 @@ export default function Productos() {
 
       <div className="card">
         <div className="card-header">
-          <span className="card-title">{lista.length} productos</span>
-          <div className="search-bar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input placeholder="Buscar por código o nombre..." value={buscar} onChange={e => setBuscar(e.target.value)} />
+          <span className="card-title">{listaOrdenada.length} productos</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <select
+              className="input"
+              style={{ padding: '5px 10px', fontSize: 13, height: 34 }}
+              value={orden}
+              onChange={e => setOrden(e.target.value)}
+            >
+              <option value="codigo">Por código</option>
+              <option value="recientes">Recientes primero</option>
+            </select>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => exportarProductosExcel(listaOrdenada)}
+              title="Exportar a Excel"
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <line x1="9" y1="15" x2="15" y2="15"/>
+              </svg>
+              Excel
+            </button>
+            <div className="search-bar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input placeholder="Buscar por código o nombre..." value={buscar} onChange={e => setBuscar(e.target.value)} />
+            </div>
           </div>
         </div>
         <div className="table-container">
@@ -83,9 +124,9 @@ export default function Productos() {
                 </tr>
               </thead>
               <tbody>
-                {lista.length === 0
+                {listaOrdenada.length === 0
                   ? <tr><td colSpan={8} className="empty-state">Sin resultados</td></tr>
-                  : lista.map(p => (
+                  : listaOrdenada.map(p => (
                     <tr key={p.id}>
                       <td>
                         <code style={{ background: '#f0f4ff', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>

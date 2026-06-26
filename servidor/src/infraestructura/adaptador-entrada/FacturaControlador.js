@@ -131,6 +131,14 @@ export default class FacturaControlador extends FacturaEntradaPuerto {
     });
   }
 
+  async anular(req, res) {
+    const { id } = req.params;
+    const respuesta = await this.commandUC.anular(id);
+    return res.status(respuesta.estado === 'ok' ? 200 : 400).json({
+      ...respuesta, traceId: req.traceId,
+    });
+  }
+
   async listaGeneral(req, res) {
     const { buscar, estado, tipo, fechaDesde, fechaHasta } = req.query;
     const respuesta = await this.queryUC.listaGeneral({ buscar, estado, tipo, fechaDesde, fechaHasta });

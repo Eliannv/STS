@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/api';
 import HistorialFormModal from './HistorialFormModal';
+import { exportarHistorialExcel } from '../../utils/exportarExcel';
 
 /**
  * Modal reutilizable que muestra el listado de historiales clínicos de un cliente.
@@ -129,6 +130,18 @@ export default function HistorialListModal({ abierto, cliente, onCerrar, onSelec
                                   Seleccionar
                                 </button>
                               )}
+                              <button
+                                className="btn-icon"
+                                title="Exportar a Excel"
+                                onClick={() => exportarHistorialExcel(h, cliente).catch(e => alert('Error al exportar: ' + e.message))}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                  <polyline points="14 2 14 8 20 8"/>
+                                  <line x1="12" y1="18" x2="12" y2="12"/>
+                                  <line x1="9" y1="15" x2="15" y2="15"/>
+                                </svg>
+                              </button>
                               {soloLectura && (
                                 <button className="btn-icon" title="Editar" onClick={() => abrirEditar(h)}>
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>

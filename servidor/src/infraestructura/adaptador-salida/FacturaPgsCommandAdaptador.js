@@ -171,6 +171,55 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
     }
   }
 
+  async anular(id) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const { rows } = await client.query(`
+        UPDATE facturas
+        SET estado_pago = 'ANULADA', saldo_pendiente = 0, updated_at = NOW()
+        WHERE id = $1 AND estado_pago != 'ANULADA'
+        RETURNING *, estado_pago AS estado, tipo_venta AS tipo
+      `, [id]);
+
+      if (rows.length === 0) {
+        await client.query('ROLLBACK');
+        return { estado: 'error', resultado: 'Factura no encontrada o ya estaba anulada' };
+      }
+
+      const factura = rows[0];
+      const items   = factura.items || [];
+      for (const item of items) {
+        if (item.id && !item.esServicio) {
+          await client.query(
+            'UPDATE productos SET stock = stock + $1 WHERE id = $2',
+            [item.cantidad || 1, item.id]
+          );
+        }
+      }
+
+      // Recalcular deuda del cliente
+      const { rows: [deuda] } = await client.query(`
+        SELECT COALESCE(SUM(saldo_pendiente), 0) AS total
+        FROM facturas WHERE cliente_id = $1 AND estado_pago = 'PENDIENTE'
+      `, [factura.cliente_id]);
+      await client.query(
+        'UPDATE clientes SET tiene_deuda = $1, updated_at = NOW() WHERE id = $2',
+        [Number(deuda.total) > 0, factura.cliente_id]
+      );
+
+      await client.query('COMMIT');
+      return { estado: 'ok', resultado: factura };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error anular factura:', error.message);
+      return { estado: 'error', resultado: 'Error al anular la factura' };
+    } finally {
+      client.release();
+    }
+  }
+
   async eliminar(id) {
     try {
       const { rows } = await pool.query(`

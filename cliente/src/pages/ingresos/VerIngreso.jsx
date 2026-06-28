@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/api';
+import { useAuth } from '../../context/AuthContext';
+import { imprimirIngreso } from '../../utils/imprimirIngreso';
 
 const FMT = v => `$${parseFloat(v || 0).toFixed(2)}`;
 const FMT_FECHA = s =>
@@ -16,6 +18,8 @@ const BADGE = (bg, color) => ({
 export default function VerIngreso() {
   const { id }   = useParams();
   const navigate = useNavigate();
+
+  const { usuario } = useAuth();
 
   const [ingreso,  setIngreso]  = useState(null);
   const [detalles, setDetalles] = useState([]);
@@ -37,7 +41,13 @@ export default function VerIngreso() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  function imprimir() { window.print(); }
+  function imprimir() {
+    imprimirIngreso({
+      ingreso,
+      detalles,
+      usuarioNombre: usuario?.nombre || usuario?.email || '',
+    });
+  }
 
   const totalUnidades = detalles.reduce((s, d) => s + parseInt(d.stock_ingresado || 0), 0);
   const totalCosto    = detalles.reduce((s, d) => s + parseFloat(d.subtotal || 0), 0);

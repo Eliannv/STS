@@ -21,14 +21,24 @@ export default function Productos() {
   const cargar = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (buscar) params.set('buscar', buscar);
-    params.set('limit', '21');
-    params.set('offset', String(page * 20));
+    if (buscar) {
+      params.set('buscar', buscar);
+      params.set('limit', '9999');
+      params.set('offset', '0');
+    } else {
+      params.set('limit', '21');
+      params.set('offset', String(page * 20));
+    }
     const res = await api.get(`/producto/lista?${params}`);
     if (res.ok) {
       const data = res.data.resultado || [];
-      setHasNext(data.length > 20);
-      setLista(data.slice(0, 20));
+      if (buscar) {
+        setHasNext(false);
+        setLista(data);
+      } else {
+        setHasNext(data.length > 20);
+        setLista(data.slice(0, 20));
+      }
     }
     setLoading(false);
   }, [buscar, page]);
@@ -168,13 +178,15 @@ export default function Productos() {
             </table>
           )}
         </div>
-        {/* Paginación */}
+        {/* Paginación — ocultar cuando hay búsqueda activa */}
+        {!buscar && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #e9ecef' }}>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
             <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
           </div>
         </div>
+        )}
       </div>
 
       <ProductoFormModal

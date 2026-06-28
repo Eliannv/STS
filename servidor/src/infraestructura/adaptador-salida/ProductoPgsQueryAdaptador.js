@@ -10,7 +10,7 @@ export default class ProductoPgsQueryAdaptador extends ProductoSalidaQueryPuerto
 
         if (buscar) {
             params.push(`%${buscar}%`);
-            filtros.push(`(p.nombre ILIKE $${params.length} OR p.codigo ILIKE $${params.length} OR p.grupo ILIKE $${params.length})`);
+            filtros.push(`(p.nombre ILIKE $${params.length} OR p.codigo ILIKE $${params.length} OR p.grupo ILIKE $${params.length} OR p.modelo ILIKE $${params.length} OR p.color ILIKE $${params.length})`);
         }
 
         const whereClause = filtros.join(' AND ');

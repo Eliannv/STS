@@ -184,7 +184,7 @@ export default function CrearVenta() {
   /* ── cargar productos ── */
   useEffect(() => {
     setCargandoProd(true);
-    api.get('/producto/lista').then(r => {
+    api.get('/producto/lista?limit=9999').then(r => {
       if (r.ok) {
         const list = r.data.resultado || [];
         setProductos(list);
@@ -205,6 +205,8 @@ export default function CrearVenta() {
         (p.nombre           || '').toLowerCase().includes(q) ||
         (p.codigo           || '').toLowerCase().includes(q) ||
         (p.grupo            || '').toLowerCase().includes(q) ||
+        (p.modelo           || '').toLowerCase().includes(q) ||
+        (p.color            || '').toLowerCase().includes(q) ||
         (p.proveedor_nombre || '').toLowerCase().includes(q)
       );
     }

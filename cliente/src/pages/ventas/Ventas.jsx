@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import Swal from 'sweetalert2';
 
 const FMT  = v => `$${parseFloat(v || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`;
 const FECHA = s => {
@@ -73,11 +74,43 @@ export default function Ventas() {
   useEffect(() => { const t = setTimeout(cargar, 300); return () => clearTimeout(t); }, [cargar]);
 
   async function handleEliminar(id) {
-    if (!confirm('¿Eliminar esta venta? Esta acción no se puede revertir.')) return;
-    const res = await api.delete('/factura/eliminar', { id });
-    if (res.ok) cargar();
-    else alert(res.data?.resultado || 'Error al eliminar');
+  const confirm = await Swal.fire({
+    title: "Eliminar venta",
+    text: "¿Eliminar esta venta? Esta acción no se puede revertir.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Sí, eliminar",
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#d33",
+    reverseButtons: true,
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  const res = await api.delete('/factura/eliminar', { id });
+
+  if (res.ok) {
+    cargar();
+    Swal.fire({
+      title: "Venta eliminada",
+      icon: "success",
+      timer: 3000,
+            toast: true,
+              position: 'top-end',
+            showConfirmButton: false
+    });
+  } else {
+    Swal.fire({
+      title: "No se pudo eliminar",
+      text: res.data?.resultado || "Error al eliminar",
+      icon: "error",
+      timer: 3000,
+            toast: true,
+              position: 'top-end',
+            showConfirmButton: false
+    });
   }
+}
 
   async function handleCobrar(v) {
     navigate(`/facturas/cobrar?clienteId=${v.cliente_id}`);

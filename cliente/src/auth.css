@@ -1,0 +1,8 @@
+/* auth.css — Tailwind para páginas de autenticación exclusivamente.
+   Importado solo desde Login.jsx y CrearCuenta.jsx.
+   Usar un archivo separado evita que @tailwind base sobreescriba
+   el sistema de diseño existente del dashboard. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

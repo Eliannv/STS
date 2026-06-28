@@ -21,7 +21,7 @@ CREATE TYPE tipo_movimiento_stock AS ENUM (
   'VENTA','SALIDA','ELIMINACION','VENTA_EDITADA','COMPRA_EDITADA'
 );
 CREATE TYPE tipo_venta           AS ENUM ('CONTADO','CREDITO');
-CREATE TYPE estado_pago          AS ENUM ('PAGADA','PENDIENTE');
+CREATE TYPE estado_pago          AS ENUM ('PAGADA','PENDIENTE','ANULADA');
 CREATE TYPE estado_credito       AS ENUM ('ACTIVO','CANCELADO');
 CREATE TYPE estado_caja          AS ENUM ('ABIERTA','CERRADA');
 CREATE TYPE tipo_movimiento_caja AS ENUM ('INGRESO','EGRESO');
@@ -324,7 +324,8 @@ CREATE TABLE facturas (
   usuario_id           INTEGER       REFERENCES usuarios(id) ON DELETE SET NULL,
   sucursal_id          INTEGER       REFERENCES sucursales(id) ON DELETE SET NULL,
   created_at           TIMESTAMPTZ   DEFAULT NOW(),
-  updated_at           TIMESTAMPTZ   DEFAULT NOW()
+  updated_at           TIMESTAMPTZ   DEFAULT NOW(),
+  deleted_at           TIMESTAMPTZ   NULL DEFAULT NULL
 );
 
 -- ─────────────────────────────────────

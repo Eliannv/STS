@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
+import { useAuth } from '../../context/AuthContext';
 import { generarHTMLTicket, imprimirTicketFactura } from '../../utils/ticketVenta';
 import HistorialListModal from '../../components/historial/HistorialListModal';
+import Swal from 'sweetalert2';
 
 /* ─────────── helpers ─────────── */
 const FMT  = v => `$${parseFloat(v || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`;
@@ -78,6 +80,7 @@ function TicketPreview({ html }) {
 export default function VerFactura() {
   const { id }   = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   const [factura,        setFactura]        = useState(null);
   const [historial,      setHistorial]      = useState(null);
@@ -101,16 +104,44 @@ export default function VerFactura() {
   const [anulando, setAnulando] = useState(false);
 
   async function anularFactura() {
-    if (!window.confirm(`¿Anular la factura ${factura.id_personalizado || '#' + factura.id}?\n\nEsto marcará la factura como ANULADA y restaurará el stock de los productos.`)) return;
-    setAnulando(true);
-    const r = await api.put(`/factura/anular/${factura.id}`);
-    if (r.ok) {
-      setFactura(prev => ({ ...prev, estado: 'ANULADA', saldo_pendiente: 0 }));
-    } else {
-      alert(r.data?.resultado || 'Error al anular la factura');
-    }
-    setAnulando(false);
+  const confirm = await Swal.fire({
+    title: "Anular factura",
+    html: `¿Anular la factura <strong>${factura.id_personalizado || '#' + factura.id}</strong>?<br><br>Esto marcará la factura como <strong>ANULADA</strong> y restaurará el stock de los productos.`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Sí, anular",
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#d33",
+    reverseButtons: true,
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  setAnulando(true);
+  const r = await api.put(`/factura/anular/${factura.id}`);
+
+  if (r.ok) {
+    setFactura(prev => ({ ...prev, estado: 'ANULADA', saldo_pendiente: 0 }));
+    Swal.fire({
+      title: "Factura anulada",
+      text: "El stock de los productos fue restaurado correctamente.",
+      icon: "success",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+  } else {
+    Swal.fire({
+      title: "No se pudo anular",
+      text: r.data?.resultado || "Error al anular la factura",
+      icon: "error",
+      timer: 3000,
+      toast: true,
+        position: 'top-end',
+      showConfirmButton: false
+    });
   }
+  setAnulando(false);
+}
 
   function reimprimir() {
     if (!factura) return;
@@ -179,7 +210,7 @@ export default function VerFactura() {
             </svg>
             Ver cliente
           </button>
-          {factura.estado !== 'ANULADA' && (
+          {factura.estado !== 'ANULADA' && isAdmin && (
             <button
               className="btn btn-sm"
               style={{ background: '#dc3545', color: '#fff', border: 'none' }}

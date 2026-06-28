@@ -9,6 +9,8 @@ export default function Productos() {
   const { isAdmin } = useAuth();
   const navigate    = useNavigate();
   const [lista, setLista]       = useState([]);
+  const [hasNext, setHasNext]   = useState(false);
+  const [page, setPage]         = useState(0);
   const [buscar, setBuscar]     = useState('');
   const [orden, setOrden]       = useState('codigo'); // 'codigo' | 'recientes'
   const [loading, setLoading]   = useState(true);
@@ -18,13 +20,20 @@ export default function Productos() {
 
   const cargar = useCallback(async () => {
     setLoading(true);
-    const url = buscar
-      ? `/producto/lista?buscar=${encodeURIComponent(buscar)}`
-      : '/producto/lista';
-    const res = await api.get(url);
-    if (res.ok) setLista(res.data.resultado || []);
+    const params = new URLSearchParams();
+    if (buscar) params.set('buscar', buscar);
+    params.set('limit', '21');
+    params.set('offset', String(page * 20));
+    const res = await api.get(`/producto/lista?${params}`);
+    if (res.ok) {
+      const data = res.data.resultado || [];
+      setHasNext(data.length > 20);
+      setLista(data.slice(0, 20));
+    }
     setLoading(false);
-  }, [buscar]);
+  }, [buscar, page]);
+
+  useEffect(() => { setPage(0); }, [buscar]);
 
   const listaOrdenada = useMemo(() => {
     const copia = [...lista];
@@ -82,7 +91,7 @@ export default function Productos() {
 
       <div className="card">
         <div className="card-header">
-          <span className="card-title">{listaOrdenada.length} productos</span>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <select
               className="input"
@@ -158,6 +167,13 @@ export default function Productos() {
               </tbody>
             </table>
           )}
+        </div>
+        {/* Paginación */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #e9ecef' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
+          </div>
         </div>
       </div>
 

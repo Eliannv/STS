@@ -39,8 +39,8 @@ export default function CajaBanco() {
   const [filtroFechaDesde, setFiltroFechaDesde] = useState('');
   const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
   const [modalAbrir,    setModalAbrir]    = useState(false);
-  const [pagina,        setPagina]        = useState(1);
-  const POR_PAGINA = 15;
+  const [page,          setPage]          = useState(0);
+  const [hasNext,       setHasNext]       = useState(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -48,27 +48,29 @@ export default function CajaBanco() {
     if (filtroEstado)     params.set('estado',     filtroEstado);
     if (filtroFechaDesde) params.set('fechaDesde', filtroFechaDesde);
     if (filtroFechaHasta) params.set('fechaHasta', filtroFechaHasta);
-    const res = await api.get(`/caja-banco/lista${params.toString() ? '?' + params : ''}`);
-    if (res.ok) setLista(res.data.resultado || []);
+    params.set('limit',  '21');
+    params.set('offset', String(page * 20));
+    const res = await api.get(`/caja-banco/lista?${params}`);
+    if (res.ok) {
+      const data = res.data.resultado || [];
+      setHasNext(data.length > 20);
+      setLista(data.slice(0, 20));
+    }
     setLoading(false);
-  }, [filtroEstado, filtroFechaDesde, filtroFechaHasta]);
+  }, [filtroEstado, filtroFechaDesde, filtroFechaHasta, page]);
 
+  useEffect(() => { setPage(0); }, [filtroEstado, filtroFechaDesde, filtroFechaHasta]);
   useEffect(() => { cargar(); }, [cargar]);
 
   function limpiarFiltros() {
     setFiltroEstado(''); setFiltroFechaDesde(''); setFiltroFechaHasta('');
-    setPagina(1);
   }
 
-  // KPIs
+  // KPIs (de la página actual)
   const totalCajas       = lista.length;
   const cajasAbiertas    = lista.filter(c => c.estado === 'ABIERTA').length;
   const saldoTotalActual = lista.reduce((s, c) => s + parseFloat(c.saldo_actual || 0), 0);
   const saldoTotalInicial = lista.reduce((s, c) => s + parseFloat(c.saldo_inicial || 0), 0);
-
-  // Paginación
-  const totalPaginas  = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
-  const listaVisible  = lista.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
 
   return (
     <div className="page">
@@ -92,7 +94,7 @@ export default function CajaBanco() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ fontSize: 12, fontWeight: 600 }}>Estado</label>
-            <select value={filtroEstado} onChange={e => { setFiltroEstado(e.target.value); setPagina(1); }}
+            <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
               style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13, background: '#fff' }}>
               <option value="">Todos</option>
               <option value="ABIERTA">Abierta</option>
@@ -101,12 +103,12 @@ export default function CajaBanco() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ fontSize: 12, fontWeight: 600 }}>Fecha desde</label>
-            <input type="date" value={filtroFechaDesde} onChange={e => { setFiltroFechaDesde(e.target.value); setPagina(1); }}
+            <input type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)}
               style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13 }} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ fontSize: 12, fontWeight: 600 }}>Fecha hasta</label>
-            <input type="date" value={filtroFechaHasta} onChange={e => { setFiltroFechaHasta(e.target.value); setPagina(1); }}
+            <input type="date" value={filtroFechaHasta} onChange={e => setFiltroFechaHasta(e.target.value)}
               style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13 }} />
           </div>
         </div>
@@ -151,13 +153,13 @@ export default function CajaBanco() {
                 </tr>
               </thead>
               <tbody>
-                {listaVisible.length === 0 ? (
+                {lista.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
                       No hay cajas banco registradas
                     </td>
                   </tr>
-                ) : listaVisible.map(caja => {
+                ) : lista.map(caja => {
                   const badge = ESTADO_BADGE[caja.estado] || {};
                   return (
                     <tr key={caja.id} style={{ borderBottom: '1px solid #f0f0f0' }}
@@ -189,24 +191,12 @@ export default function CajaBanco() {
           </div>
 
           {/* Paginación */}
-          {lista.length > POR_PAGINA && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderTop: '1px solid #dee2e6' }}>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                Página {pagina} de {totalPaginas} · {lista.length} registros
-              </span>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button className="btn btn-ghost btn-sm" onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}>‹ Anterior</button>
-                {Array.from({ length: totalPaginas }, (_, i) => i + 1)
-                  .filter(p => Math.abs(p - pagina) <= 2)
-                  .map(p => (
-                    <button key={p} className={`btn btn-sm ${p === pagina ? 'btn-primary' : 'btn-ghost'}`}
-                      onClick={() => setPagina(p)} style={{ minWidth: 32 }}>{p}</button>
-                  ))
-                }
-                <button className="btn btn-ghost btn-sm" onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas}>Siguiente ›</button>
-              </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #dee2e6' }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
             </div>
-          )}
+          </div>
         </div>
       )}
 

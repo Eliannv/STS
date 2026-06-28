@@ -44,6 +44,8 @@ export default function Ventas() {
   const { isAdmin } = useAuth();
 
   const [lista,      setLista]      = useState([]);
+  const [hasNext,    setHasNext]    = useState(false);
+  const [page,       setPage]       = useState(0);
   const [loading,    setLoading]    = useState(true);
   const [buscar,     setBuscar]     = useState('');
   const [estado,     setEstado]     = useState('');
@@ -66,11 +68,18 @@ export default function Ventas() {
     if (tipo)       params.set('tipo',       tipo);
     if (fechaDesde) params.set('fechaDesde', fechaDesde);
     if (fechaHasta) params.set('fechaHasta', fechaHasta);
-    const res = await api.get(`/factura/lista${params.toString() ? '?' + params : ''}`);
-    if (res.ok) setLista(Array.isArray(res.data.resultado) ? res.data.resultado : []);
+    params.set('limit',  '16');
+    params.set('offset', String(page * 15));
+    const res = await api.get(`/factura/lista?${params}`);
+    if (res.ok) {
+      const data = Array.isArray(res.data.resultado) ? res.data.resultado : [];
+      setHasNext(data.length > 15);
+      setLista(data.slice(0, 15));
+    }
     setLoading(false);
-  }, [buscar, estado, tipo, fechaDesde, fechaHasta]);
+  }, [buscar, estado, tipo, fechaDesde, fechaHasta, page]);
 
+  useEffect(() => { setPage(0); }, [buscar, estado, tipo, fechaDesde, fechaHasta]);
   useEffect(() => { const t = setTimeout(cargar, 300); return () => clearTimeout(t); }, [cargar]);
 
   async function handleEliminar(id) {
@@ -203,10 +212,9 @@ export default function Ventas() {
 
       {/* Tabla */}
       <div className="card">
-        <div className="card-header">
-          <span className="card-title">{lista.length} registro{lista.length !== 1 ? 's' : ''}</span>
+        <div className="card-header" style={hayFiltros ? { padding: '16px 20px' } : { padding: 0, border: 'none' }}>
           {hayFiltros && (
-            <button className="btn btn-ghost btn-sm" onClick={limpiarFiltros} style={{ marginBottom: 1 }}>
+            <button className="btn btn-ghost btn-sm" onClick={limpiarFiltros} >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
@@ -305,6 +313,13 @@ export default function Ventas() {
               </tbody>
             </table>
           )}
+        </div>
+        {/* Paginación */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #e9ecef' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
+          </div>
         </div>
       </div>
     </div>

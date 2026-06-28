@@ -10,6 +10,8 @@ export default function Clientes() {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const [lista, setLista] = useState([]);
+  const [hasNext, setHasNext] = useState(false);
+  const [page, setPage] = useState(0);
   const [buscar, setBuscar] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -24,12 +26,20 @@ export default function Clientes() {
 
   const cargar = useCallback(async () => {
     setLoading(true);
-    const url = buscar ? `/cliente/lista?buscar=${encodeURIComponent(buscar)}` : '/cliente/lista';
-    const res = await api.get(url);
-    if (res.ok) setLista(res.data.resultado || []);
+    const params = new URLSearchParams();
+    if (buscar) params.set('buscar', buscar);
+    params.set('limit',  '21');
+    params.set('offset', String(page * 20));
+    const res = await api.get(`/cliente/lista?${params}`);
+    if (res.ok) {
+      const data = res.data.resultado || [];
+      setHasNext(data.length > 20);
+      setLista(data.slice(0, 20));
+    }
     setLoading(false);
-  }, [buscar]);
+  }, [buscar, page]);
 
+  useEffect(() => { setPage(0); }, [buscar]);
   useEffect(() => { const t = setTimeout(cargar, 300); return () => clearTimeout(t); }, [cargar]);
 
   function abrirNuevo() { setClienteSeleccionado(null); setEditandoId(null); setModalCliente(true); }
@@ -111,7 +121,7 @@ export default function Clientes() {
 
       <div className="card">
         <div className="card-header">
-          <span className="card-title">{lista.length} clientes</span>
+
           <div className="search-bar">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             <input placeholder="Buscar por nombre, cédula..." value={buscar} onChange={e => setBuscar(e.target.value)} />
@@ -193,6 +203,13 @@ export default function Clientes() {
               </tbody>
             </table>
           )}
+        </div>
+        {/* Paginación */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #e9ecef' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
+          </div>
         </div>
       </div>
 

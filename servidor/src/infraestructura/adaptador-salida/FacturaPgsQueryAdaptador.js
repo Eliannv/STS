@@ -62,7 +62,7 @@ export default class FacturaPgsQueryAdaptador extends FacturaSalidaQueryPuerto {
         }
     }
 
-    async listaGeneral({ buscar, estado, tipo, fechaDesde, fechaHasta } = {}) {
+    async listaGeneral({ buscar, estado, tipo, fechaDesde, fechaHasta, limit = 15, offset = 0 } = {}) {
         try {
             const params = [];
             const where = [];
@@ -72,14 +72,22 @@ export default class FacturaPgsQueryAdaptador extends FacturaSalidaQueryPuerto {
                 const n = params.length;
                 where.push(`(f.id_personalizado ILIKE $${n} OR (c.nombres||' '||c.apellidos) ILIKE $${n} OR c.cedula ILIKE $${n})`);
             }
-            if (estado) { params.push(estado);
-                where.push(`f.estado_pago = $${params.length}`); }
-            if (tipo) { params.push(tipo);
-                where.push(`f.tipo_venta = $${params.length}`); }
-            if (fechaDesde) { params.push(fechaDesde);
-                where.push(`f.created_at::date >= $${params.length}`); }
-            if (fechaHasta) { params.push(fechaHasta);
-                where.push(`f.created_at::date <= $${params.length}`); }
+            if (estado) {
+                params.push(estado);
+                where.push(`f.estado_pago = $${params.length}`);
+            }
+            if (tipo) {
+                params.push(tipo);
+                where.push(`f.tipo_venta = $${params.length}`);
+            }
+            if (fechaDesde) {
+                params.push(fechaDesde);
+                where.push(`f.created_at::date >= $${params.length}`);
+            }
+            if (fechaHasta) {
+                params.push(fechaHasta);
+                where.push(`f.created_at::date <= $${params.length}`);
+            }
             const sql = `
         SELECT f.*,
                f.estado_pago  AS estado,
@@ -92,8 +100,9 @@ export default class FacturaPgsQueryAdaptador extends FacturaSalidaQueryPuerto {
         LEFT JOIN usuarios u ON u.id = f.usuario_id
         WHERE f.deleted_at IS NULL${where.length ? ' AND ' + where.join(' AND ') : ''}
         ORDER BY f.created_at DESC
-        LIMIT 300
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
       `;
+            params.push(limit + 1, offset);
             const { rows } = await pool.query(sql, params);
             return { estado: 'ok', resultado: rows };
         } catch (error) {

@@ -12,6 +12,8 @@ export default function Ingresos() {
   const { isAdmin } = useAuth();
 
   const [lista, setLista]         = useState([]);
+  const [hasNext, setHasNext]     = useState(false);
+  const [page, setPage]           = useState(0);
   const [loading, setLoading]     = useState(true);
   const [buscar, setBuscar]       = useState('');
   const [estado, setEstado]       = useState('');
@@ -44,11 +46,18 @@ export default function Ingresos() {
     if (estado)     params.set('estado',     estado);
     if (fechaDesde) params.set('fechaDesde', fechaDesde);
     if (fechaHasta) params.set('fechaHasta', fechaHasta);
-    const res = await api.get(`/ingreso/lista${params.toString() ? '?' + params : ''}`);
-    if (res.ok) setLista(res.data.resultado || []);
+    params.set('limit',  '11');
+    params.set('offset', String(page * 10));
+    const res = await api.get(`/ingreso/lista?${params}`);
+    if (res.ok) {
+      const data = res.data.resultado || [];
+      setHasNext(data.length > 10);
+      setLista(data.slice(0, 10));
+    }
     setLoading(false);
-  }, [buscar, estado, fechaDesde, fechaHasta]);
+  }, [buscar, estado, fechaDesde, fechaHasta, page]);
 
+  useEffect(() => { setPage(0); }, [buscar, estado, fechaDesde, fechaHasta]);
   useEffect(() => {
     const t = setTimeout(cargar, 300);
     return () => clearTimeout(t);
@@ -175,8 +184,8 @@ export default function Ingresos() {
 
       {/* Tabla */}
       <div className="card">
-        <div className="card-header">
-          <span className="card-title">{lista.length} ingresos</span>
+        <div className="card-header" style={(buscar || estado || fechaDesde || fechaHasta) ? { padding: '16px 20px' } : { padding: 0, border: 'none' }}>
+
           {(buscar || estado || fechaDesde || fechaHasta) && (
             <button
               className="btn btn-ghost btn-sm"
@@ -277,6 +286,13 @@ export default function Ingresos() {
               </tbody>
             </table>
           )}
+        </div>
+        {/* Paginación */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #e9ecef' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
+          </div>
         </div>
       </div>
     </div>

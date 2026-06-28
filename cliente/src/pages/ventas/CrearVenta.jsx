@@ -688,10 +688,16 @@ export default function CrearVenta() {
           </div>
 
           {/* Items del carrito — siempre flex:1 */}
-          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', ...(carrito.length === 0 && { justifyContent: 'center', alignItems: 'center' })}}>
             {carrito.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '24px', color: '#aaa', fontSize: 13 }}>
-                <span style={{ fontSize: 26 }}><ShoppingCart /></span>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                color: '#aaa',
+                fontSize: 13
+              }}>
+                <ShoppingCart size={50} />
                 <p style={{ marginTop: 6 }}>Selecciona productos de la lista</p>
               </div>
             )}

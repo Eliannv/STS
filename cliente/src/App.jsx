@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/auth/Login';
-import CrearCuenta from './pages/auth/CrearCuenta';
 import Dashboard from './pages/Dashboard';
 import Clientes from './pages/clientes/Clientes';
 import Productos from './pages/productos/Productos';
@@ -30,7 +29,6 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/crear-cuenta" element={<CrearCuenta />} />
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/clientes" element={<Clientes />} />

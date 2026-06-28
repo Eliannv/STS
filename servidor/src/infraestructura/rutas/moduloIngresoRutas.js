@@ -4,45 +4,16 @@ import { authMiddleware } from '../middleware/AuthMiddleware.js';
 import { ingresoControlador } from '../contenedor/IngresoContenedor.js';
 
 const router = Router();
+const c = ingresoControlador;
 
-// ── Ingreso ───────────────────────────────────────────────────────────────
-
-router.post('/crear',
-  authMiddleware('ADMINISTRADOR'),
-  (req, res) => ingresoControlador.crear(req, res));
-
-router.get('/lista',
-  authMiddleware(),
-  (req, res) => ingresoControlador.lista(req, res));
-
-router.get('/buscar/:id',
-  authMiddleware(),
-  (req, res) => ingresoControlador.buscarPorId(req, res));
-
-router.put('/editar',
-  authMiddleware('ADMINISTRADOR'),
-  (req, res) => ingresoControlador.editar(req, res));
-
-router.put('/finalizar',
-  authMiddleware('ADMINISTRADOR'),
-  (req, res) => ingresoControlador.finalizar(req, res));
-
-router.delete('/eliminar',
-  authMiddleware('ADMINISTRADOR'),
-  (req, res) => ingresoControlador.eliminar(req, res));
-
-// ── Detalle ───────────────────────────────────────────────────────────────
-
-router.post('/detalle/agregar',
-  authMiddleware('ADMINISTRADOR'),
-  (req, res) => ingresoControlador.agregarDetalle(req, res));
-
-router.put('/detalle/editar',
-  authMiddleware('ADMINISTRADOR'),
-  (req, res) => ingresoControlador.editarDetalle(req, res));
-
-router.delete('/detalle/eliminar',
-  authMiddleware('ADMINISTRADOR'),
-  (req, res) => ingresoControlador.eliminarDetalle(req, res));
+router.get('/lista', authMiddleware(), c.lista.bind(c));
+router.get('/buscar/:id', authMiddleware(), c.buscarPorId.bind(c));
+router.post('/crear', authMiddleware('ADMINISTRADOR'), c.crear.bind(c));
+router.put('/editar', authMiddleware('ADMINISTRADOR'), c.editar.bind(c));
+router.put('/finalizar', authMiddleware('ADMINISTRADOR'), c.finalizar.bind(c));
+router.delete('/eliminar', authMiddleware('ADMINISTRADOR'), c.eliminar.bind(c));
+router.post('/detalle/agregar', authMiddleware('ADMINISTRADOR'), c.agregarDetalle.bind(c));
+router.put('/detalle/editar', authMiddleware('ADMINISTRADOR'), c.editarDetalle.bind(c));
+router.delete('/detalle/eliminar', authMiddleware('ADMINISTRADOR'), c.eliminarDetalle.bind(c));
 
 export default router;

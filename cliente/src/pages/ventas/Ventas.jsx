@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
+import StatCard from '../../components/common/StatCard';
 
 const FMT  = v => `$${parseFloat(v || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`;
 const FECHA = s => {
@@ -20,24 +21,6 @@ const TIPO = {
   CONTADO: { bg: '#e3f0ff', color: '#1a56db', label: 'Contado' },
   CREDITO: { bg: '#f3e8ff', color: '#7c3aed', label: 'Crédito' },
 };
-
-function StatCard({ icon, label, value, color }) {
-  return (
-    <div style={{
-      background: '#fff', borderRadius: 10, border: '1px solid #e9ecef',
-      padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
-    }}>
-      <div style={{ width: 44, height: 44, borderRadius: 10, background: color + '1a',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
-        {icon}
-      </div>
-      <div>
-        <div style={{ fontSize: 11, color: '#6c757d', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: '#2c3e50', marginTop: 2 }}>{value}</div>
-      </div>
-    </div>
-  );
-}
 
 export default function Ventas() {
   const navigate    = useNavigate();

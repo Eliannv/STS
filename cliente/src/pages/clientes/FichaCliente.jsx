@@ -4,6 +4,7 @@ import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import HistorialFormModal from '../../components/historial/HistorialFormModal';
 import ClienteFormModal from '../../components/clientes/ClienteFormModal';
+import StatCard from '../../components/common/StatCard';
 
 /* --- helpers --- */
 function fmtFecha(f) {
@@ -193,6 +194,12 @@ export default function FichaCliente() {
   const [formVentaAbierto, setFormVentaAbierto] = useState(false);
   const [editandoVentaId, setEditandoVentaId] = useState(null);
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
+
+  const FILE_CHECK = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text-icon lucide-file-text"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`;
+  const CALENDAR_DAYS = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-days-icon lucide-calendar-days"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>`;
+  const USER = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-icon lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+
+
 
   const cargarCliente = useCallback(async () => {
     setLoadingCliente(true);
@@ -450,23 +457,21 @@ export default function FichaCliente() {
         {/* TAB HISTORIAL */}
         {tab === 'historial' && (
           <div>
+            {/* Stats Historial */}
             {!loadingHistoriales && statsHistorial && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
-                {[
-                  { label: 'Total registros', val: statsHistorial.total, icon: '\uD83D\uDCCB' },
-                  { label: 'Primer chequeo', val: statsHistorial.primero, icon: '\uD83D\uDCC5' },
-                  { label: 'Último chequeo', val: statsHistorial.ultimo, icon: '📅' },
-                  { label: 'Doctor frecuente', val: statsHistorial.doctor, icon: '\uD83D\uDC68\u200D\u2695\uFE0F' },
-                ].map(s => (
-                  <div key={s.label} style={{
-                    background: 'linear-gradient(135deg, #f8fafc, #eef2f7)',
-                    border: '1px solid var(--border-color)', borderRadius: 10, padding: '14px 16px',
-                  }}>
-                    <div style={{ fontSize: 18, marginBottom: 4 }}>{s.icon}</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>{s.val}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{s.label}</div>
-                  </div>
-                ))}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 24 }}>
+                <StatCard
+                  icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>}
+                  label="Total registros" value={statsHistorial.total} color="#3498db" />
+                <StatCard
+                  icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h2"/></svg>}
+                  label="Primer chequeo" value={statsHistorial.primero} color="#27ae60" />
+                <StatCard
+                  icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M16 14h2"/></svg>}
+                  label="Último chequeo" value={statsHistorial.ultimo} color="#f39c12" />
+                <StatCard
+                  icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
+                  label="Doctor frecuente" value={statsHistorial.doctor} color="#8e44ad" />
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>

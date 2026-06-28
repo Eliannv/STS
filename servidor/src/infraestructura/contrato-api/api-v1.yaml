@@ -1,0 +1,1225 @@
+openapi: 3.0.0
+
+info:
+  title: STS — Sales Technology System API
+  version: 1.0.0
+  description: |
+    API REST del sistema de gestión para **Óptica Macías Pasaje**.
+    Arquitectura hexagonal con autenticación JWT por roles (OPERADOR / ADMINISTRADOR).
+
+servers:
+  - url: http://localhost:3000/api
+    description: Servidor de desarrollo
+
+tags:
+  - name: Auth / Usuarios
+    description: Autenticación y gestión de usuarios del sistema
+  - name: Clientes
+    description: Gestión del padrón de clientes
+  - name: Proveedores
+    description: Gestión de proveedores
+  - name: Productos
+    description: Catálogo de productos
+  - name: Ingresos
+    description: Ingresos de mercadería (compras a proveedores)
+  - name: Ventas / Facturas
+    description: Emisión y gestión de facturas de venta
+  - name: Cobro de Deuda
+    description: Abonos a facturas con saldo pendiente
+  - name: Historial Clínico
+    description: Historial clínico de clientes
+  - name: Caja Chica
+    description: Caja chica — movimientos en efectivo
+  - name: Caja Banco
+    description: Caja banco — movimientos financieros
+  - name: Sucursal
+    description: Gestión de sucursales
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Seguridad global
+# ─────────────────────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # ── Respuestas reutilizables ──────────────────────────────────────────────
+  responses:
+    Unauthorized:
+      description: Token ausente o inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: El rol del usuario no tiene permiso para esta operación
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Datos inválidos en el cuerpo de la solicitud
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Esquemas ─────────────────────────────────────────────────────────────
+  schemas:
+
+    ErrorResponse:
+      type: object
+      properties:
+        estado:
+          type: string
+          example: error
+        resultado:
+          type: string
+          example: Descripción del error
+        traceId:
+          type: string
+          example: 550e8400-e29b-41d4-a716-446655440000
+
+    OkResponse:
+      type: object
+      properties:
+        estado:
+          type: string
+          example: ok
+        resultado:
+          description: Puede ser un objeto, array o mensaje
+        traceId:
+          type: string
+
+    # ── Paginación ────────────────────────────────────────────────────────
+    PaginacionQuery:
+      type: object
+      properties:
+        limit:
+          type: integer
+          default: 20
+          description: Máximo de registros (usar 9999 para sin límite)
+        offset:
+          type: integer
+          default: 0
+          description: Desplazamiento para paginación
+
+    # ── Usuario ───────────────────────────────────────────────────────────
+    Usuario:
+      type: object
+      properties:
+        id:          { type: integer }
+        nombre:      { type: string }
+        apellido:    { type: string }
+        email:       { type: string, format: email }
+        cedula:      { type: string, nullable: true }
+        rol:         { type: string, enum: [OPERADOR, ADMINISTRADOR] }
+        activo:      { type: boolean }
+        sucursal_id: { type: integer, nullable: true }
+        created_at:  { type: string, format: date-time }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:    { type: string, format: email, example: admin@optica.com }
+        password: { type: string, example: 'Abc12345' }
+
+    LoginResponse:
+      type: object
+      properties:
+        estado:    { type: string, example: ok }
+        resultado:
+          type: object
+          properties:
+            token:   { type: string }
+            usuario: { $ref: '#/components/schemas/Usuario' }
+
+    CrearUsuarioRequest:
+      type: object
+      required: [nombre, apellido, email, password, rol]
+      properties:
+        nombre:          { type: string }
+        apellido:        { type: string }
+        email:           { type: string, format: email }
+        password:        { type: string, minLength: 8 }
+        cedula:          { type: string, nullable: true }
+        fechaNacimiento: { type: string, format: date, nullable: true }
+        rol:             { type: string, enum: [OPERADOR, ADMINISTRADOR] }
+        activo:          { type: boolean, default: true }
+
+    CambiarPasswordRequest:
+      type: object
+      required: [passwordActual, passwordNueva]
+      properties:
+        passwordActual: { type: string }
+        passwordNueva:  { type: string, minLength: 8 }
+
+    # ── Cliente ───────────────────────────────────────────────────────────
+    Cliente:
+      type: object
+      properties:
+        id:                    { type: integer }
+        nombres:               { type: string }
+        apellidos:             { type: string }
+        cedula:                { type: string, nullable: true }
+        telefono:              { type: string, nullable: true }
+        email:                 { type: string, nullable: true }
+        tiene_credito:         { type: boolean }
+        tiene_deuda:           { type: boolean }
+        es_consumidor_final:   { type: boolean }
+        tiene_historial_clinico: { type: boolean }
+        activo:                { type: boolean }
+        created_at:            { type: string, format: date-time }
+
+    CrearClienteRequest:
+      type: object
+      required: [nombres, apellidos]
+      properties:
+        nombres:             { type: string }
+        apellidos:           { type: string }
+        cedula:              { type: string, nullable: true }
+        telefono:            { type: string, nullable: true }
+        email:               { type: string, nullable: true }
+        fechaNacimiento:     { type: string, format: date, nullable: true }
+        direccion:           { type: string, nullable: true }
+        pais:                { type: string, nullable: true }
+        provincia:           { type: string, nullable: true }
+        ciudad:              { type: string, nullable: true }
+        esConsumidorFinal:   { type: boolean, default: false }
+
+    # ── Proveedor ─────────────────────────────────────────────────────────
+    Proveedor:
+      type: object
+      properties:
+        id:              { type: integer }
+        nombre:          { type: string }
+        ruc:             { type: string, nullable: true }
+        telefono:        { type: string, nullable: true }
+        email:           { type: string, nullable: true }
+        contacto_nombre: { type: string, nullable: true }
+        activo:          { type: boolean }
+
+    CrearProveedorRequest:
+      type: object
+      required: [nombre]
+      properties:
+        nombre:          { type: string }
+        ruc:             { type: string, nullable: true }
+        telefono:        { type: string, nullable: true }
+        email:           { type: string, nullable: true }
+        contactoNombre:  { type: string, nullable: true }
+        direccion:       { type: string, nullable: true }
+
+    # ── Producto ──────────────────────────────────────────────────────────
+    Producto:
+      type: object
+      properties:
+        id:               { type: integer }
+        nombre:           { type: string }
+        codigo:           { type: string, nullable: true }
+        grupo:            { type: string, nullable: true }
+        modelo:           { type: string, nullable: true }
+        color:            { type: string, nullable: true }
+        costo:            { type: number, format: float }
+        pvp1:             { type: number, format: float }
+        pvp2:             { type: number, format: float, nullable: true }
+        iva:              { type: number, format: float, default: 0 }
+        stock:            { type: integer, default: 0 }
+        activo:           { type: boolean }
+        proveedor_id:     { type: integer, nullable: true }
+        proveedor_nombre: { type: string, nullable: true }
+
+    # ── Ingreso ───────────────────────────────────────────────────────────
+    Ingreso:
+      type: object
+      properties:
+        id:               { type: integer }
+        id_personalizado: { type: string, nullable: true }
+        proveedor_nombre: { type: string, nullable: true }
+        numero_factura:   { type: string, nullable: true }
+        fecha:            { type: string, format: date }
+        estado:           { type: string, enum: [BORRADOR, FINALIZADO] }
+        total:            { type: number, format: float }
+        created_at:       { type: string, format: date-time }
+
+    CrearIngresoRequest:
+      type: object
+      required: [proveedorId, fecha]
+      properties:
+        proveedorId:    { type: integer }
+        numeroFactura:  { type: string, nullable: true }
+        fecha:          { type: string, format: date }
+        notas:          { type: string, nullable: true }
+
+    AgregarDetalleRequest:
+      type: object
+      required: [ingresoId, productoId, stockIngresado, costo]
+      properties:
+        ingresoId:       { type: integer }
+        productoId:      { type: integer }
+        stockIngresado:  { type: integer, minimum: 1 }
+        costo:           { type: number, format: float, minimum: 0 }
+
+    # ── Factura / Venta ───────────────────────────────────────────────────
+    Factura:
+      type: object
+      properties:
+        id:               { type: integer }
+        id_personalizado: { type: string, nullable: true }
+        cliente_id:       { type: integer }
+        cliente_nombre:   { type: string, nullable: true }
+        total:            { type: number, format: float }
+        abonado:          { type: number, format: float }
+        saldo_pendiente:  { type: number, format: float }
+        estado_pago:      { type: string, enum: [PAGADO, PARCIAL, PENDIENTE] }
+        tipo_venta:       { type: string, enum: [CONTADO, CREDITO] }
+        created_at:       { type: string, format: date-time }
+
+    CrearFacturaRequest:
+      type: object
+      required: [clienteId, items, total]
+      properties:
+        clienteId:   { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            required: [productoId, cantidad, precioUnitario]
+            properties:
+              productoId:      { type: integer }
+              cantidad:        { type: integer, minimum: 1 }
+              precioUnitario:  { type: number, format: float }
+        total:       { type: number, format: float }
+        abonado:     { type: number, format: float, default: 0 }
+        metodoPago:  { type: string, enum: [efectivo, transferencia, tarjeta] }
+        tipoVenta:   { type: string, enum: [CONTADO, CREDITO] }
+        notas:       { type: string, nullable: true }
+
+    # ── Caja ──────────────────────────────────────────────────────────────
+    CajaChica:
+      type: object
+      properties:
+        id:             { type: integer }
+        estado:         { type: string, enum: [ABIERTA, CERRADA] }
+        monto_inicial:  { type: number, format: float }
+        monto_actual:   { type: number, format: float }
+        fecha:          { type: string, format: date }
+        usuario_nombre: { type: string, nullable: true }
+
+    CajaBanco:
+      type: object
+      properties:
+        id:              { type: integer }
+        estado:          { type: string, enum: [ABIERTA, CERRADA] }
+        saldo_inicial:   { type: number, format: float }
+        saldo_actual:    { type: number, format: float }
+        fecha:           { type: string, format: date }
+        usuario_nombre:  { type: string, nullable: true }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RUTAS
+# ─────────────────────────────────────────────────────────────────────────────
+paths:
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # USUARIOS / AUTH
+  # ══════════════════════════════════════════════════════════════════════════
+  /usuario/login:
+    post:
+      tags: [Auth / Usuarios]
+      summary: Iniciar sesión
+      description: Devuelve un token JWT si las credenciales son válidas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /usuario/lista:
+    get:
+      tags: [Auth / Usuarios]
+      summary: Listar usuarios (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: buscar
+          schema: { type: string }
+          description: Filtro por nombre, apellido o email
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /usuario/crear:
+    post:
+      tags: [Auth / Usuarios]
+      summary: Crear usuario (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearUsuarioRequest'
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /usuario/buscar/{id}:
+    get:
+      tags: [Auth / Usuarios]
+      summary: Obtener usuario por ID (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /usuario/editar:
+    put:
+      tags: [Auth / Usuarios]
+      summary: Editar usuario (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:      { type: integer }
+                nombre:  { type: string }
+                apellido: { type: string }
+                rol:     { type: string, enum: [OPERADOR, ADMINISTRADOR] }
+                activo:  { type: boolean }
+      responses:
+        '200':
+          description: Usuario actualizado
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /usuario/cambiar-password:
+    put:
+      tags: [Auth / Usuarios]
+      summary: Cambiar contraseña (usuario autenticado)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambiarPasswordRequest'
+      responses:
+        '200': { description: Contraseña actualizada }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /usuario/eliminar:
+    delete:
+      tags: [Auth / Usuarios]
+      summary: Eliminar usuario (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Usuario eliminado }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CLIENTES
+  # ══════════════════════════════════════════════════════════════════════════
+  /cliente/lista:
+    get:
+      tags: [Clientes]
+      summary: Listar clientes
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: buscar
+          schema: { type: string }
+          description: Filtro por nombre, cédula o teléfono
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Lista de clientes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+
+  /cliente/crear:
+    post:
+      tags: [Clientes]
+      summary: Crear cliente
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearClienteRequest'
+      responses:
+        '201':
+          description: Cliente creado
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /cliente/buscar/{id}:
+    get:
+      tags: [Clientes]
+      summary: Obtener cliente por ID
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Cliente encontrado }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /cliente/editar:
+    put:
+      tags: [Clientes]
+      summary: Editar cliente
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Cliente actualizado }
+
+  /cliente/eliminar:
+    delete:
+      tags: [Clientes]
+      summary: Eliminar cliente (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Cliente eliminado }
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # PROVEEDORES
+  # ══════════════════════════════════════════════════════════════════════════
+  /proveedor/lista:
+    get:
+      tags: [Proveedores]
+      summary: Listar proveedores
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: buscar
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200': { description: Lista de proveedores }
+
+  /proveedor/crear:
+    post:
+      tags: [Proveedores]
+      summary: Crear proveedor (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearProveedorRequest'
+      responses:
+        '201': { description: Proveedor creado }
+
+  /proveedor/buscar/{id}:
+    get:
+      tags: [Proveedores]
+      summary: Obtener proveedor por ID
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Proveedor encontrado }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /proveedor/editar:
+    put:
+      tags: [Proveedores]
+      summary: Editar proveedor (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Proveedor actualizado }
+
+  /proveedor/eliminar:
+    delete:
+      tags: [Proveedores]
+      summary: Eliminar proveedor (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Proveedor eliminado }
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # PRODUCTOS
+  # ══════════════════════════════════════════════════════════════════════════
+  /producto/lista:
+    get:
+      tags: [Productos]
+      summary: Listar productos
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: buscar
+          schema: { type: string }
+          description: Filtro por nombre, código, grupo, modelo o color
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200': { description: Catálogo de productos }
+
+  /producto/buscar/{id}:
+    get:
+      tags: [Productos]
+      summary: Obtener producto por ID
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Producto encontrado }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /producto/buscar-unico:
+    get:
+      tags: [Productos]
+      summary: Buscar producto por modelo, color y grupo
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: modelo
+          required: true
+          schema: { type: string }
+        - in: query
+          name: color
+          schema: { type: string }
+        - in: query
+          name: grupo
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Producto encontrado }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /producto/editar:
+    put:
+      tags: [Productos]
+      summary: Editar producto (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Producto actualizado }
+
+  /producto/eliminar:
+    delete:
+      tags: [Productos]
+      summary: Eliminar producto (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Producto eliminado }
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # INGRESOS
+  # ══════════════════════════════════════════════════════════════════════════
+  /ingreso/lista:
+    get:
+      tags: [Ingresos]
+      summary: Listar ingresos
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: buscar
+          schema: { type: string }
+        - in: query
+          name: estado
+          schema: { type: string, enum: [BORRADOR, FINALIZADO] }
+        - in: query
+          name: fechaDesde
+          schema: { type: string, format: date }
+        - in: query
+          name: fechaHasta
+          schema: { type: string, format: date }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200': { description: Lista de ingresos }
+
+  /ingreso/crear:
+    post:
+      tags: [Ingresos]
+      summary: Crear ingreso (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearIngresoRequest'
+      responses:
+        '201': { description: Ingreso creado }
+
+  /ingreso/buscar/{id}:
+    get:
+      tags: [Ingresos]
+      summary: Obtener ingreso por ID (con detalles)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Ingreso con detalles }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /ingreso/editar:
+    put:
+      tags: [Ingresos]
+      summary: Editar cabecera del ingreso (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Ingreso actualizado }
+
+  /ingreso/finalizar:
+    put:
+      tags: [Ingresos]
+      summary: Finalizar ingreso y actualizar stock (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Ingreso finalizado }
+
+  /ingreso/eliminar:
+    delete:
+      tags: [Ingresos]
+      summary: Eliminar ingreso en borrador (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Ingreso eliminado }
+
+  /ingreso/detalle/agregar:
+    post:
+      tags: [Ingresos]
+      summary: Agregar producto al ingreso (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgregarDetalleRequest'
+      responses:
+        '201': { description: Detalle agregado }
+
+  /ingreso/detalle/editar:
+    put:
+      tags: [Ingresos]
+      summary: Editar detalle del ingreso (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Detalle actualizado }
+
+  /ingreso/detalle/eliminar:
+    delete:
+      tags: [Ingresos]
+      summary: Eliminar detalle del ingreso (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Detalle eliminado }
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # VENTAS / FACTURAS
+  # ══════════════════════════════════════════════════════════════════════════
+  /factura/lista:
+    get:
+      tags: [Ventas / Facturas]
+      summary: Listar facturas con filtros
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: buscar
+          schema: { type: string }
+          description: Filtro por ID personalizado, nombre o cédula del cliente
+        - in: query
+          name: estado
+          schema: { type: string, enum: [PAGADO, PARCIAL, PENDIENTE] }
+        - in: query
+          name: tipo
+          schema: { type: string, enum: [CONTADO, CREDITO] }
+        - in: query
+          name: fechaDesde
+          schema: { type: string, format: date }
+        - in: query
+          name: fechaHasta
+          schema: { type: string, format: date }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200': { description: Lista de facturas }
+
+  /factura/crear:
+    post:
+      tags: [Ventas / Facturas]
+      summary: Crear factura de venta
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearFacturaRequest'
+      responses:
+        '201': { description: Factura creada }
+
+  /factura/buscar/{id}:
+    get:
+      tags: [Ventas / Facturas]
+      summary: Obtener factura por ID
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Factura encontrada }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /factura/cliente/{clienteId}:
+    get:
+      tags: [Ventas / Facturas]
+      summary: Listar facturas de un cliente
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: clienteId
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Facturas del cliente }
+
+  /factura/resumen/{clienteId}:
+    get:
+      tags: [Ventas / Facturas]
+      summary: Resumen financiero de un cliente
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: clienteId
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Resumen del cliente }
+
+  /factura/cobrar/{id}:
+    put:
+      tags: [Ventas / Facturas]
+      summary: Registrar abono a factura
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [monto]
+              properties:
+                monto:      { type: number, format: float, minimum: 0.01 }
+                metodoPago: { type: string, enum: [efectivo, transferencia, tarjeta] }
+      responses:
+        '200': { description: Abono registrado }
+
+  /factura/anular/{id}:
+    put:
+      tags: [Ventas / Facturas]
+      summary: Anular factura (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Factura anulada }
+
+  /factura/eliminar:
+    delete:
+      tags: [Ventas / Facturas]
+      summary: Eliminar factura (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Factura eliminada }
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CAJA CHICA
+  # ══════════════════════════════════════════════════════════════════════════
+  /caja-chica/lista:
+    get:
+      tags: [Caja Chica]
+      summary: Listar cajas chicas
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: estado
+          schema: { type: string, enum: [ABIERTA, CERRADA] }
+        - in: query
+          name: fechaDesde
+          schema: { type: string, format: date }
+        - in: query
+          name: fechaHasta
+          schema: { type: string, format: date }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200': { description: Lista de cajas chicas }
+
+  /caja-chica/abrir:
+    post:
+      tags: [Caja Chica]
+      summary: Abrir caja chica (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [montoInicial]
+              properties:
+                montoInicial: { type: number, format: float, minimum: 0 }
+                cajaBancoId:  { type: integer }
+      responses:
+        '201': { description: Caja chica abierta }
+
+  /caja-chica/cerrar:
+    put:
+      tags: [Caja Chica]
+      summary: Cerrar caja chica (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Caja chica cerrada }
+
+  /caja-chica/abierta:
+    get:
+      tags: [Caja Chica]
+      summary: Obtener la caja chica actualmente abierta
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Caja chica abierta o null }
+
+  /caja-chica/buscar/{id}:
+    get:
+      tags: [Caja Chica]
+      summary: Obtener caja chica por ID con movimientos
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Caja chica con movimientos }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # CAJA BANCO
+  # ══════════════════════════════════════════════════════════════════════════
+  /caja-banco/lista:
+    get:
+      tags: [Caja Banco]
+      summary: Listar cajas banco
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: query
+          name: estado
+          schema: { type: string, enum: [ABIERTA, CERRADA] }
+        - in: query
+          name: fechaDesde
+          schema: { type: string, format: date }
+        - in: query
+          name: fechaHasta
+          schema: { type: string, format: date }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        '200': { description: Lista de cajas banco }
+
+  /caja-banco/abrir:
+    post:
+      tags: [Caja Banco]
+      summary: Abrir caja banco (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [saldoInicial]
+              properties:
+                saldoInicial: { type: number, format: float, minimum: 0 }
+      responses:
+        '201': { description: Caja banco abierta }
+
+  /caja-banco/cerrar:
+    put:
+      tags: [Caja Banco]
+      summary: Cerrar caja banco (ADMINISTRADOR)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: integer }
+      responses:
+        '200': { description: Caja banco cerrada }
+
+  /caja-banco/abierta:
+    get:
+      tags: [Caja Banco]
+      summary: Obtener la caja banco actualmente abierta
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Caja banco abierta o null }
+
+  /caja-banco/buscar/{id}:
+    get:
+      tags: [Caja Banco]
+      summary: Obtener caja banco por ID con movimientos
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Caja banco con movimientos }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # HEALTH CHECK
+  # ══════════════════════════════════════════════════════════════════════════
+  /health:
+    get:
+      tags: []
+      summary: Estado del servidor
+      responses:
+        '200':
+          description: Servidor operativo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  estado:  { type: string, example: ok }
+                  mensaje: { type: string }

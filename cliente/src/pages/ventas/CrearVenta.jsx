@@ -181,6 +181,35 @@ export default function CrearVenta() {
     setHistorialSel(null);
   }
 
+  function resetFormularioVenta() {
+    // cliente
+    limpiarCliente(); // ya limpia clienteSel, buscarCliente, clientesFound, dropCliOpen, historialList, historialSel
+
+    // carrito
+    setCarrito([]);
+
+    // servicio rápido
+    setFormServicio({ nombre: '', precio: '' });
+    setMostrarServicio(false);
+
+    // pago
+    setDescuentoPct('0');
+    setMetodoPago('Efectivo');
+    setReferenciaNum('');
+    setMontoRecibido('');
+    setEsCredito(false);
+    setObservacion('');
+    setFechaCustom('');
+    setHoraCustom('');
+
+    // búsqueda de productos
+    setBuscarProd('');
+    setSelectedIdx(-1);
+
+    // error
+    setError('');
+  }
+
   /* ── cargar productos ── */
   useEffect(() => {
     setCargandoProd(true);
@@ -978,44 +1007,75 @@ export default function CrearVenta() {
 
       {/* ════ MODAL ÉXITO VENTA ════ */}
       {ventaCreada && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: '36px 32px', width: 440, maxWidth: '95vw', boxShadow: '0 24px 70px rgba(0,0,0,0.3)', textAlign: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 28, width: 440, maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
 
-            {/* Icono éxito */}
-            <div style={{ width: 68, height: 68, borderRadius: '50%', background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5">
-                <path d="M20 6L9 17l-5-5"/>
-              </svg>
+            {/* Header igual al modal de tipo de venta */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Venta registrada</h3>
+              <button onClick={() => {
+                setVentaCreada(null);
+                resetFormularioVenta();
+              }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#aaa' }}>✕</button>
             </div>
 
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1a1a1a', marginBottom: 8 }}>¡Factura Registrada!</h2>
-            <p style={{ fontSize: 14, color: '#6c757d', marginBottom: 6 }}>
-              La venta <strong style={{ color: '#2c3e50' }}>
-                #{ventaCreada.venta.id_personalizado || ventaCreada.venta.id || ''}
-              </strong> se ha registrado correctamente.
-            </p>
-            {ventaCreada.venta.saldo_pendiente > 0 && (
-              <div style={{ display: 'inline-block', background: '#fef3c7', color: '#d97706', borderRadius: 8, padding: '5px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
-                Saldo pendiente: ${Number(ventaCreada.venta.saldo_pendiente).toFixed(2)}
+            {/* Icono central + texto, mismo tono que el subtítulo gris */}
+            <div style={{ textAlign: 'center', marginBottom: 18 }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2.5">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
               </div>
-            )}
+              <p style={{ fontSize: 13, color: '#6c757d', margin: 0 }}>
+                La venta <strong style={{ color: '#2c3e50' }}>
+                  #{ventaCreada.venta.id_personalizado || ventaCreada.venta.id || ''}
+                </strong> se ha registrado correctamente.
+              </p>
+              {ventaCreada.venta.saldo_pendiente > 0 && (
+                <div style={{ display: 'inline-block', background: '#fef3c7', color: '#d97706', borderRadius: 8, padding: '5px 12px', fontSize: 13, fontWeight: 600, marginTop: 10 }}>
+                  Saldo pendiente: ${Number(ventaCreada.venta.saldo_pendiente).toFixed(2)}
+                </div>
+              )}
+            </div>
 
-            <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <button
-                className="btn btn-primary"
-                style={{ justifyContent: 'center', background: '#10b981', border: 'none', fontWeight: 700 }}
-                onClick={() => navigate('/ventas')}
-              >
-                ✓ Finalizar
+            {/* Tarjetas estilo "tipo de venta": borde de color + icono arriba */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <button onClick={() => {
+                setVentaCreada(null);
+                resetFormularioVenta();
+              }}
+                style={{ padding: '14px 8px', borderRadius: 12, border: '2px solid #27ae60', background: '#f0fff4', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#27ae60" strokeWidth="2">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+                <div style={{ fontWeight: 700, fontSize: 12, color: '#2c3e50', textAlign: 'center' }}>Finalizar</div>
+                <div style={{ fontSize: 10, color: '#27ae60', textAlign: 'center' }}>Realizar otra venta</div>
               </button>
-              <button
-                className="btn"
-                style={{ justifyContent: 'center', background: '#3498db', color: '#fff', border: 'none', fontWeight: 600 }}
-                onClick={() => imprimirTicketVenta({ venta: ventaCreada.venta, items: ventaCreada.items })}
-              >
-                🖨 Reimprimir Ticket
+
+              <button onClick={() => navigate('/facturas')}
+                style={{ padding: '14px 8px', borderRadius: 12, border: '2px solid #f39c12', background: '#fff8ed', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f39c12" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                <div style={{ fontWeight: 700, fontSize: 12, color: '#2c3e50', textAlign: 'center' }}>Ver Facturas</div>
+                <div style={{ fontSize: 10, color: '#f39c12', textAlign: 'center' }}>Volver al listado</div>
+              </button>
+
+              <button onClick={() => imprimirTicketVenta({ venta: ventaCreada.venta, items: ventaCreada.items })}
+                style={{ padding: '14px 8px', borderRadius: 12, border: '2px solid #3498db', background: '#eef4ff', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3498db" strokeWidth="2">
+                  <path d="M6 9V2h12v7"/>
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                  <rect x="6" y="14" width="12" height="8"/>
+                </svg>
+                <div style={{ fontWeight: 700, fontSize: 12, color: '#2c3e50', textAlign: 'center' }}>Reimprimir</div>
+                <div style={{ fontSize: 10, color: '#3498db', textAlign: 'center' }}>Imprimir comprobante</div>
               </button>
             </div>
+
           </div>
         </div>
       )}

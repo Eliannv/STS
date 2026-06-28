@@ -4,41 +4,15 @@ import { authMiddleware } from '../middleware/AuthMiddleware.js';
 import { cajaChicaControlador } from '../contenedor/CajaChicaContenedor.js';
 
 const router = Router();
+const c = cajaChicaControlador;
 
-// ── Caja Chica ────────────────────────────────────────────────────────────
-
-router.post('/abrir',
-  authMiddleware(),
-  (req, res) => cajaChicaControlador.abrir(req, res));
-
-router.put('/cerrar',
-  authMiddleware(),
-  (req, res) => cajaChicaControlador.cerrar(req, res));
-
-router.get('/lista',
-  authMiddleware(),
-  (req, res) => cajaChicaControlador.lista(req, res));
-
-router.get('/abierta',
-  authMiddleware(),
-  (req, res) => cajaChicaControlador.cajaAbierta(req, res));
-
-router.get('/buscar/:id',
-  authMiddleware(),
-  (req, res) => cajaChicaControlador.buscarPorId(req, res));
-
-// ── Movimientos ───────────────────────────────────────────────────────────
-
-router.post('/movimiento',
-  authMiddleware(),
-  (req, res) => cajaChicaControlador.registrarMovimiento(req, res));
-
-router.delete('/movimiento/:id',
-  authMiddleware('ADMINISTRADOR'),
-  (req, res) => cajaChicaControlador.eliminarMovimiento(req, res));
-
-router.get('/:id/movimientos',
-  authMiddleware(),
-  (req, res) => cajaChicaControlador.listarMovimientos(req, res));
+router.get('/lista', authMiddleware(), c.lista.bind(c));
+router.get('/abierta', authMiddleware(), c.cajaAbierta.bind(c));
+router.get('/buscar/:id', authMiddleware(), c.buscarPorId.bind(c));
+router.post('/abrir', authMiddleware(), c.abrir.bind(c));
+router.put('/cerrar', authMiddleware(), c.cerrar.bind(c));
+router.post('/movimiento', authMiddleware(), c.registrarMovimiento.bind(c));
+router.delete('/movimiento/:id', authMiddleware('ADMINISTRADOR'), c.eliminarMovimiento.bind(c));
+router.get('/:id/movimientos', authMiddleware(), c.listarMovimientos.bind(c));
 
 export default router;

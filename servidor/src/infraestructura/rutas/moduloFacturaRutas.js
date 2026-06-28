@@ -4,41 +4,16 @@ import { authMiddleware } from '../middleware/AuthMiddleware.js';
 import { facturaControlador } from '../contenedor/FacturaContenedor.js';
 
 const router = Router();
+const c = facturaControlador;
 
-router.post('/crear',
-  authMiddleware(),
-  (req, res) => facturaControlador.crear(req, res));
-
-router.get('/lista',
-  authMiddleware(),
-  (req, res) => facturaControlador.listaGeneral(req, res));
-
-router.get('/cliente/:clienteId',
-  authMiddleware(),
-  (req, res) => facturaControlador.listaPorCliente(req, res));
-
-router.get('/resumen/:clienteId',
-  authMiddleware(),
-  (req, res) => facturaControlador.resumenPorCliente(req, res));
-
-router.get('/buscar/:id',
-  authMiddleware(),
-  (req, res) => facturaControlador.buscarPorId(req, res));
-
-router.put('/editar',
-  authMiddleware(),
-  (req, res) => facturaControlador.editar(req, res));
-
-router.put('/cobrar/:id',
-  authMiddleware(),
-  (req, res) => facturaControlador.cobrar(req, res));
-
-router.put('/anular/:id',
-  authMiddleware('ADMINISTRADOR'),
-  (req, res) => facturaControlador.anular(req, res));
-
-router.delete('/eliminar',
-  authMiddleware('ADMINISTRADOR'),
-  (req, res) => facturaControlador.eliminar(req, res));
+router.get('/lista', authMiddleware(), c.listaGeneral.bind(c));
+router.get('/cliente/:clienteId', authMiddleware(), c.listaPorCliente.bind(c));
+router.get('/resumen/:clienteId', authMiddleware(), c.resumenPorCliente.bind(c));
+router.get('/buscar/:id', authMiddleware(), c.buscarPorId.bind(c));
+router.post('/crear', authMiddleware(), c.crear.bind(c));
+router.put('/editar', authMiddleware(), c.editar.bind(c));
+router.put('/cobrar/:id', authMiddleware(), c.cobrar.bind(c));
+router.put('/anular/:id', authMiddleware('ADMINISTRADOR'), c.anular.bind(c));
+router.delete('/eliminar', authMiddleware('ADMINISTRADOR'), c.eliminar.bind(c));
 
 export default router;

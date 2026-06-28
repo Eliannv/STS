@@ -14,42 +14,101 @@
  *             (puede ser vacío si se imprime desde historial sin items)
  */
 
+import { Check, TriangleAlert } from 'lucide-react';
+
 const EMPRESA = {
-  nombre:   'ÓPTICA MACÍAS PASAJE',
-  ruc:      '0912477528001',
-  ciudad:   'Pasaje - Ecuador',
-  telefono: '0990391361',
+    nombre: 'ÓPTICA MACÍAS PASAJE',
+    ruc: '0912477528001',
+    ciudad: 'Pasaje - Ecuador',
+    telefono: '0990391361',
 };
 
 function formatFecha(dateStr) {
-  const d = dateStr ? new Date(dateStr) : new Date();
-  const pad = n => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const d = dateStr ? new Date(dateStr) : new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function formatMonto(n) {
-  return Number(n || 0).toFixed(2);
+    return Number(n || 0).toFixed(2);
 }
 
 function generarCodigoBarras(texto) {
-  if (!texto) return '';
-  // SVG simple de barras (Code128-like visual) usando líneas negras y blancas
-  // Para producción real se puede usar JsBarcode, pero aquí usamos un fallback visual
-  return `<div style="font-family:monospace;font-size:11px;letter-spacing:2px;text-align:center;margin-top:4px">${texto}</div>`;
+    if (!texto) return '';
+
+    // Tabla Code128B: cada símbolo = anchos alternados barra/espacio (6 elementos, stop=7)
+    // Índice 0–95 = ASCII 32–127, índice 104 = Start B, índice 106 = Stop
+    const P = [
+        '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312',
+        '132212', '221213', '221312', '231212', '112232', '122132', '122231', '113222',
+        '123122', '123221', '223211', '221132', '221231', '213212', '223112', '312131',
+        '311222', '321122', '321221', '312212', '322112', '322211', '212123', '212321',
+        '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+        '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121',
+        '313121', '211331', '231131', '213113', '213311', '213131', '311123', '311321',
+        '331121', '312113', '312311', '332111', '314111', '221411', '431111', '111224',
+        '111422', '121124', '121421', '141122', '141221', '112214', '112412', '122114',
+        '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+        '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112',
+        '421211', '212141', '214121', '412121', '111143', '111341', '131141', '114113',
+        '114311', '411113', '411311', '113141', '114131', '311141', '411131', '211412',
+        '211214', '211232', '2331112',
+    ];
+    // Start B = índice 104, Stop = índice 106 (último)
+    const START_B = 104;
+    const STOP = 106;
+
+    const codes = [];
+    for (let i = 0; i < texto.length; i++) {
+        const idx = texto.charCodeAt(i) - 32; // Code128B: ASCII 32 → 0, ASCII 127 → 95
+        if (idx >= 0 && idx <= 95) codes.push(idx);
+    }
+    if (!codes.length) return '';
+
+    // Checksum: startValue + Σ(value * posición 1-based) mod 103
+    let sum = START_B;
+    codes.forEach((c, i) => { sum += c * (i + 1); });
+    const check = sum % 103;
+
+    // Secuencia final: Start-B + datos + checksum + Stop
+    const seq = [P[START_B], ...codes.map(c => P[c]), P[check], P[STOP]];
+
+    const mw = 2; // ancho del módulo en px
+    const h = 50; // altura de las barras
+    const mx = 8; // margen lateral
+    let x = mx;
+    let rects = '';
+
+    for (const sym of seq) {
+        for (let i = 0; i < sym.length; i++) {
+            const w = parseInt(sym[i]) * mw;
+            if (i % 2 === 0) rects += `<rect x="${x}" y="0" width="${w}" height="${h}"/>`;
+            x += w;
+        }
+    }
+
+    const totalW = x + mx;
+    return `
+    <div style="text-align:center;margin-top:6px">
+      <svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${h + 14}" style="max-width:100%">
+        <rect width="${totalW}" height="${h + 14}" fill="white"/>
+        <g fill="black">${rects}</g>}
+      </svg>
+    </div>`;
 }
 
 export function generarHTMLTicket({ venta, items }) {
-  const facturaNo = venta.id_personalizado || venta.numero_factura || String(venta.id || '');
-  const cliente   = venta.nombre_cliente   || 'CONSUMIDOR FINAL';
-  const metodo    = venta.metodo_pago      || 'Efectivo';
-  const fecha     = formatFecha(venta.created_at);
-  const subtotal  = formatMonto(venta.subtotal);
-  const descuento = Number(venta.descuento || 0);
-  const total     = formatMonto(venta.total);
-  const abono     = formatMonto(Number(venta.total || 0) - Number(venta.saldo_pendiente || 0));
-  const saldo     = Number(venta.saldo_pendiente || 0);
+    const facturaNo = venta.id_personalizado || venta.numero_factura || String(venta.id || '');
+    const cliente = venta.nombre_cliente || 'CONSUMIDOR FINAL';
+    const metodo = venta.metodo_pago || 'Efectivo';
+    const fecha = formatFecha(venta.created_at);
+    const subtotal = formatMonto(venta.subtotal);
+    const descuento = Number(venta.descuento || 0);
+    const total = formatMonto(venta.total);
+    const abono = formatMonto(Number(venta.total || 0) - Number(venta.saldo_pendiente || 0));
+    const saldo = Number(venta.saldo_pendiente || 0);
 
-  const itemsRows = (items || []).map(it => `
+    const itemsRows = (items || []).map(it => `
     <tr>
       <td style="padding:1px 3px">${it.codigo || ''}</td>
       <td style="padding:1px 3px;max-width:90px;word-wrap:break-word">${it.nombre || ''}</td>
@@ -58,7 +117,7 @@ export function generarHTMLTicket({ venta, items }) {
       <td style="padding:1px 3px;text-align:right">${formatMonto(it.precio_total)}</td>
     </tr>`).join('');
 
-  return `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -182,6 +241,7 @@ export function imprimirTicketVenta({ venta, items = [] }) {
   };
 }
 
+
 /* ─────────────── TICKET ABONO / COBRO DEUDA ─────────────── */
 
 function generarHTMLTicketAbono({ factura, abono, saldoAnterior, saldoNuevo, cliente, metodoPago, referencia, fechaPago }) {
@@ -190,6 +250,9 @@ function generarHTMLTicketAbono({ factura, abono, saldoAnterior, saldoNuevo, cli
   const fecha       = formatFecha(fechaPago || new Date().toISOString());
   const abonadoPrev = formatMonto(parseFloat(factura.total || 0) - parseFloat(saldoAnterior || 0));
   const abonadoTotal = formatMonto(parseFloat(factura.total || 0) - parseFloat(saldoNuevo || 0));
+
+  const ICONO_CHECK = `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-icon lucide-check"><path d="M20 6 9 17l-5-5"/></svg>`;
+  const ICONO_ALERTA = `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert-icon lucide-triangle-alert"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -233,7 +296,9 @@ function generarHTMLTicketAbono({ factura, abono, saldoAnterior, saldoNuevo, cli
   <div class="t-kv t-small"><span>Abonado total</span><span>$${abonadoTotal}</span></div>
   <hr class="t-hr">
   <div class="t-kv t-bold"><span>SALDO</span><span>$${formatMonto(saldoNuevo)}</span></div>
-  <div class="t-center t-small" style="margin-top:6px">${parseFloat(saldoNuevo) <= 0 ? '✅ DEUDA CANCELADA' : '⚠️ SALDO PENDIENTE'}</div>
+  <div class="t-center t-small" style="margin-top:6px; display:flex; align-items:center; justify-content:center; gap:4px;">
+    ${parseFloat(saldoNuevo) <= 0 ? `${ICONO_CHECK} DEUDA CANCELADA` : `${ICONO_ALERTA} SALDO PENDIENTE`}
+  </div>
   <hr class="t-hr">
   <div class="t-center t-small">Gracias</div>
   <div class="t-center t-small">Conserve este comprobante</div>

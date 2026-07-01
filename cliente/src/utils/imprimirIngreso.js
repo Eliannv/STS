@@ -297,7 +297,7 @@ export function imprimirIngreso({ ingreso, detalles = [], usuarioNombre = '' }) 
   <table class="productos-table">
     <thead>
       <tr>
-        <th style="width:60px">ID</th>
+        <th style="width:60px">Codigo</th>
         <th>Nombre</th>
         <th style="width:160px">Modelo</th>
         <th style="width:180px">Color</th>

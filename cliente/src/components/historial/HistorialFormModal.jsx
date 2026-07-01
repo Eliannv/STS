@@ -22,7 +22,7 @@ const VACIO = {
  *   onCerrar         {() => void}
  *   onGuardado       {() => void}   — se llama tras guardar con éxito
  */
-export default function HistorialFormModal({ abierto, editando, historialInicial, cliente, onCerrar, onGuardado }) {
+export default function HistorialFormModal({ abierto, editando, historialInicial, cliente, onCerrar, onGuardado, soloLectura = false }) {
   const [form, setForm] = useState(VACIO);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -52,7 +52,9 @@ export default function HistorialFormModal({ abierto, editando, historialInicial
 
   if (!abierto) return null;
 
-  function handleChange(e) { setForm(p => ({ ...p, [e.target.name]: e.target.value })); }
+  const des = soloLectura;
+
+  function handleChange(e) { if (!soloLectura) setForm(p => ({ ...p, [e.target.name]: e.target.value })); }
 
   async function guardar(e) {
     e.preventDefault(); setSaving(true); setError('');
@@ -83,7 +85,7 @@ export default function HistorialFormModal({ abierto, editando, historialInicial
           <button className="btn-icon" onClick={onCerrar}>✕</button>
         </div>
 
-        <form onSubmit={guardar} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <form onSubmit={soloLectura ? e => e.preventDefault() : guardar} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <div style={{ display: 'flex', gap: 0, flex: 1, minHeight: 0 }}>
 
             {/* Panel izquierdo (scrollable) */}
@@ -102,19 +104,19 @@ export default function HistorialFormModal({ abierto, editando, historialInicial
                   <div style={{ border: '2px solid #dbeafe', borderRadius: 10, padding: '14px 16px' }}>
                     <div style={{ fontWeight: 700, color: 'var(--primary-color)', marginBottom: 14, fontSize: 13 }}>Ojo Derecho (OD)</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 12px' }}>
-                      {[
-                        { label: 'Esfera',   name: 'odEsfera',   ph: '+0.00' },
-                        { label: 'Cilindro', name: 'odCilindro', ph: '-0.00' },
-                        { label: 'Eje (°)',  name: 'odEje',      ph: '90' },
-                        { label: '',         name: '' },
-                        { label: 'AVSC',     name: 'odAvsc',     ph: '20/20' },
-                        { label: 'AVCC',     name: 'odAvcc',     ph: '20/40' },
-                      ].map(f => f.name ? (
-                        <div key={f.name} className="form-group" style={{ margin: 0 }}>
-                          <label className="form-label" style={{ fontSize: 11, marginBottom: 3 }}>{f.label}</label>
-                          <input className="form-control" style={{ fontSize: 13 }} type="text" name={f.name} value={form[f.name]} onChange={handleChange} placeholder={f.ph} />
-                        </div>
-                      ) : <div key="empty-od" />)}
+                        {[
+                          { label: 'Esfera',   name: 'odEsfera',   ph: '+0.00' },
+                          { label: 'Cilindro', name: 'odCilindro', ph: '-0.00' },
+                          { label: 'Eje (°)',  name: 'odEje',      ph: '90' },
+                          { label: '',         name: '' },
+                          { label: 'AVSC',     name: 'odAvsc',     ph: '20/20' },
+                          { label: 'AVCC',     name: 'odAvcc',     ph: '20/40' },
+                        ].map(f => f.name ? (
+                          <div key={f.name} className="form-group" style={{ margin: 0 }}>
+                            <label className="form-label" style={{ fontSize: 11, marginBottom: 3 }}>{f.label}</label>
+                            <input className="form-control" style={{ fontSize: 13 }} type="text" name={f.name} value={form[f.name]} onChange={handleChange} placeholder={f.ph} disabled={des} />
+                          </div>
+                        ) : <div key="empty-od" />)}
                     </div>
                   </div>
 
@@ -122,19 +124,19 @@ export default function HistorialFormModal({ abierto, editando, historialInicial
                   <div style={{ border: '2px solid #dcfce7', borderRadius: 10, padding: '14px 16px' }}>
                     <div style={{ fontWeight: 700, color: '#27ae60', marginBottom: 14, fontSize: 13 }}>Ojo Izquierdo (OI)</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 12px' }}>
-                      {[
-                        { label: 'Esfera',   name: 'oiEsfera',   ph: '+0.00' },
-                        { label: 'Cilindro', name: 'oiCilindro', ph: '-0.00' },
-                        { label: 'Eje (°)',  name: 'oiEje',      ph: '90' },
-                        { label: '',         name: '' },
-                        { label: 'AVSC',     name: 'oiAvsc',     ph: '20/20' },
-                        { label: 'AVCC',     name: 'oiAvcc',     ph: '20/40' },
-                      ].map(f => f.name ? (
-                        <div key={f.name} className="form-group" style={{ margin: 0 }}>
-                          <label className="form-label" style={{ fontSize: 11, marginBottom: 3 }}>{f.label}</label>
-                          <input className="form-control" style={{ fontSize: 13 }} type="text" name={f.name} value={form[f.name]} onChange={handleChange} placeholder={f.ph} />
-                        </div>
-                      ) : <div key="empty-oi" />)}
+                        {[
+                          { label: 'Esfera',   name: 'oiEsfera',   ph: '+0.00' },
+                          { label: 'Cilindro', name: 'oiCilindro', ph: '-0.00' },
+                          { label: 'Eje (°)',  name: 'oiEje',      ph: '90' },
+                          { label: '',         name: '' },
+                          { label: 'AVSC',     name: 'oiAvsc',     ph: '20/20' },
+                          { label: 'AVCC',     name: 'oiAvcc',     ph: '20/40' },
+                        ].map(f => f.name ? (
+                          <div key={f.name} className="form-group" style={{ margin: 0 }}>
+                            <label className="form-label" style={{ fontSize: 11, marginBottom: 3 }}>{f.label}</label>
+                            <input className="form-control" style={{ fontSize: 13 }} type="text" name={f.name} value={form[f.name]} onChange={handleChange} placeholder={f.ph} disabled={des} />
+                          </div>
+                        ) : <div key="empty-oi" />)}
                     </div>
                   </div>
                 </div>
@@ -143,15 +145,15 @@ export default function HistorialFormModal({ abierto, editando, historialInicial
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 14 }}>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">ADD</label>
-                    <input className="form-control" type="text" name="add" value={form.add} onChange={handleChange} placeholder="2.00" />
+                    <input className="form-control" type="text" name="add" value={form.add} onChange={handleChange} placeholder="2.00" disabled={des} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">DP (mm)</label>
-                    <input className="form-control" type="text" name="dp" value={form.dp} onChange={handleChange} placeholder="62" />
+                    <input className="form-control" type="text" name="dp" value={form.dp} onChange={handleChange} placeholder="62" disabled={des} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">Altura (mm)</label>
-                    <input className="form-control" type="text" name="altura" value={form.altura} onChange={handleChange} placeholder="18.5" />
+                    <input className="form-control" type="text" name="altura" value={form.altura} onChange={handleChange} placeholder="18.5" disabled={des} />
                   </div>
                 </div>
               </div>
@@ -165,23 +167,23 @@ export default function HistorialFormModal({ abierto, editando, historialInicial
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">H — Ancho del Aro</label>
-                    <input className="form-control" type="text" name="armazonH" value={form.armazonH} onChange={handleChange} placeholder="52" />
+                    <input className="form-control" type="text" name="armazonH" value={form.armazonH} onChange={handleChange} placeholder="52" disabled={des} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">V — Alto del Aro</label>
-                    <input className="form-control" type="text" name="armazonV" value={form.armazonV} onChange={handleChange} placeholder="40" />
+                    <input className="form-control" type="text" name="armazonV" value={form.armazonV} onChange={handleChange} placeholder="40" disabled={des} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">DBL — Puente</label>
-                    <input className="form-control" type="text" name="armazonDbl" value={form.armazonDbl} onChange={handleChange} placeholder="18" />
+                    <input className="form-control" type="text" name="armazonDbl" value={form.armazonDbl} onChange={handleChange} placeholder="18" disabled={des} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">DM — Diagonal Mayor</label>
-                    <input className="form-control" type="text" name="armazonDm" value={form.armazonDm} onChange={handleChange} placeholder="60" />
+                    <input className="form-control" type="text" name="armazonDm" value={form.armazonDm} onChange={handleChange} placeholder="60" disabled={des} />
                   </div>
                   <div className="form-group" style={{ margin: 0, gridColumn: 'span 2' }}>
                     <label className="form-label">Tipo de Armazón</label>
-                    <select className="form-control" name="armazonTipo" value={form.armazonTipo} onChange={handleChange}>
+                    <select className="form-control" name="armazonTipo" value={form.armazonTipo} onChange={handleChange} disabled={des}>
                       <option value="">Seleccionar...</option>
                       <option value="Completo">Completo</option>
                       <option value="Ranurado">Ranurado</option>
@@ -192,11 +194,11 @@ export default function HistorialFormModal({ abierto, editando, historialInicial
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">De</label>
-                    <input className="form-control" type="text" name="de" value={form.de} onChange={handleChange} placeholder="Cerca / Lejos / DP" />
+                    <input className="form-control" type="text" name="de" value={form.de} onChange={handleChange} placeholder="Cerca / Lejos / DP" disabled={des} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">Color</label>
-                    <input className="form-control" type="text" name="color" value={form.color} onChange={handleChange} placeholder="Negro / Transparente" />
+                    <input className="form-control" type="text" name="color" value={form.color} onChange={handleChange} placeholder="Negro / Transparente" disabled={des} />
                   </div>
                 </div>
               </div>
@@ -209,20 +211,20 @@ export default function HistorialFormModal({ abierto, editando, historialInicial
                 </div>
                 <div className="form-group" style={{ margin: 0, marginBottom: 12 }}>
                   <label className="form-label">Observación</label>
-                  <textarea className="form-control" name="observacion" value={form.observacion} onChange={handleChange} rows={3} placeholder="Notas adicionales sobre la consulta..." style={{ resize: 'vertical' }} />
+                  <textarea className="form-control" name="observacion" value={form.observacion} onChange={handleChange} rows={3} placeholder="Notas adicionales sobre la consulta..." style={{ resize: 'vertical' }} disabled={des} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">Doctor que atendió</label>
-                    <input className="form-control" type="text" name="doctor" value={form.doctor} onChange={handleChange} placeholder="Dr. Juan Pérez" />
+                    <input className="form-control" type="text" name="doctor" value={form.doctor} onChange={handleChange} placeholder="Dr. Juan Pérez" disabled={des} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">Fecha del chequeo</label>
-                    <input className="form-control" type="date" name="fechaChequeo" value={form.fechaChequeo} onChange={handleChange} />
+                    <input className="form-control" type="date" name="fechaChequeo" value={form.fechaChequeo} onChange={handleChange} disabled={des} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">Hora del chequeo</label>
-                    <input className="form-control" type="time" name="horaChequeo" value={form.horaChequeo} onChange={handleChange} />
+                    <input className="form-control" type="time" name="horaChequeo" value={form.horaChequeo} onChange={handleChange} disabled={des} />
                   </div>
                 </div>
               </div>
@@ -281,10 +283,12 @@ export default function HistorialFormModal({ abierto, editando, historialInicial
 
           {/* Footer */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '16px 24px', borderTop: '1px solid var(--border-color)', flexShrink: 0 }}>
-            <button type="button" className="btn btn-ghost" onClick={onCerrar}>Cancelar</button>
-            <button type="submit" className="btn btn-primary" disabled={saving} style={{ minWidth: 160 }}>
-              {saving ? 'Guardando...' : (editando ? 'Guardar Cambios' : 'Guardar Todo')}
-            </button>
+            <button type="button" className="btn btn-ghost" onClick={onCerrar}>{soloLectura ? 'Cerrar' : 'Cancelar'}</button>
+            {!soloLectura && (
+              <button type="submit" className="btn btn-primary" disabled={saving} style={{ minWidth: 160 }}>
+                {saving ? 'Guardando...' : (editando ? 'Guardar Cambios' : 'Guardar Todo')}
+              </button>
+            )}
           </div>
         </form>
       </div>

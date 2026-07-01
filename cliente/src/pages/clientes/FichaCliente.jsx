@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import HistorialFormModal from '../../components/historial/HistorialFormModal';
+import HistorialListModal from '../../components/historial/HistorialListModal';
 import ClienteFormModal from '../../components/clientes/ClienteFormModal';
 import StatCard from '../../components/common/StatCard';
 
@@ -15,11 +16,6 @@ function fmtFecha(f) {
 function fmtMoney(v) {
   const n = parseFloat(v ?? 0);
   return isNaN(n) ? '$0.00' : '$' + n.toFixed(2);
-}
-function fmtGrad(v) {
-  if (v === '' || v === null || v === undefined) return '—';
-  const n = parseFloat(v);
-  return isNaN(n) ? String(v) : (n >= 0 ? '+' + n.toFixed(2) : n.toFixed(2));
 }
 const BADGE = (bg, color) => ({
   display: 'inline-block', padding: '2px 10px', borderRadius: 20,
@@ -236,12 +232,6 @@ export default function FichaCliente() {
   useEffect(() => {
     if (tab === 'facturas') cargarVentas();
   }, [tab, cargarVentas]);
-
-  async function eliminarHistorial(hid) {
-    if (!confirm('¿Eliminar este historial clínico?')) return;
-    const res = await api.delete('/historial-clinico/eliminar', { id: hid });
-    if (res.ok) cargarHistoriales();
-  }
 
   async function eliminarVenta(vid) {
     if (!confirm('¿Eliminar esta venta?')) return;
@@ -474,92 +464,17 @@ export default function FichaCliente() {
                   label="Doctor frecuente" value={statsHistorial.doctor} color="#8e44ad" />
               </div>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Historial Clínico</h3>
-                <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-                  {cliente.nombres} {cliente.apellidos}{cliente.cedula ? ' — ' + cliente.cedula : ''}
-                </p>
-              </div>
-              <button className="btn btn-primary"
-                onClick={() => { setHistorialSeleccionado(null); setEditandoHistorialId(null); setFormHistorialAbierto(true); }}>
-                + Nuevo historial
-              </button>
-            </div>
-            {loadingHistoriales
-              ? <div className="spinner-wrapper" style={{ padding: 40 }}><div className="spinner" /></div>
-              : historiales.length === 0
-                ? (
-                  <div className="empty-state" style={{ padding: '48px 0' }}>
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--text-muted)', marginBottom: 12 }}>
-                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                      <polyline points="14 2 14 8 20 8"/><path d="M10 13h4"/><path d="M10 17h4"/>
-                    </svg>
-                    <p>No hay historiales clínicos registrados</p>
-                    <button className="btn btn-primary" style={{ marginTop: 12 }}
-                      onClick={() => { setHistorialSeleccionado(null); setEditandoHistorialId(null); setFormHistorialAbierto(true); }}>
-                      Crear primer historial
-                    </button>
-                  </div>
-                )
-                : (
-                  <div style={{ border: '1px solid var(--border-color)', borderRadius: 8, overflow: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                      <thead>
-                        <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border-color)' }}>
-                          {[['Fecha','110px','left'],['OD Esf.','80px','center'],['OD Cil.','80px','center'],['OD Eje','70px','center'],
-                            ['OD AVSC','75px','center'],['OD AVCC','75px','center'],['OI Esf.','80px','center'],
-                            ['OI Cil.','80px','center'],['OI Eje','70px','center'],['DP','55px','center'],
-                            ['Doctor',null,'left'],['Acciones','90px','center']
-                          ].map(([h,w,align]) => (
-                            <th key={h} style={{ padding: '10px 12px', textAlign: align, width: w||undefined, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {historiales.map((h, i) => (
-                          <tr key={h.id} style={{ borderBottom: '1px solid var(--border-light)', background: i % 2 === 0 ? '#fff' : '#fafbfc' }}>
-                            <td style={{ padding: '10px 12px', fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtFecha(h.fecha_chequeo || h.created_at)}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'monospace' }}>{fmtGrad(h.od_esfera)}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'monospace' }}>{fmtGrad(h.od_cilindro)}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.od_eje ? h.od_eje + '°' : '—'}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.od_avsc || '—'}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.od_avcc || '—'}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'monospace' }}>{fmtGrad(h.oi_esfera)}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center', fontFamily: 'monospace' }}>{fmtGrad(h.oi_cilindro)}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.oi_eje ? h.oi_eje + '°' : '—'}</td>
-                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>{h.dp || '—'}</td>
-                            <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{h.doctor || '—'}</td>
-                            <td style={{ padding: '10px 12px' }}>
-                              <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                                <button className="btn-icon" title="Editar"
-                                  onClick={() => { setHistorialSeleccionado(h); setEditandoHistorialId(h.id); setFormHistorialAbierto(true); }}>
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                  </svg>
-                                </button>
-                                {isAdmin && (
-                                  <button className="btn-icon danger" title="Eliminar" onClick={() => eliminarHistorial(h.id)}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-                                      <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                                    </svg>
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )
-            }
+            <HistorialListModal
+              abierto={true}
+              cliente={cliente}
+              onCerrar={() => {}}
+              modal={false}
+            />
           </div>
-        )}
+        )
+      }
 
-        {/* TAB FACTURAS */}
+      {/* TAB FACTURAS */}
         {tab === 'facturas' && (
           <div>
             {!loadingVentas && resumen && Number(resumen.deuda_total) > 0 && (

@@ -148,7 +148,7 @@ export default function HistorialListModal({ abierto, cliente, onCerrar, onSelec
       </thead>
       <tbody>
         {historiales.length === 0
-          ? <tr><td colSpan={columnas.length} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No hay historiales cl\u00ednicos para este paciente</td></tr>
+          ? <tr><td colSpan={columnas.length} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No hay historiales clinicos para este paciente</td></tr>
           : historiales.map(h => {
             const celdas = extendido
               ? [
@@ -198,7 +198,7 @@ export default function HistorialListModal({ abierto, cliente, onCerrar, onSelec
   const encabezado = (
     <div style={{ padding: enModal ? '20px 24px' : 0, borderBottom: enModal ? '1px solid var(--border-color)' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Historiales cl\u00ednicos</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Historiales clinicos</h2>
         {cliente && (
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3 }}>
             {cliente.nombres} {cliente.apellidos}
@@ -207,15 +207,8 @@ export default function HistorialListModal({ abierto, cliente, onCerrar, onSelec
         )}
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <button
-          className="btn btn-ghost btn-sm"
-          onClick={() => setExtendido(v => !v)}
-          title={extendido ? 'Vista compacta' : 'Vista extendida'}
-          style={{ fontSize: 12, padding: '4px 10px' }}
-        >
-          {extendido ? 'Compacto' : 'Extendido'}
-        </button>
-        {enModal && <button className="btn-icon" onClick={onCerrar}>\u2715</button>}
+        
+        {enModal && <button className="btn-icon" onClick={onCerrar}>X</button>}
       </div>
     </div>
   );

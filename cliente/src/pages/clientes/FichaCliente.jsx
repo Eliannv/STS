@@ -468,7 +468,8 @@ export default function FichaCliente() {
               abierto={true}
               cliente={cliente}
               onCerrar={() => {}}
-              modal={false}
+              modal={false} 
+              modoCompacto={false}
             />
           </div>
         )

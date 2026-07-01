@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/api';
 import HistorialFormModal from './HistorialFormModal';
@@ -16,6 +16,7 @@ export default function HistorialListModal({ abierto, cliente, onCerrar, onCrear
 
   const [extendido, setExtendido] = useState(!modoCompacto);
   const [viendo, setViendo] = useState(null);
+  const inputImportRef = useRef(null);
 
   useEffect(() => {
     if (abierto && cliente) cargar();
@@ -39,6 +40,47 @@ export default function HistorialListModal({ abierto, cliente, onCerrar, onCrear
     setHistorialSeleccionado(h);
     setEditandoId(h.id);
     setFormAbierto(true);
+  }
+
+  async function importarHistorial(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const ExcelJS = (await import('exceljs')).default;
+      const buffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer);
+      const ws = workbook.getWorksheet(1);
+      if (!ws) { alert('El archivo no tiene hojas'); return; }
+
+      const c = v => {
+        const cell = ws.getCell(v);
+        return cell && cell.value !== null && cell.value !== undefined ? cell.value : '';
+      };
+
+      const data = {
+        cliente_id:     cliente?.id || '',
+        od_esfera:      c('C3'), od_cilindro: c('D3'), od_eje: c('E3'),
+        od_avsc:        c('F3'), od_avcc: c('G3'),
+        oi_esfera:      c('C4'), oi_cilindro: c('D4'), oi_eje: c('E4'),
+        oi_avsc:        c('F4'), oi_avcc: c('G4'),
+        add:            c('C5'),
+        dp:             c('H3'),
+        altura:         c('H4'),
+        armazon_h:      c('J2'), armazon_v: c('J3'),
+        armazon_dm:     c('J4'), armazon_dbl: c('J5'),
+        de:             c('C6'),
+        armazon_tipo:   c('L3'),
+        fecha_chequeo:  c('D1'),
+      };
+
+      setHistorialSeleccionado(data);
+      setEditandoId(null);
+      setFormAbierto(true);
+    } catch (err) {
+      alert('Error al importar: ' + err.message);
+    }
+    e.target.value = '';
   }
 
   async function eliminar(id) {
@@ -210,7 +252,12 @@ export default function HistorialListModal({ abierto, cliente, onCerrar, onCrear
         {!soloLectura && !ocultarNuevo && (
           <button className="btn btn-primary btn-sm" style={{ padding: '4px 10px', fontSize: 12 }} onClick={abrirNuevo}>+ Nuevo historial</button>
         )}
-        
+        {cliente && !soloLectura && !ocultarNuevo && (
+          <>
+            <button className="btn btn-ghost btn-sm" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => inputImportRef.current?.click()}>Importar</button>
+            <input ref={inputImportRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={importarHistorial} />
+          </>
+        )}
       </div>
     </div>
   );

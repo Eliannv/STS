@@ -29,7 +29,7 @@ export default function HistorialFormModal({ abierto, editando, historialInicial
 
   useEffect(() => {
     if (!abierto) return;
-    if (editando && historialInicial) {
+    if (historialInicial) {
       const h = historialInicial;
       setForm({
         clienteId:    h.cliente_id,

@@ -1025,6 +1025,7 @@ export default function CrearVenta() {
         cliente={clienteSel}
         onCerrar={() => setModalHistorial(false)}
         onSeleccionar={h => setHistorialSel(h)}
+        ocultarNuevo
       />
 
       {/* ════ MODAL VER HISTORIAL CLÍNICO ════ */}

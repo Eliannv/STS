@@ -352,10 +352,10 @@ export default function FichaCliente() {
           { key: 'informacion', label: 'Información',
             icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
             badge: null },
-          { key: 'historial', label: 'Historial Clínico',
+          { key: 'historial', label: 'Historiales Clínicos',
             icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13h4"/><path d="M10 17h4"/></svg>,
             badge: tieneHistorial ? { text: '✓', color: '#27ae60' } : null },
-          { key: 'facturas', label: 'Facturación',
+          { key: 'facturas', label: 'Facturas',
             icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>,
             badge: cliente.tiene_deuda ? { text: '!', color: '#e67e22' } : null },
         ].map(t => (
@@ -497,19 +497,22 @@ export default function FichaCliente() {
               </div>
             )}
             {!loadingVentas && resumen && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 24 }}>
-                {[
-                  { label: 'Total Facturado',  val: fmtMoney(resumen.total_facturado),  color: '#1a56db', bg: '#ebf5ff' },
-                  { label: 'Total Pagado',      val: fmtMoney(resumen.total_pagado),     color: '#057a55', bg: '#f0fdf4' },
-                  { label: 'Deuda Pendiente',   val: fmtMoney(resumen.deuda_total),      color: Number(resumen.deuda_total) > 0 ? '#92400e' : '#6b7280', bg: Number(resumen.deuda_total) > 0 ? '#fffbeb' : '#f9fafb' },
-                  { label: 'Facturas',          val: resumen.cantidad_facturas || 0,     color: '#5521b5', bg: '#f5f3ff' },
-                  { label: 'Promedio',          val: fmtMoney(resumen.promedio_compra),  color: '#1e429f', bg: '#ebf5ff' },
-                ].map(s => (
-                  <div key={s.label} style={{ background: s.bg, border: '1px solid ' + s.color + '22', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: s.color, marginBottom: 4 }}>{s.val}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{s.label}</div>
-                  </div>
-                ))}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 24 }}>
+                <StatCard
+                  icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+                  label="Total Facturado" value={fmtMoney(resumen.total_facturado)} color="#1a56db" />
+                <StatCard
+                  icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                  label="Total Pagado" value={fmtMoney(resumen.total_pagado)} color="#057a55" />
+                <StatCard
+                  icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
+                  label="Deuda Pendiente" value={fmtMoney(resumen.deuda_total)} color={Number(resumen.deuda_total) > 0 ? '#92400e' : '#6b7280'} />
+                <StatCard
+                  icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>}
+                  label="Facturas" value={resumen.cantidad_facturas || 0} color="#5521b5" />
+                <StatCard
+                  icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>}
+                  label="Promedio" value={fmtMoney(resumen.promedio_compra)} color="#1e429f" />
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>

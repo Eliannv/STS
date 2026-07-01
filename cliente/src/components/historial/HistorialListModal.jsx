@@ -4,7 +4,7 @@ import { api } from '../../api/api';
 import HistorialFormModal from './HistorialFormModal';
 import { exportarHistorialExcel } from '../../utils/exportarExcel';
 
-export default function HistorialListModal({ abierto, cliente, onCerrar, onSeleccionar, modoCompacto = true, soloLectura = false, modal: enModal = true }) {
+export default function HistorialListModal({ abierto, cliente, onCerrar, onCrear, onSeleccionar, modoCompacto = true, soloLectura = false, modal: enModal = true, ocultarNuevo = false }) {
   const { isAdmin } = useAuth();
 
   const [historiales, setHistoriales] = useState([]);
@@ -207,8 +207,10 @@ export default function HistorialListModal({ abierto, cliente, onCerrar, onSelec
         )}
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        {!soloLectura && !ocultarNuevo && (
+          <button className="btn btn-primary btn-sm" style={{ padding: '4px 10px', fontSize: 12 }} onClick={abrirNuevo}>+ Nuevo historial</button>
+        )}
         
-        {enModal && <button className="btn-icon" onClick={onCerrar}>X</button>}
       </div>
     </div>
   );
@@ -222,9 +224,6 @@ export default function HistorialListModal({ abierto, cliente, onCerrar, onSelec
       }
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: enModal ? '14px 24px' : '16px 0 0', borderTop: enModal ? '1px solid var(--border-color)' : 'none' }}>
         {enModal && <button className="btn btn-ghost" onClick={onCerrar}>Cerrar</button>}
-        {!soloLectura && (
-          <button className="btn btn-primary" onClick={abrirNuevo}>+ Nuevo historial</button>
-        )}
       </div>
     </>
   );

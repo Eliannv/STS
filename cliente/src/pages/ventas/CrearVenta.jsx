@@ -4,8 +4,9 @@ import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import ClienteFormModal from '../../components/clientes/ClienteFormModal';
 import HistorialListModal from '../../components/historial/HistorialListModal';
+import HistorialFormModal from '../../components/historial/HistorialFormModal';
 import { imprimirTicketVenta } from '../../utils/ticketVenta';
-import { Search, ShoppingCart, FileText, X } from 'lucide-react';
+import { Search, ShoppingCart, FileText, X, Eye } from 'lucide-react';
 
 /* ─────────────── helpers ─────────────── */
 const FMT      = v => `$${parseFloat(v || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`;
@@ -92,6 +93,7 @@ export default function CrearVenta() {
 
   /* ── historial clínico seleccionado para la venta ── */
   const [historialSel, setHistorialSel] = useState(null);
+  const [viendoHistorial, setViendoHistorial] = useState(null);
 
   /* ── consumidor final ── */
   const [consumidorFinalId, setConsumidorFinalId] = useState(null);
@@ -497,24 +499,44 @@ export default function CrearVenta() {
       </button>
 
       {historialSel && (
-        <button
-          onClick={() => setHistorialSel(null)}
-          title="Quitar historial seleccionado"
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: '50%',
-            border: '1px solid #e2e8f0',
-            background: '#fff',
-            color: '#64748b',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer'
-          }}
-        >
-          <X size={12} />
-        </button>
+        <>
+          <button
+            onClick={() => setViendoHistorial(historialSel)}
+            title="Ver historial clínico"
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              border: '1px solid #e2e8f0',
+              background: '#fff',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }}
+          >
+            <Eye size={12} />
+          </button>
+          <button
+            onClick={() => setHistorialSel(null)}
+            title="Quitar historial seleccionado"
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              border: '1px solid #e2e8f0',
+              background: '#fff',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }}
+          >
+            <X size={12} />
+          </button>
+        </>
       )}
     </>
   ) : (
@@ -1003,6 +1025,17 @@ export default function CrearVenta() {
         cliente={clienteSel}
         onCerrar={() => setModalHistorial(false)}
         onSeleccionar={h => setHistorialSel(h)}
+      />
+
+      {/* ════ MODAL VER HISTORIAL CLÍNICO ════ */}
+      <HistorialFormModal
+        abierto={!!viendoHistorial}
+        editando={viendoHistorial?.id}
+        historialInicial={viendoHistorial}
+        cliente={clienteSel}
+        soloLectura={true}
+        onCerrar={() => setViendoHistorial(null)}
+        onGuardado={() => setViendoHistorial(null)}
       />
 
       {/* ════ MODAL ÉXITO VENTA ════ */}

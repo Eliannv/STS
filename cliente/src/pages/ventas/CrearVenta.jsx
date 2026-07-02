@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import ClienteFormModal from '../../components/clientes/ClienteFormModal';
 import HistorialListModal from '../../components/historial/HistorialListModal';
 import HistorialFormModal from '../../components/historial/HistorialFormModal';
+import FilterCard, { FilterItem } from '../../components/common/FilterCard';
 import { imprimirTicketVenta } from '../../utils/ticketVenta';
 import { Search, ShoppingCart, FileText, X, Eye } from 'lucide-react';
 
@@ -66,6 +67,7 @@ export default function CrearVenta() {
   const [buscarProd,       setBuscarProd]       = useState('');
   const [cargandoProd,     setCargandoProd]     = useState(false);
   const [mostrarFiltros,   setMostrarFiltros]   = useState(false);
+
   const [filtroGrupo,      setFiltroGrupo]      = useState('');
   const [filtroProveedor,  setFiltroProveedor]  = useState('');
   const [filtroStock,      setFiltroStock]      = useState('');   // '' | 'con' | 'sin'
@@ -381,7 +383,7 @@ export default function CrearVenta() {
     setModalTipo(true);
   }
 
-  const hayFiltrosActivos = filtroGrupo || filtroProveedor || filtroStock;
+
   const refActiva = REF_META[metodoPago];
 
   /* ═══════════════════════════ RENDER ═══════════════════════════ */
@@ -576,76 +578,61 @@ export default function CrearVenta() {
             </span>
           </div>
 
-          {/* Barra búsqueda + filtros */}
+          {/* Barra búsqueda */}
           <div style={{ padding: '8px 12px', borderBottom: '1px solid #dee2e6', background: '#fff', flexShrink: 0 }}>
-            {/* Input buscar */}
             <div style={{ position: 'relative', marginBottom: 8 }}>
               <svg style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }}
                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
-              <input
-                ref={searchProdRef}
-                style={{ ...S.input, paddingLeft: 30, paddingRight: buscarProd ? 26 : 8 }}
+              <input ref={searchProdRef}
+                style={{ padding: '7px 10px', border: '1px solid #ced4da', borderRadius: 6, fontSize: 13, width: '100%', background: '#fff', outline: 'none', fontFamily: 'inherit', paddingLeft: 30, paddingRight: buscarProd ? 26 : 8, boxSizing: 'border-box' }}
                 placeholder="Buscar por nombre, código, grupo... (↑↓ y Enter)"
-                value={buscarProd}
-                onChange={e => setBuscarProd(e.target.value)}
-                onKeyDown={onSearchKeydown}
-              />
+                value={buscarProd} onChange={e => setBuscarProd(e.target.value)}
+                onKeyDown={onSearchKeydown} />
               {buscarProd && (
                 <button onClick={() => setBuscarProd('')}
                   style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#aaa', fontSize: 13, padding: 0 }}>✕</button>
               )}
             </div>
-
-            {/* Botón filtros */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button
-                className={`btn btn-sm ${mostrarFiltros ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setMostrarFiltros(v => !v)}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-                </svg>
-                Filtros
-                {hayFiltrosActivos && <span style={S.badge('#e74c3c', '#fff')}>!</span>}
-              </button>
-              {hayFiltrosActivos && (
-                <button className="btn btn-ghost btn-sm"
-                  onClick={() => { setFiltroGrupo(''); setFiltroProveedor(''); setFiltroStock(''); }}>
-                  Limpiar filtros
-                </button>
-              )}
-            </div>
-
-            {/* Panel de filtros — 3 columnas */}
-            {mostrarFiltros && (
-              <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                <div>
-                  <label style={S.lbl}>Grupo:</label>
-                  <select value={filtroGrupo} onChange={e => setFiltroGrupo(e.target.value)} style={S.input}>
-                    <option value="">Todos</option>
-                    {grupos.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={S.lbl}>Proveedor:</label>
-                  <select value={filtroProveedor} onChange={e => setFiltroProveedor(e.target.value)} style={S.input}>
-                    <option value="">Todos</option>
-                    {proveedores.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={S.lbl}>Stock:</label>
-                  <select value={filtroStock} onChange={e => setFiltroStock(e.target.value)} style={S.input}>
-                    <option value="">Todos</option>
-                    <option value="con">Con stock</option>
-                    <option value="sin">Sin stock</option>
-                  </select>
-                </div>
-              </div>
-            )}
+            <button className={`btn btn-sm ${mostrarFiltros ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setMostrarFiltros(v => !v)}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle', marginRight: 4 }}>
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+              </svg>
+              Filtros
+            </button>
           </div>
+
+          {mostrarFiltros && (
+            <FilterCard
+              onLimpiar={() => { setFiltroGrupo(''); setFiltroProveedor(''); setFiltroStock(''); }}
+              resultado={`${prodFiltrados.length} producto${prodFiltrados.length !== 1 ? 's' : ''}`}
+            >
+              <FilterItem label="Grupo">
+                <select value={filtroGrupo} onChange={e => setFiltroGrupo(e.target.value)}
+                  style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13, background: '#fff', width: '100%', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}>
+                  <option value="">Todos</option>
+                  {grupos.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </FilterItem>
+              <FilterItem label="Proveedor">
+                <select value={filtroProveedor} onChange={e => setFiltroProveedor(e.target.value)}
+                  style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13, background: '#fff', width: '100%', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}>
+                  <option value="">Todos</option>
+                  {proveedores.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </FilterItem>
+              <FilterItem label="Stock">
+                <select value={filtroStock} onChange={e => setFiltroStock(e.target.value)}
+                  style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13, background: '#fff', width: '100%', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}>
+                  <option value="">Todos</option>
+                  <option value="con">Con stock</option>
+                  <option value="sin">Sin stock</option>
+                </select>
+              </FilterItem>
+            </FilterCard>
+          )}
 
           {/* ── TABLA DE PRODUCTOS ── */}
           <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>

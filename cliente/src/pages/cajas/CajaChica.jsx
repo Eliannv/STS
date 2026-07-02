@@ -4,6 +4,7 @@ import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import AbrirCajaChicaModal from '../../components/cajas/AbrirCajaChicaModal';
 import StatCard from '../../components/common/StatCard';
+import FilterCard, { FilterItem, filterInputStyle } from '../../components/common/FilterCard';
 
 const FMT   = v => `$${parseFloat(v || 0).toFixed(2)}`;
 const FECHA = s => {
@@ -77,38 +78,6 @@ export default function CajaChica() {
         )}
       </div>
 
-      {/* ═══ FILTROS ═══ */}
-      <div style={{ background: '#fff', border: '1px solid #e9ecef', borderRadius: 10, padding: '18px 20px', marginBottom: 20 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 14px' }}>Filtros de Búsqueda</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: 12, fontWeight: 600 }}>Estado</label>
-            <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
-              style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13, background: '#fff' }}>
-              <option value="">Todos</option>
-              <option value="ABIERTA">Abierta</option>
-              <option value="CERRADA">Cerrada</option>
-            </select>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: 12, fontWeight: 600 }}>Fecha desde</label>
-            <input type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)}
-              style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13 }} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: 12, fontWeight: 600 }}>Fecha hasta</label>
-            <input type="date" value={filtroFechaHasta} onChange={e => setFiltroFechaHasta(e.target.value)}
-              style={{ padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: 7, fontSize: 13 }} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
-          <button className="btn btn-ghost btn-sm" onClick={limpiarFiltros}>✕ Limpiar filtros</button>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            {!loading && `${lista.length} caja${lista.length !== 1 ? 's' : ''} encontrada${lista.length !== 1 ? 's' : ''}`}
-          </span>
-        </div>
-      </div>
-
       {/* ═══ KPIs ═══ */}
       {!loading && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 20 }}>
@@ -129,6 +98,26 @@ export default function CajaChica() {
             label="Total gastado" value={FMT(gastoTotal > 0 ? gastoTotal : 0)} color="#e67e22" />
         </div>
       )}
+
+      <FilterCard
+        titulo="Filtros de Búsqueda"
+        onLimpiar={limpiarFiltros}
+        resultado={!loading ? `${lista.length} caja${lista.length !== 1 ? 's' : ''} encontrada${lista.length !== 1 ? 's' : ''}` : ''}
+      >
+        <FilterItem label="Estado">
+          <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} style={filterInputStyle}>
+            <option value="">Todos</option>
+            <option value="ABIERTA">Abierta</option>
+            <option value="CERRADA">Cerrada</option>
+          </select>
+        </FilterItem>
+        <FilterItem label="Fecha desde">
+          <input type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)} style={filterInputStyle} />
+        </FilterItem>
+        <FilterItem label="Fecha hasta">
+          <input type="date" value={filtroFechaHasta} onChange={e => setFiltroFechaHasta(e.target.value)} style={filterInputStyle} />
+        </FilterItem>
+      </FilterCard>
 
       {/* ═══ LOADING ═══ */}
       {loading && (

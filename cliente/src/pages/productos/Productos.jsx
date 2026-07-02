@@ -3,50 +3,54 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import ProductoFormModal from '../../components/productos/ProductoFormModal';
+import FilterCard, { FilterItem, filterInputStyle } from '../../components/common/FilterCard';
 import { exportarProductosExcel } from '../../utils/exportarExcel';
 
 export default function Productos() {
   const { isAdmin } = useAuth();
   const navigate    = useNavigate();
   const [lista, setLista]       = useState([]);
-  const [hasNext, setHasNext]   = useState(false);
-  const [page, setPage]         = useState(0);
-  const [buscar, setBuscar]     = useState('');
-  const [orden, setOrden]       = useState('codigo'); // 'codigo' | 'recientes'
   const [loading, setLoading]   = useState(true);
+  const [buscarProd, setBuscarProd] = useState('');
+  const [filtroGrupo, setFiltroGrupo] = useState('');
+  const [filtroProveedor, setFiltroProveedor] = useState('');
+  const [filtroStock, setFiltroStock] = useState('');
+  const [orden, setOrden]       = useState('codigo');
   const [modal, setModal]       = useState(false);
   const [editando, setEditando] = useState(null);
   const [productoSel, setProductoSel] = useState(null);
 
+  const grupos = useMemo(() => [...new Set(lista.map(p => p.grupo).filter(Boolean))].sort(), [lista]);
+  const proveedores = useMemo(() => [...new Set(lista.map(p => p.proveedor_nombre).filter(Boolean))].sort(), [lista]);
+
   const cargar = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (buscar) {
-      params.set('buscar', buscar);
-      params.set('limit', '9999');
-      params.set('offset', '0');
-    } else {
-      params.set('limit', '21');
-      params.set('offset', String(page * 20));
-    }
-    const res = await api.get(`/producto/lista?${params}`);
-    if (res.ok) {
-      const data = res.data.resultado || [];
-      if (buscar) {
-        setHasNext(false);
-        setLista(data);
-      } else {
-        setHasNext(data.length > 20);
-        setLista(data.slice(0, 20));
-      }
-    }
+    const res = await api.get('/producto/lista?limit=9999');
+    if (res.ok) setLista(res.data.resultado || []);
     setLoading(false);
-  }, [buscar, page]);
+  }, []);
 
-  useEffect(() => { setPage(0); }, [buscar]);
+  useEffect(() => { cargar(); }, [cargar]);
 
-  const listaOrdenada = useMemo(() => {
-    const copia = [...lista];
+  const filtrados = useMemo(() => {
+    let l = lista;
+    if (buscarProd.trim()) {
+      const q = buscarProd.toLowerCase();
+      l = l.filter(p =>
+        (p.nombre           || '').toLowerCase().includes(q) ||
+        (p.codigo           || '').toLowerCase().includes(q) ||
+        (p.grupo            || '').toLowerCase().includes(q) ||
+        (p.modelo           || '').toLowerCase().includes(q) ||
+        (p.color            || '').toLowerCase().includes(q) ||
+        (p.proveedor_nombre || '').toLowerCase().includes(q)
+      );
+    }
+    if (filtroGrupo)     l = l.filter(p => p.grupo === filtroGrupo);
+    if (filtroProveedor) l = l.filter(p => p.proveedor_nombre === filtroProveedor);
+    if (filtroStock === 'con') l = l.filter(p => (p.stock ?? 0) > 0);
+    if (filtroStock === 'sin') l = l.filter(p => (p.stock ?? 0) <= 0);
+
+    const copia = [...l];
     if (orden === 'recientes') {
       copia.sort((a, b) => {
         const da = new Date(a.created_at || 0);
@@ -57,9 +61,7 @@ export default function Productos() {
       copia.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '', 'es', { numeric: true }));
     }
     return copia;
-  }, [lista, orden]);
-
-  useEffect(() => { const t = setTimeout(cargar, 300); return () => clearTimeout(t); }, [cargar]);
+  }, [lista, buscarProd, filtroGrupo, filtroProveedor, filtroStock, orden]);
 
   function abrirEditar(p) {
     setProductoSel(p);
@@ -79,9 +81,8 @@ export default function Productos() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Productos</h1>
-          <p className="page-subtitle">Catálogo de productos — ordenado por código</p>
+          <p className="page-subtitle">Catálogo de productos</p>
         </div>
-        
       </div>
 
       {isAdmin && (
@@ -99,39 +100,63 @@ export default function Productos() {
         </div>
       )}
 
-      <div className="card">
-        <div className="card-header">
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <select
-              className="input"
-              style={{ padding: '5px 10px', fontSize: 13, height: 34 }}
-              value={orden}
-              onChange={e => setOrden(e.target.value)}
-            >
-              <option value="codigo">Por código</option>
-              <option value="recientes">Recientes primero</option>
-            </select>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => exportarProductosExcel(listaOrdenada)}
-              title="Exportar a Excel"
-              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="12" y1="18" x2="12" y2="12"/>
-                <line x1="9" y1="15" x2="15" y2="15"/>
-              </svg>
-              Excel
-            </button>
-            <div className="search-bar">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input placeholder="Buscar por código o nombre..." value={buscar} onChange={e => setBuscar(e.target.value)} />
-            </div>
+      <FilterCard
+        titulo="Opciones de filtrado y exportación"
+        onLimpiar={() => { setFiltroGrupo(''); setFiltroProveedor(''); setFiltroStock(''); setBuscarProd(''); }}
+        resultado={`${filtrados.length} producto${filtrados.length !== 1 ? 's' : ''}`}
+      >
+        <FilterItem label="Buscar" span={3}>
+          <div style={{ position: 'relative' }}>
+            <svg style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }}
+              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input style={{ ...filterInputStyle, paddingLeft: 30 }}
+              placeholder="Nombre, código, grupo..."
+              value={buscarProd} onChange={e => setBuscarProd(e.target.value)} />
           </div>
-        </div>
+        </FilterItem>
+        <FilterItem label="Grupo">
+          <select value={filtroGrupo} onChange={e => setFiltroGrupo(e.target.value)} style={filterInputStyle}>
+            <option value="">Todos</option>
+            {grupos.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </FilterItem>
+        <FilterItem label="Proveedor">
+          <select value={filtroProveedor} onChange={e => setFiltroProveedor(e.target.value)} style={filterInputStyle}>
+            <option value="">Todos</option>
+            {proveedores.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </FilterItem>
+        <FilterItem label="Stock">
+          <select value={filtroStock} onChange={e => setFiltroStock(e.target.value)} style={filterInputStyle}>
+            <option value="">Todos</option>
+            <option value="con">Con stock</option>
+            <option value="sin">Sin stock</option>
+          </select>
+        </FilterItem>
+        <FilterItem label="Ordenar">
+          <select value={orden} onChange={e => setOrden(e.target.value)} style={filterInputStyle}>
+            <option value="codigo">Por código</option>
+            <option value="recientes">Recientes primero</option>
+          </select>
+        </FilterItem>
+        <FilterItem label="Exportar">
+          <button onClick={() => exportarProductosExcel(filtrados)}
+            title="Exportar a Excel"
+            style={{ ...filterInputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+            Excel
+          </button>
+        </FilterItem>
+      </FilterCard>
+
+      <div className="card">
         <div className="table-container">
           {loading ? <div className="spinner-wrapper"><div className="spinner"/></div> : (
             <table>
@@ -143,9 +168,9 @@ export default function Productos() {
                 </tr>
               </thead>
               <tbody>
-                {listaOrdenada.length === 0
+                {filtrados.length === 0
                   ? <tr><td colSpan={8} className="empty-state">Sin resultados</td></tr>
-                  : listaOrdenada.map(p => (
+                  : filtrados.map(p => (
                     <tr key={p.id}>
                       <td>
                         <code style={{ background: '#f0f4ff', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>
@@ -178,15 +203,6 @@ export default function Productos() {
             </table>
           )}
         </div>
-        {/* Paginación — ocultar cuando hay búsqueda activa */}
-        {!buscar && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #e9ecef' }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
-          </div>
-        </div>
-        )}
       </div>
 
       <ProductoFormModal

@@ -4,6 +4,7 @@ import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
 import StatCard from '../../components/common/StatCard';
+import FilterCard, { FilterItem, filterInputStyle } from '../../components/common/FilterCard';
 
 const FMT  = v => `$${parseFloat(v || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`;
 const FECHA = s => {
@@ -112,8 +113,6 @@ export default function Ventas() {
     setBuscar(''); setEstado(''); setTipo(''); setFechaDesde(''); setFechaHasta('');
   }
 
-  const hayFiltros = buscar || estado || tipo || fechaDesde || fechaHasta;
-
   return (
     <div className="page">
 
@@ -154,57 +153,43 @@ export default function Ventas() {
           label="Deuda total" value={FMT(totalDeuda)} color={totalDeuda > 0 ? '#e74c3c' : '#27ae60'} />
       </div>
 
-      {/* Filtros */}
-      <div className="card" style={{ padding: '14px 20px' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ flex: '1 1 200px' }}>
-            <label className="form-label">Buscar</label>
-            <div className="search-bar">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-              </svg>
-              <input placeholder="Factura, cliente, ID..." value={buscar} onChange={e => setBuscar(e.target.value)} />
-            </div>
+      <FilterCard
+        onLimpiar={limpiarFiltros}
+      >
+        <FilterItem label="Buscar" span={3}>
+          <div style={{ position: 'relative' }}>
+            <svg style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }}
+              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input style={{ ...filterInputStyle, paddingLeft: 30 }} placeholder="Factura, cliente, ID..."
+              value={buscar} onChange={e => setBuscar(e.target.value)} />
           </div>
-          <div className="form-group" style={{ flex: '0 0 140px' }}>
-            <label className="form-label">Estado</label>
-            <select className="form-control" value={estado} onChange={e => setEstado(e.target.value)}>
-              <option value="">Todos</option>
-              <option value="PENDIENTE">Pendiente</option>
-              <option value="PAGADA">Pagada</option>
-            </select>
-          </div>
-          <div className="form-group" style={{ flex: '0 0 160px' }}>
-            <label className="form-label">Tipo</label>
-            <select className="form-control" value={tipo} onChange={e => setTipo(e.target.value)}>
-              <option value="">Todos</option>
-              <option value="CONTADO">Contado</option>
-              <option value="CREDITO">Crédito</option>
-            </select>
-          </div>
-          <div className="form-group" style={{ flex: '0 0 140px' }}>
-            <label className="form-label">Desde</label>
-            <input type="date" className="form-control" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} />
-          </div>
-          <div className="form-group" style={{ flex: '0 0 140px' }}>
-            <label className="form-label">Hasta</label>
-            <input type="date" className="form-control" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} />
-          </div>
-        </div>
-      </div>
+        </FilterItem>
+        <FilterItem label="Estado">
+          <select value={estado} onChange={e => setEstado(e.target.value)} style={filterInputStyle}>
+            <option value="">Todos</option>
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="PAGADA">Pagada</option>
+          </select>
+        </FilterItem>
+        <FilterItem label="Tipo">
+          <select value={tipo} onChange={e => setTipo(e.target.value)} style={filterInputStyle}>
+            <option value="">Todos</option>
+            <option value="CONTADO">Contado</option>
+            <option value="CREDITO">Crédito</option>
+          </select>
+        </FilterItem>
+        <FilterItem label="Desde">
+          <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} style={filterInputStyle} />
+        </FilterItem>
+        <FilterItem label="Hasta">
+          <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} style={filterInputStyle} />
+        </FilterItem>
+      </FilterCard>
 
       {/* Tabla */}
       <div className="card">
-        <div className="card-header" style={hayFiltros ? { padding: '16px 20px' } : { padding: 0, border: 'none' }}>
-          {hayFiltros && (
-            <button className="btn btn-ghost btn-sm" onClick={limpiarFiltros} >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-              Limpiar
-            </button>
-          )}
-        </div>
         <div className="table-container">
           {loading ? (
             <div className="spinner-wrapper"><div className="spinner" /></div>

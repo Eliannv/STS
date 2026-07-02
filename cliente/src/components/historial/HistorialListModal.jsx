@@ -3,8 +3,9 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/api';
 import HistorialFormModal from './HistorialFormModal';
 import { exportarHistorialExcel } from '../../utils/exportarExcel';
+import { File } from 'lucide-react';
 
-export default function HistorialListModal({ abierto, cliente, onCerrar, onCrear, onSeleccionar, modoCompacto = true, soloLectura = false, modal: enModal = true, ocultarNuevo = false }) {
+export default function HistorialListModal({ abierto, cliente, onCerrar, onSeleccionar, modoCompacto = true, soloLectura = false, modal: enModal = true, ocultarNuevo = false }) {
   const { isAdmin } = useAuth();
 
   const [historiales, setHistoriales] = useState([]);
@@ -250,11 +251,11 @@ export default function HistorialListModal({ abierto, cliente, onCerrar, onCrear
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         {!soloLectura && !ocultarNuevo && (
-          <button className="btn btn-primary btn-sm" style={{ padding: '4px 10px', fontSize: 12 }} onClick={abrirNuevo}>+ Nuevo historial</button>
+          <button className="btn btn-primary btn-sm" style={{ padding: '4px 10px', fontSize: 14 }} onClick={abrirNuevo}>+ Nuevo historial</button>
         )}
         {cliente && !soloLectura && !ocultarNuevo && (
           <>
-            <button className="btn btn-ghost btn-sm" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => inputImportRef.current?.click()}>Importar</button>
+            <button className="btn btn-ghost btn-sm" style={{ padding: '4px 10px', fontSize: 14 }} onClick={() => inputImportRef.current?.click()}><File size={16} /> Importar</button>
             <input ref={inputImportRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={importarHistorial} />
           </>
         )}

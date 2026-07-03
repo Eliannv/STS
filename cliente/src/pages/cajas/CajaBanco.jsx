@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import AbrirCajaBancoModal from '../../components/cajas/AbrirCajaBancoModal';
 import StatCard from '../../components/common/StatCard';
 import FilterCard, { FilterItem, filterInputStyle } from '../../components/common/FilterCard';
+import TableCard from '../../components/common/TableCard';
 
 const FMT   = v => `$${parseFloat(v || 0).toFixed(2)}`;
 const FECHA = s => {
@@ -125,64 +126,52 @@ export default function CajaBanco() {
 
       {/* ═══ TABLA ═══ */}
       {!loading && (
-        <div style={{ background: '#fff', border: '1px solid #e9ecef', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead style={{ background: '#f8f9fa' }}>
-                <tr>
-                  {['Fecha', 'Estado', 'Saldo inicial', 'Saldo actual', 'Usuario', 'Cerrado por', 'Acciones'].map(h => (
-                    <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 600, color: '#495057', borderBottom: '1px solid #dee2e6', whiteSpace: 'nowrap' }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {lista.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
-                      No hay cajas banco registradas
+        <TableCard scrollY
+          loading={false}
+          empty={lista.length === 0}
+          emptyText="No hay cajas banco registradas"
+          page={page}
+          hasNext={hasNext}
+          onPrevPage={() => setPage(p => p - 1)}
+          onNextPage={() => setPage(p => p + 1)}
+        >
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Estado</th><th>Saldo inicial</th>
+                <th>Saldo actual</th><th>Usuario</th>
+                <th>Cerrado por</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map(caja => {
+                const badge = ESTADO_BADGE[caja.estado] || {};
+                return (
+                  <tr key={caja.id}>
+                    <td style={{ fontWeight: 500 }}>{FECHA(caja.fecha)}</td>
+                    <td>
+                      <span style={{ ...badge, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600 }}>
+                        {caja.estado}
+                      </span>
+                    </td>
+                    <td>{FMT(caja.saldo_inicial)}</td>
+                    <td style={{ fontWeight: 600, color: parseFloat(caja.saldo_actual) > 0 ? '#28a745' : '#dc3545' }}>
+                      {FMT(caja.saldo_actual)}
+                    </td>
+                    <td style={{ color: '#6c757d' }}>{caja.usuario_nombre || '—'}</td>
+                    <td style={{ color: '#6c757d' }}>{caja.cerrado_por_nombre || '—'}</td>
+                    <td>
+                      <button className="btn btn-ghost btn-sm"
+                        onClick={() => navigate(`/caja-banco/${caja.id}`)}>
+                        Ver detalle →
+                      </button>
                     </td>
                   </tr>
-                ) : lista.map(caja => {
-                  const badge = ESTADO_BADGE[caja.estado] || {};
-                  return (
-                    <tr key={caja.id} style={{ borderBottom: '1px solid #f0f0f0' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#f8f9fa'}
-                      onMouseLeave={e => e.currentTarget.style.background = ''}>
-                      <td style={{ padding: '12px 14px', fontWeight: 500 }}>{FECHA(caja.fecha)}</td>
-                      <td style={{ padding: '12px 14px' }}>
-                        <span style={{ ...badge, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600 }}>
-                          {caja.estado}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 14px' }}>{FMT(caja.saldo_inicial)}</td>
-                      <td style={{ padding: '12px 14px', fontWeight: 600, color: parseFloat(caja.saldo_actual) > 0 ? '#28a745' : '#dc3545' }}>
-                        {FMT(caja.saldo_actual)}
-                      </td>
-                      <td style={{ padding: '12px 14px', color: '#6c757d' }}>{caja.usuario_nombre || '—'}</td>
-                      <td style={{ padding: '12px 14px', color: '#6c757d' }}>{caja.cerrado_por_nombre || '—'}</td>
-                      <td style={{ padding: '12px 14px' }}>
-                        <button className="btn btn-ghost btn-sm"
-                          onClick={() => navigate(`/caja-banco/${caja.id}`)}>
-                          Ver detalle →
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Paginación */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #dee2e6' }}>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
-            </div>
-          </div>
-        </div>
+                );
+              })}
+            </tbody>
+          </table>
+        </TableCard>
       )}
 
       {/* Modal abrir caja */}

@@ -6,8 +6,9 @@ import ClienteFormModal from '../../components/clientes/ClienteFormModal';
 import HistorialListModal from '../../components/historial/HistorialListModal';
 import HistorialFormModal from '../../components/historial/HistorialFormModal';
 import FilterCard, { FilterItem } from '../../components/common/FilterCard';
+import ProductTable from '../../components/common/ProductTable';
 import { imprimirTicketVenta } from '../../utils/ticketVenta';
-import { Search, ShoppingCart, FileText, X, Eye } from 'lucide-react';
+import { ShoppingCart, FileText, X, Eye } from 'lucide-react';
 
 /* ─────────────── helpers ─────────────── */
 const FMT      = v => `$${parseFloat(v || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`;
@@ -74,6 +75,8 @@ export default function CrearVenta() {
   const [grupos,           setGrupos]           = useState([]);
   const [proveedores,      setProveedores]      = useState([]);
   const [selectedIdx,      setSelectedIdx]      = useState(-1);
+  const [page,    setPage]    = useState(0);
+  const [hasNext, setHasNext] = useState(false);
   const searchProdRef = useRef(null);
 
   /* ── carrito ── */
@@ -214,42 +217,49 @@ export default function CrearVenta() {
     setError('');
   }
 
-  /* ── cargar productos ── */
+  /* ── cargar productos: server-side paginado, o búsqueda completa ── */
+  const hayFiltrosLocales = filtroGrupo || filtroProveedor || filtroStock;
+
   useEffect(() => {
     setCargandoProd(true);
-    api.get('/producto/lista?limit=9999').then(r => {
+    const params = new URLSearchParams();
+    if (buscarProd.trim() || hayFiltrosLocales) {
+      if (buscarProd.trim()) params.set('buscar', buscarProd.trim());
+      params.set('limit', '9999');
+      params.set('offset', '0');
+    } else {
+      params.set('limit', '21');
+      params.set('offset', String(page * 20));
+    }
+    api.get(`/producto/lista?${params}`).then(r => {
       if (r.ok) {
-        const list = r.data.resultado || [];
-        setProductos(list);
-        setProdFiltrados(list);
-        setGrupos([...new Set(list.map(p => p.grupo).filter(Boolean))].sort());
-        setProveedores([...new Set(list.map(p => p.proveedor_nombre).filter(Boolean))].sort());
+        const data = r.data.resultado || [];
+        if (buscarProd.trim() || hayFiltrosLocales) {
+          setHasNext(false);
+          setProductos(data);
+        } else {
+          setHasNext(data.length > 20);
+          setProductos(data.slice(0, 20));
+        }
+        setGrupos([...new Set(data.map(p => p.grupo).filter(Boolean))].sort());
+        setProveedores([...new Set(data.map(p => p.proveedor_nombre).filter(Boolean))].sort());
       }
       setCargandoProd(false);
     });
-  }, []);
+  }, [buscarProd, page, hayFiltrosLocales]); // eslint-disable-line
 
-  /* ── filtrar productos ── */
+  useEffect(() => { if (buscarProd.trim() || hayFiltrosLocales) setPage(0); }, [buscarProd, hayFiltrosLocales]);
+
+  /* ── filtrar productos: solo filtros locales (grupo/proveedor/stock) ── */
   useEffect(() => {
     let lista = productos;
-    if (buscarProd.trim()) {
-      const q = buscarProd.toLowerCase();
-      lista = lista.filter(p =>
-        (p.nombre           || '').toLowerCase().includes(q) ||
-        (p.codigo           || '').toLowerCase().includes(q) ||
-        (p.grupo            || '').toLowerCase().includes(q) ||
-        (p.modelo           || '').toLowerCase().includes(q) ||
-        (p.color            || '').toLowerCase().includes(q) ||
-        (p.proveedor_nombre || '').toLowerCase().includes(q)
-      );
-    }
     if (filtroGrupo)     lista = lista.filter(p => p.grupo === filtroGrupo);
     if (filtroProveedor) lista = lista.filter(p => p.proveedor_nombre === filtroProveedor);
     if (filtroStock === 'con') lista = lista.filter(p => (p.stock ?? 0) > 0);
     if (filtroStock === 'sin') lista = lista.filter(p => (p.stock ?? 0) <= 0);
     setProdFiltrados(lista);
     setSelectedIdx(-1);
-  }, [buscarProd, filtroGrupo, filtroProveedor, filtroStock, productos]);
+  }, [filtroGrupo, filtroProveedor, filtroStock, productos]);
 
   /* ── teclado en búsqueda ── */
   function onSearchKeydown(e) {
@@ -634,64 +644,23 @@ export default function CrearVenta() {
             </FilterCard>
           )}
 
-          {/* ── TABLA DE PRODUCTOS ── */}
-          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
-            {cargandoProd && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 120 }}>
-                <div className="spinner" />
+          <ProductTable
+            productos={prodFiltrados}
+            loading={cargandoProd}
+            onRowClick={agregarAlCarrito}
+            selectedIdx={selectedIdx}
+            stickyHeader
+            mostrarModelo
+            mostrarProveedor
+          />
+          {!buscarProd.trim() && !filtroGrupo && !filtroProveedor && !filtroStock && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #e9ecef', flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
               </div>
-            )}
-
-            {!cargandoProd && prodFiltrados.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '30px', color: '#6c757d', fontSize: 13 }}>
-                <span style={{ fontSize: 28 }}><Search /></span>
-                <p style={{ marginTop: 8 }}>No se encontraron productos</p>
-              </div>
-            )}
-
-            {!cargandoProd && prodFiltrados.length > 0 && (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                  <tr>
-                    <th style={S.thCell}>Código</th>
-                    <th style={S.thCell}>Nombre</th>
-                    <th style={S.thCell}>Modelo</th>
-                    <th style={S.thCell}>Grupo</th>
-                    <th style={S.thCell}>Proveedor</th>
-                    <th style={{ ...S.thCell, textAlign: 'right' }}>Costo</th>
-                    <th style={{ ...S.thCell, textAlign: 'right' }}>PVP1</th>
-                    <th style={{ ...S.thCell, textAlign: 'center' }}>Stock</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {prodFiltrados.map((p, i) => {
-                    const sel = selectedIdx === i;
-                    return (
-                      <tr
-                        key={p.id}
-                        onClick={() => agregarAlCarrito(p)}
-                        onMouseEnter={e => { if (!sel) e.currentTarget.style.background = '#f5f8ff'; }}
-                        onMouseLeave={e => { if (!sel) e.currentTarget.style.background = 'inherit'; }}
-                        style={{ background: sel ? '#eef4ff' : 'inherit', cursor: 'pointer', borderLeft: sel ? '3px solid #3498db' : '3px solid transparent' }}
-                        title="Clic para agregar al carrito"
-                      >
-                        <td style={{ ...S.tdCell(sel), color: '#6c757d', fontSize: 12 }}>{p.codigo || '—'}</td>
-                        <td style={{ ...S.tdCell(sel), fontWeight: 600 }}>{p.nombre}</td>
-                        <td style={{ ...S.tdCell(sel), color: '#6c757d', fontSize: 12 }}>{p.modelo || '—'}</td>
-                        <td style={{ ...S.tdCell(sel), color: '#6c757d', fontSize: 12 }}>{p.grupo || '—'}</td>
-                        <td style={{ ...S.tdCell(sel), color: '#6c757d', fontSize: 12 }}>{p.proveedor_nombre || '—'}</td>
-                        <td style={{ ...S.tdCell(sel), textAlign: 'right', color: '#6c757d' }}>${parseFloat(p.costo || 0).toFixed(2)}</td>
-                        <td style={{ ...S.tdCell(sel), textAlign: 'right', fontWeight: 700, color: '#2980b9' }}>${parseFloat(p.pvp1 || 0).toFixed(2)}</td>
-                        <td style={{ ...S.tdCell(sel), textAlign: 'center' }}>
-                          <span style={{ fontWeight: 700, color: (p.stock ?? 0) > 0 ? '#27ae60' : '#e74c3c' }}>{p.stock ?? 0}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* ════ PANEL DERECHO — CARRITO + PAGO ════ */}

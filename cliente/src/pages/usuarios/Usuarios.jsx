@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import TableCard from '../../components/common/TableCard';
 
 const VACIO = { nombre: '', apellido: '', email: '', password: '', cedula: '', rol: 'OPERADOR', activo: true, sucursalId: '' };
 
@@ -85,53 +86,47 @@ export default function Usuarios() {
         {isAdmin && <button className="btn btn-primary" onClick={abrirNuevo}>+ Nuevo usuario</button>}
       </div>
 
-      <div className="card">
-        <div className="card-header">
-
+      <TableCard scrollY
+        loading={loading}
+        empty={lista.length === 0}
+        emptyText="Sin resultados"
+        page={page}
+        hasNext={hasNext}
+        onPrevPage={() => setPage(p => p - 1)}
+        onNextPage={() => setPage(p => p + 1)}
+        header={
           <div className="search-bar">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             <input placeholder="Buscar por nombre o email..." value={buscar} onChange={e => setBuscar(e.target.value)} />
           </div>
-        </div>
-        <div className="table-container">
-          {loading ? <div className="spinner-wrapper"><div className="spinner"/></div> : (
-            <table>
-              <thead>
-                <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th>{isAdmin && <th>Acciones</th>}</tr>
-              </thead>
-              <tbody>
-                {lista.length === 0 ? (
-                  <tr><td colSpan={5} className="empty-state">Sin resultados</td></tr>
-                ) : lista.map(u => (
-                  <tr key={u.id}>
-                    <td><strong>{u.nombre} {u.apellido}</strong></td>
-                    <td>{u.email}</td>
-                    <td><span className={`chip ${u.rol === 'ADMINISTRADOR' ? 'chip-active' : ''}`}>{u.rol}</span></td>
-                    <td><span className={`chip ${u.activo ? 'chip-active' : 'chip-inactive'}`}>{u.activo ? 'Activo' : 'Inactivo'}</span></td>
-                    {isAdmin && (
-                      <td style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn-icon" onClick={() => abrirEditar(u)} title="Editar">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        </button>
-                        <button className="btn-icon danger" onClick={() => eliminar(u.id)} title="Eliminar">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-        {/* Paginación */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #e9ecef' }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
-          </div>
-        </div>
-      </div>
+        }
+      >
+        <table>
+          <thead>
+            <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th>{isAdmin && <th>Acciones</th>}</tr>
+          </thead>
+          <tbody>
+            {lista.map(u => (
+              <tr key={u.id}>
+                <td><strong>{u.nombre} {u.apellido}</strong></td>
+                <td>{u.email}</td>
+                <td><span className={`chip ${u.rol === 'ADMINISTRADOR' ? 'chip-active' : ''}`}>{u.rol}</span></td>
+                <td><span className={`chip ${u.activo ? 'chip-active' : 'chip-inactive'}`}>{u.activo ? 'Activo' : 'Inactivo'}</span></td>
+                {isAdmin && (
+                  <td style={{ display: 'flex', gap: 4 }}>
+                    <button className="btn-icon" onClick={() => abrirEditar(u)} title="Editar">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button className="btn-icon danger" onClick={() => eliminar(u.id)} title="Eliminar">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
 
       {modal && (
         <div className="modal-overlay" onClick={cerrar}>

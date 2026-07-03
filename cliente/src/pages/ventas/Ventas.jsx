@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
 import StatCard from '../../components/common/StatCard';
 import FilterCard, { FilterItem, filterInputStyle } from '../../components/common/FilterCard';
+import TableCard from '../../components/common/TableCard';
 
 const FMT  = v => `$${parseFloat(v || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`;
 const FECHA = s => {
@@ -189,107 +190,95 @@ export default function Ventas() {
       </FilterCard>
 
       {/* Tabla */}
-      <div className="card">
-        <div className="table-container">
-          {loading ? (
-            <div className="spinner-wrapper"><div className="spinner" /></div>
-          ) : lista.length === 0 ? (
-            <div className="empty-state">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" style={{ marginBottom: 8 }}>
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-              </svg>
-              <p>No se encontraron ventas</p>
-            </div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Cliente</th>
-                  <th>Fecha</th>
-                  <th>Método Pago</th>
-                  <th>Tipo</th>
-                  <th>Total</th>
-                  <th>Saldo Pendiente</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lista.map(v => {
-                  const est = ESTADO[v.estado] || ESTADO.PENDIENTE;
-                  const tip = TIPO[v.tipo]     || TIPO.CONTADO;
-                  return (
-                    <tr key={v.id}>
-                      <td>
-                        <code style={{ background: '#f0f4ff', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>
-                          {v.id_personalizado || v.id}
-                        </code>
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => navigate(`/clientes/${v.cliente_id}/ficha`)}
-                          style={{ background: 'none', border: 'none', padding: 0, color: '#1a56db', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
-                        >
-                          {v.cliente_nombre || '—'}
+      <TableCard scrollY
+        loading={loading}
+        empty={lista.length === 0}
+        emptyText="No se encontraron ventas"
+        emptyColSpan={9}
+        page={page}
+        hasNext={hasNext}
+        onPrevPage={() => setPage(p => p - 1)}
+        onNextPage={() => setPage(p => p + 1)}
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cliente</th>
+              <th>Fecha</th>
+              <th>Método Pago</th>
+              <th>Tipo</th>
+              <th>Total</th>
+              <th>Saldo Pendiente</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map(v => {
+              const est = ESTADO[v.estado] || ESTADO.PENDIENTE;
+              const tip = TIPO[v.tipo]     || TIPO.CONTADO;
+              return (
+                <tr key={v.id}>
+                  <td>
+                    <code style={{ background: '#f0f4ff', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>
+                      {v.id_personalizado || v.id}
+                    </code>
+                  </td>
+                  <td>
+                    <button
+                      onClick={() => navigate(`/clientes/${v.cliente_id}/ficha`)}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#1a56db', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                    >
+                      {v.cliente_nombre || '—'}
+                    </button>
+                    {v.cedula && <div style={{ fontSize: 11, color: '#6c757d' }}>{v.cedula}</div>}
+                  </td>
+                  <td style={{ fontSize: 12, color: '#6c757d' }}>{FECHA(v.created_at)}</td>
+                  <td style={{ fontSize: 13 }}>{v.metodo_pago || '—'}</td>
+                  <td>
+                    <span style={{ ...BADGE, background: tip.bg, color: tip.color }}>{tip.label}</span>
+                  </td>
+                  <td style={{ fontWeight: 600 }}>{FMT(v.total)}</td>
+                  <td>
+                    {parseFloat(v.saldo_pendiente) > 0
+                      ? <span style={{ color: '#e74c3c', fontWeight: 700 }}>{FMT(v.saldo_pendiente)}</span>
+                      : <span style={{ color: '#27ae60', fontWeight: 700 }}>✓ {FMT(0)}</span>
+                    }
+                  </td>
+                  <td>
+                    <span style={{ ...BADGE, background: est.bg, color: est.color }}>{est.label}</span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {parseFloat(v.saldo_pendiente) > 0 && (
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleCobrar(v)} title="Marcar como pagada">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                          </svg>
                         </button>
-                        {v.cedula && <div style={{ fontSize: 11, color: '#6c757d' }}>{v.cedula}</div>}
-                      </td>
-                      <td style={{ fontSize: 12, color: '#6c757d' }}>{FECHA(v.created_at)}</td>
-                      <td style={{ fontSize: 13 }}>{v.metodo_pago || '—'}</td>
-                      <td>
-                        <span style={{ ...BADGE, background: tip.bg, color: tip.color }}>{tip.label}</span>
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{FMT(v.total)}</td>
-                      <td>
-                        {parseFloat(v.saldo_pendiente) > 0
-                          ? <span style={{ color: '#e74c3c', fontWeight: 700 }}>{FMT(v.saldo_pendiente)}</span>
-                          : <span style={{ color: '#27ae60', fontWeight: 700 }}>✓ {FMT(0)}</span>
-                        }
-                      </td>
-                      <td>
-                        <span style={{ ...BADGE, background: est.bg, color: est.color }}>{est.label}</span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          {parseFloat(v.saldo_pendiente) > 0 && (
-                            <button className="btn btn-ghost btn-sm" onClick={() => handleCobrar(v)} title="Marcar como pagada">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-                              </svg>
-                            </button>
-                          )}
-                          <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/facturas/${v.id}`)} title="Ver factura">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                              <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                          </button>
-                          {isAdmin && (
-                            <button className="btn-icon danger" onClick={() => handleEliminar(v.id)} title="Eliminar venta">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-        {/* Paginación */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #e9ecef' }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
-          </div>
-        </div>
-      </div>
+                      )}
+                      <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/facturas/${v.id}`)} title="Ver factura">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                          <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                      </button>
+                      {isAdmin && (
+                        <button className="btn-icon danger" onClick={() => handleEliminar(v.id)} title="Eliminar venta">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </TableCard>
     </div>
   );
 }

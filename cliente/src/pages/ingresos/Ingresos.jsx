@@ -4,6 +4,7 @@ import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import { FilePen, File } from 'lucide-react';
 import FilterCard, { FilterItem, filterInputStyle } from '../../components/common/FilterCard';
+import TableCard from '../../components/common/TableCard';
 
 const FMT = v => `$${parseFloat(v || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`;
 const FMT_FECHA = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-EC') : '—';
@@ -180,108 +181,93 @@ export default function Ingresos() {
         </FilterItem>
       </FilterCard>
 
-      {/* Tabla */}
-      <div className="card">
-        <div className="table-container">
-          {loading ? <div className="spinner-wrapper"><div className="spinner"/></div> : (
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th><th>Proveedor</th><th>N° Factura</th>
-                  <th>Fecha</th><th>Tipo</th><th>Productos</th>
-                  <th>Total</th><th>Estado</th>
-                  {isAdmin && <th>Acciones</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {lista.length === 0
-                  ? <tr><td colSpan={9} className="empty-state">Sin ingresos registrados</td></tr>
-                  : lista.map(ing => {
-                    const chip = chipEstado(ing.estado);
-                    return (
-                      <tr key={ing.id}>
-                        <td>
-                          <code style={{ background: '#f0f4ff', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>
-                            {ing.id_personalizado || `#${ing.id}`}
-                          </code>
-                        </td>
-                        <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {ing.proveedor_nombre || <span style={{ color: 'var(--text-muted)' }}>Sin proveedor</span>}
-                        </td>
-                        <td>{ing.numero_factura}</td>
-                        <td>{FMT_FECHA(ing.fecha)}</td>
-                        <td>
-                          <span style={{
-                            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99,
-                            background: ing.tipo_compra === 'CONTADO' ? '#e8f5e9' : '#fce4ec',
-                            color: ing.tipo_compra === 'CONTADO' ? '#2e7d32' : '#880e4f',
-                          }}>
-                            {ing.tipo_compra}
-                          </span>
-                        </td>
-                        <td style={{ color: 'var(--text-secondary)' }}>
-                          {ing.cantidad_detalles ?? 0} líneas
-                        </td>
-                        <td><strong>{FMT(ing.total)}</strong></td>
-                        <td>
-                          <span style={{
-                            fontSize: 11, fontWeight: 600, padding: '2px 8px',
-                            borderRadius: 99, background: chip.bg, color: chip.color,
-                          }}>
-                            {chip.label}
-                          </span>
-                        </td>
-                        {isAdmin && (
-                          <td style={{ display: 'flex', gap: 4 }}>
-                            {/* Ver detalle — disponible para todos los estados */}
-                            <button
-                              className="btn-icon"
-                              title="Ver detalle"
-                              onClick={() => navigate(`/ingresos/${ing.id}`)}
-                            >
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                              </svg>
-                            </button>
-                            {ing.estado === 'BORRADOR' && (
-                              <button
-                                className="btn-icon"
-                                title="Continuar ingreso"
-                                onClick={() => navigate(`/ingresos/${ing.id}/productos`)}
-                              >
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
-                                  <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
-                                </svg>
-                              </button>
-                            )}
-                            {ing.estado === 'BORRADOR' && (
-                              <button className="btn-icon danger" title="Eliminar" onClick={() => eliminar(ing.id)}>
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-                                  <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                                </svg>
-                              </button>
-                            )}
-                          </td>
+      <TableCard scrollY
+        loading={loading}
+        empty={lista.length === 0}
+        emptyText="Sin ingresos registrados"
+        emptyColSpan={isAdmin ? 9 : 8}
+        page={page}
+        hasNext={hasNext}
+        onPrevPage={() => setPage(p => p - 1)}
+        onNextPage={() => setPage(p => p + 1)}
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Proveedor</th><th>N° Factura</th>
+              <th>Fecha</th><th>Tipo</th><th>Productos</th>
+              <th>Total</th><th>Estado</th>
+              {isAdmin && <th>Acciones</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map(ing => {
+                const chip = chipEstado(ing.estado);
+                return (
+                  <tr key={ing.id}>
+                    <td>
+                      <code style={{ background: '#f0f4ff', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>
+                        {ing.id_personalizado || `#${ing.id}`}
+                      </code>
+                    </td>
+                    <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {ing.proveedor_nombre || <span style={{ color: 'var(--text-muted)' }}>Sin proveedor</span>}
+                    </td>
+                    <td>{ing.numero_factura}</td>
+                    <td>{FMT_FECHA(ing.fecha)}</td>
+                    <td>
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99,
+                        background: ing.tipo_compra === 'CONTADO' ? '#e8f5e9' : '#fce4ec',
+                        color: ing.tipo_compra === 'CONTADO' ? '#2e7d32' : '#880e4f',
+                      }}>
+                        {ing.tipo_compra}
+                      </span>
+                    </td>
+                    <td style={{ color: 'var(--text-secondary)' }}>
+                      {ing.cantidad_detalles ?? 0} líneas
+                    </td>
+                    <td><strong>{FMT(ing.total)}</strong></td>
+                    <td>
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, padding: '2px 8px',
+                        borderRadius: 99, background: chip.bg, color: chip.color,
+                      }}>
+                        {chip.label}
+                      </span>
+                    </td>
+                    {isAdmin && (
+                      <td style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn-icon" title="Ver detalle" onClick={() => navigate(`/ingresos/${ing.id}`)}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
+                        </button>
+                        {ing.estado === 'BORRADOR' && (
+                          <button className="btn-icon" title="Continuar ingreso" onClick={() => navigate(`/ingresos/${ing.id}/productos`)}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                              <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+                            </svg>
+                          </button>
                         )}
-                      </tr>
-                    );
-                  })
-                }
-              </tbody>
-            </table>
-          )}
-        </div>
-        {/* Paginación */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '10px 20px', borderTop: '1px solid #e9ecef' }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>← Anterior</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => p + 1)} disabled={!hasNext}>Siguiente →</button>
-          </div>
-        </div>
-      </div>
+                        {ing.estado === 'BORRADOR' && (
+                          <button className="btn-icon danger" title="Eliminar" onClick={() => eliminar(ing.id)}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                              <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                            </svg>
+                          </button>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
+      </TableCard>
     </div>
   );
 }

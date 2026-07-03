@@ -8,6 +8,7 @@ import Productos from './pages/productos/Productos';
 import Proveedores from './pages/proveedores/Proveedores';
 import Sucursales from './pages/sucursales/Sucursales';
 import Usuarios from './pages/usuarios/Usuarios';
+import EmpleadoEstadisticas from './pages/usuarios/EmpleadoEstadisticas';
 import Ingresos from './pages/ingresos/Ingresos';
 import CrearIngreso from './pages/ingresos/CrearIngreso';
 import ImportarIngreso from './pages/ingresos/ImportarIngreso';
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/proveedores" element={<Proveedores />} />
             <Route path="/sucursales" element={<Sucursales />} />
             <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/empleados" element={<EmpleadoEstadisticas />} />
             <Route path="/ingresos" element={<Ingresos />} />
             <Route path="/ingresos/nuevo" element={<CrearIngreso />} />
             <Route path="/ingresos/importar" element={<ImportarIngreso />} />

@@ -76,6 +76,8 @@ import facturaRutas from './infraestructura/rutas/moduloFacturaRutas.js';
 import cobroDeudaRutas from './infraestructura/rutas/moduloCobroDeudaRutas.js';
 import cajaChicaRutas from './infraestructura/rutas/moduloCajaChicaRutas.js';
 import cajaBancoRutas from './infraestructura/rutas/moduloCajaBancoRutas.js';
+import empleadoMetricasRutas from './infraestructura/rutas/moduloEmpleadoMetricasRutas.js';
+import dashboardRutas from './infraestructura/rutas/moduloDashboardRutas.js';
 
 const app = express();
 app.use(cors());
@@ -107,6 +109,8 @@ app.use('/api/factura', facturaRutas);
 app.use('/api/cobro-deuda', cobroDeudaRutas);
 app.use('/api/caja-chica', cajaChicaRutas);
 app.use('/api/caja-banco', cajaBancoRutas);
+app.use('/api/empleado-metricas', empleadoMetricasRutas);
+app.use('/api/dashboard', dashboardRutas);
 
 // Health check
 app.get('/api/health', (_req, res) => {

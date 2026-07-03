@@ -11,6 +11,7 @@
   top: 0;
   z-index: 100;
   flex-shrink: 0;
+  gap: 16px;
 }
 .navbar-brand {
   display: flex;
@@ -19,6 +20,7 @@
   font-size: 16px;
   font-weight: 700;
   color: var(--secondary-color);
+  flex-shrink: 0;
 }
 
 .navbar-logo {
@@ -28,7 +30,82 @@
 }
 
 .navbar-brand svg { stroke: var(--primary-color); }
-.navbar-right { display: flex; align-items: center; gap: 12px; }
+.navbar-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+
+.navbar-search {
+  position: relative;
+  flex: 1;
+  max-width: 360px;
+  min-width: 160px;
+}
+.navbar-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.navbar-search-input {
+  width: 100%;
+  padding: 6px 12px 6px 32px;
+  border: 1px solid var(--navbar-border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+.navbar-search-input::placeholder { color: var(--text-muted); }
+.navbar-search-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+}
+.navbar-search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--navbar-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  overflow: hidden;
+  z-index: 200;
+}
+.navbar-search-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.1s;
+}
+.navbar-search-item:hover,
+.navbar-search-item:focus-visible,
+.navbar-search-item.selected {
+  background: var(--bg-secondary);
+  outline: none;
+}
+.navbar-search-item-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.navbar-search-item-route {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
 .navbar-user { display: flex; flex-direction: column; align-items: flex-end; }
 .navbar-user-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .navbar-user-rol { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }

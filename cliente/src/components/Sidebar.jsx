@@ -29,6 +29,7 @@ const allMenuItems = [
     children: [
       { label: 'Clientes', route: '/clientes' },
       { label: 'Proveedores', route: '/proveedores' },
+      { label: 'Empleados', route: '/empleados', adminOnly: true },
       { label: 'Usuarios', route: '/usuarios', adminOnly: true },
     ],
   },

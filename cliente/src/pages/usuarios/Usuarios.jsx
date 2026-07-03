@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import TableCard from '../../components/common/TableCard';
-
-const VACIO = { nombre: '', apellido: '', email: '', password: '', cedula: '', rol: 'OPERADOR', activo: true, sucursalId: '' };
+import UsuarioFormModal from '../../components/usuarios/UsuarioFormModal';
 
 export default function Usuarios() {
   const { isAdmin } = useAuth();
@@ -14,10 +13,7 @@ export default function Usuarios() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
-  const [form, setForm] = useState(VACIO);
-  const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [sucursales, setSucursales] = useState([]);
+  const [usuarioInicial, setUsuarioInicial] = useState(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -36,39 +32,10 @@ export default function Usuarios() {
 
   useEffect(() => { setPage(0); }, [buscar]);
   useEffect(() => { const t = setTimeout(cargar, 300); return () => clearTimeout(t); }, [cargar]);
-  useEffect(() => {
-    api.get('/sucursal/lista').then(res => { if (res.ok) setSucursales(res.data.resultado || []); });
-  }, []);
 
-  function abrirNuevo() { setForm(VACIO); setEditando(null); setError(''); setModal(true); }
-  function abrirEditar(u) {
-    setForm({ nombre: u.nombre, apellido: u.apellido, email: u.email, password: '', cedula: u.cedula || '', rol: u.rol, activo: u.activo, sucursalId: u.sucursal_id || '' });
-    setEditando(u.id);
-    setError('');
-    setModal(true);
-  }
+  function abrirNuevo() { setEditando(null); setUsuarioInicial(null); setModal(true); }
+  function abrirEditar(u) { setEditando(u.id); setUsuarioInicial(u); setModal(true); }
   function cerrar() { setModal(false); }
-
-  function handleChange(e) {
-    const { name, value, type, checked } = e.target;
-    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-  }
-
-  async function guardar(e) {
-    e.preventDefault();
-    setSaving(true); setError('');
-    try {
-      let res;
-      if (editando) {
-        res = await api.put('/usuario/editar', { id: editando, ...form });
-      } else {
-        res = await api.post('/usuario/crear', form);
-      }
-      if (res.ok) { cerrar(); cargar(); }
-      else setError(res.data.mensaje || 'Error al guardar');
-    } catch { setError('Error de conexión'); }
-    finally { setSaving(false); }
-  }
 
   async function eliminar(id) {
     if (!confirm('¿Eliminar este usuario?')) return;
@@ -128,67 +95,13 @@ export default function Usuarios() {
         </table>
       </TableCard>
 
-      {modal && (
-        <div className="modal-overlay" onClick={cerrar}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <span className="modal-title">{editando ? 'Editar usuario' : 'Nuevo usuario'}</span>
-              <button className="btn-icon" onClick={cerrar}>✕</button>
-            </div>
-            <form onSubmit={guardar}>
-              <div className="modal-body">
-                {error && <div className="alert alert-error">{error}</div>}
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label">Nombre *</label>
-                    <input className="form-control" name="nombre" value={form.nombre} onChange={handleChange} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Apellido *</label>
-                    <input className="form-control" name="apellido" value={form.apellido} onChange={handleChange} required />
-                  </div>
-                  <div className="form-group full">
-                    <label className="form-label">Email *</label>
-                    <input className="form-control" type="email" name="email" value={form.email} onChange={handleChange} required />
-                  </div>
-                  {!editando && (
-                    <div className="form-group full">
-                      <label className="form-label">Contraseña *</label>
-                      <input className="form-control" type="password" name="password" value={form.password} onChange={handleChange} required={!editando} />
-                    </div>
-                  )}
-                  <div className="form-group">
-                    <label className="form-label">Cédula</label>
-                    <input className="form-control" name="cedula" value={form.cedula} onChange={handleChange} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Rol</label>
-                    <select className="form-control" name="rol" value={form.rol} onChange={handleChange}>
-                      <option value="OPERADOR">OPERADOR</option>
-                      <option value="ADMINISTRADOR">ADMINISTRADOR</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Sucursal</label>
-                    <select className="form-control" name="sucursalId" value={form.sucursalId} onChange={handleChange}>
-                      <option value="">Sin sucursal</option>
-                      {sucursales.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group" style={{ justifyContent: 'center' }}>
-                    <label className="form-label">Activo</label>
-                    <input type="checkbox" name="activo" checked={form.activo} onChange={handleChange} style={{ width: 18, height: 18 }} />
-                  </div>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={cerrar}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <UsuarioFormModal
+        abierto={modal}
+        editando={editando}
+        usuarioInicial={usuarioInicial}
+        onCerrar={cerrar}
+        onGuardado={cargar}
+      />
     </div>
   );
 }

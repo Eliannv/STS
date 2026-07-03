@@ -1,16 +1,9 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/api';
+import FormModal from '../common/FormModal';
 
 const HOY = new Date().toISOString().split('T')[0];
 
-/**
- * Modal reutilizable para abrir una nueva caja chica.
- *
- * Props:
- *   abierto     {boolean}
- *   onCerrar    {() => void}
- *   onAbierta   {(caja) => void}  — se llama tras abrir con éxito
- */
 export default function AbrirCajaChicaModal({ abierto, onCerrar, onAbierta }) {
   const [form, setForm]     = useState({ fecha: HOY, montoInicial: '', observacion: '' });
   const [error, setError]   = useState('');
@@ -55,77 +48,90 @@ export default function AbrirCajaChicaModal({ abierto, onCerrar, onAbierta }) {
     }
   }
 
-  return (
-    <div className="modal-overlay" onClick={onCerrar}>
-      <div className="modal" onClick={e => e.stopPropagation()}
-        style={{ maxWidth: 480, width: '95vw' }}>
-
-        {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: '#d4edda', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#155724" strokeWidth="2">
-                <circle cx="12" cy="16" r="1"/><rect width="18" height="12" x="3" y="10" rx="2"/>
-                <path d="M7 10V7a5 5 0 0 1 9.33-2.5"/>
-              </svg>
-            </div>
-            <div>
-              <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Abrir Nueva Caja Chica</h2>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>Caja operativa diaria</p>
-            </div>
+  const rightPanel = (
+    <>
+      <div style={{ background: '#fff', border: '1px solid var(--border-color)', borderRadius: 10, padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span style={{ fontWeight: 700, fontSize: 13 }}>Información</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: 'var(--text-muted)' }}>Tipo:</span>
+            <span style={{ fontWeight: 600 }}>Caja Chica</span>
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={onCerrar} style={{ padding: '4px 8px' }}>✕</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: 'var(--text-muted)' }}>Estado:</span>
+            <span style={{ fontWeight: 600, color: 'var(--success-color)' }}>Activa</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: 'var(--text-muted)' }}>Monto inicial:</span>
+            <span style={{ fontWeight: 600 }}>${parseFloat(form.montoInicial || 0).toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: '#fff', border: '1px solid var(--border-color)', borderRadius: 10, padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span style={{ fontWeight: 700, fontSize: 13 }}>Datos Requeridos</span>
+        </div>
+        {['Fecha de apertura válida', 'Monto inicial (≥ 0)', 'Sin fechas futuras', 'Observación opcional'].map(txt => (
+          <div key={txt} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" strokeWidth="2.5" style={{ marginTop: 1, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+            {txt}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+
+  return (
+    <FormModal
+      abierto={abierto}
+      titulo="Abrir Nueva Caja Chica"
+      subtitulo="Caja operativa diaria"
+      onCerrar={onCerrar}
+      onSubmit={handleSubmit}
+      saving={saving}
+      saveLabel="Abrir Caja"
+      error={error}
+      maxWidth={900}
+      rightPanel={rightPanel}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontSize: 13, fontWeight: 600 }}>Fecha de Apertura *</label>
+          <input
+            type="date" name="fecha" value={form.fecha}
+            max={HOY}
+            onChange={handleChange}
+            style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 14 }}
+          />
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>No se permiten fechas futuras</span>
         </div>
 
-        {/* Body */}
-        <form onSubmit={handleSubmit} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontSize: 13, fontWeight: 600 }}>Monto Inicial *</label>
+          <input
+            type="number" name="montoInicial" value={form.montoInicial}
+            placeholder="0.00" step="0.01" min="0"
+            onChange={handleChange}
+            style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 14 }}
+          />
+        </div>
 
-          {/* Fecha */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 600 }}>Fecha de Apertura *</label>
-            <input
-              type="date" name="fecha" value={form.fecha}
-              max={HOY}
-              onChange={handleChange}
-              style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 14 }}
-            />
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>No se permiten fechas futuras</span>
-          </div>
-
-          {/* Monto inicial */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 600 }}>Monto Inicial *</label>
-            <input
-              type="number" name="montoInicial" value={form.montoInicial}
-              placeholder="0.00" step="0.01" min="0"
-              onChange={handleChange}
-              style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 14 }}
-            />
-          </div>
-
-          {/* Observación */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 600 }}>Observación <span style={{ color: 'var(--text-muted)' }}>(opcional)</span></label>
-            <textarea
-              name="observacion" value={form.observacion}
-              placeholder="Detalles sobre la apertura..."
-              rows={3}
-              onChange={handleChange}
-              style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 14, resize: 'vertical' }}
-            />
-          </div>
-
-          {error && <div className="alert alert-error">{error}</div>}
-
-          {/* Acciones */}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <button type="button" className="btn btn-ghost" onClick={onCerrar} disabled={saving}>Cancelar</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Abriendo...' : '✓ Abrir Caja'}
-            </button>
-          </div>
-        </form>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontSize: 13, fontWeight: 600 }}>Observación <span style={{ color: 'var(--text-muted)' }}>(opcional)</span></label>
+          <textarea
+            name="observacion" value={form.observacion}
+            placeholder="Detalles sobre la apertura..."
+            rows={3}
+            onChange={handleChange}
+            style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 14, resize: 'vertical' }}
+          />
+        </div>
       </div>
-    </div>
+    </FormModal>
   );
 }

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
-import { useAuth } from '../../context/AuthContext';
 import { imprimirTicketAbono } from '../../utils/ticketVenta';
 import { Search, ReceiptText, ChevronDown } from 'lucide-react';
 
@@ -21,10 +20,8 @@ const FECHAFMT = s => {
 
 export default function CobrarDeuda() {
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
 
   // State
-  const [horaActual, setHoraActual] = useState(HORA());
   const [deudas, setDeudas] = useState([]);
   const [totalDeudas, setTotalDeudas] = useState(0);
   const [pagina, setPagina] = useState(0);
@@ -41,31 +38,7 @@ export default function CobrarDeuda() {
   
   const ITEMS_POR_PAGINA = 5;
 
-  // Effects
-  useEffect(() => {
-    const t = setInterval(() => setHoraActual(HORA()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  useEffect(() => {
-    cargarDeudas(0);
-  }, []);
-
-  useEffect(() => {
-    if (metodoPago === 'Transferencia' || metodoPago === 'Tarjeta') {
-      if (!fechaCustom) {
-        const now = new Date();
-        setFechaCustom(now.toISOString().slice(0, 10));
-        setHoraCustom(now.toTimeString().slice(0, 5));
-      }
-    } else {
-      setFechaCustom('');
-      setHoraCustom('');
-    }
-    setReferencia('');
-  }, [metodoPago]);
-
-  // Functions
+  // Functions (declaradas antes de Effects)
   async function cargarDeudas(numeroPagea) {
     setCargandoDeudas(true);
     const r = await api.get(`/cobro-deuda/deudas-pagina?pagina=${numeroPagea}&limite=${ITEMS_POR_PAGINA}`);
@@ -81,6 +54,12 @@ export default function CobrarDeuda() {
     setCargandoDeudas(false);
   }
 
+  // Effects
+  useEffect(() => {
+    cargarDeudas(0);
+  }, []);
+
+  // Event Handlers
   function cargarMasDeudas() {
     cargarDeudas(pagina + 1);
   }
@@ -109,7 +88,21 @@ export default function CobrarDeuda() {
   }
 
   function handleMetodoPagoChange(e) {
-    setMetodoPago(e.target.value);
+    const nuevoMetodo = e.target.value;
+    setMetodoPago(nuevoMetodo);
+    setReferencia('');
+    
+    // Inicializar fecha/hora si es Transferencia o Tarjeta
+    if (nuevoMetodo === 'Transferencia' || nuevoMetodo === 'Tarjeta') {
+      if (!fechaCustom) {
+        const now = new Date();
+        setFechaCustom(now.toISOString().slice(0, 10));
+        setHoraCustom(now.toTimeString().slice(0, 5));
+      }
+    } else {
+      setFechaCustom('');
+      setHoraCustom('');
+    }
   }
 
   function handleKeyPressAbono(e) {
@@ -117,6 +110,24 @@ export default function CobrarDeuda() {
       handleCobrar();
     }
   }
+
+  // Computed variables
+  const deudasFiltradas = filtroDeuda.trim()
+    ? deudas.filter(d =>
+        (d.id_personalizado || '').toLowerCase().includes(filtroDeuda.toLowerCase()) ||
+        (d.cliente_nombre || '').toLowerCase().includes(filtroDeuda.toLowerCase()) ||
+        String(d.id).includes(filtroDeuda)
+      )
+    : deudas;
+
+  const deudaSel = deudaIdx !== null ? deudasFiltradas[deudaIdx] : null;
+  const cliente = deudaSel ? { nombres: deudaSel.cliente_nombres, apellidos: deudaSel.cliente_apellidos, telefono: deudaSel.cliente_telefono, email: deudaSel.cliente_email, id: deudaSel.cliente_id } : null;
+  const saldoActual = parseFloat(deudaSel?.saldo_pendiente || 0);
+  const abonoNum = Math.min(parseFloat(abono) || 0, saldoActual);
+  const saldoNuevo = Math.max(0, parseFloat((saldoActual - abonoNum).toFixed(2)));
+  const vuelto = (parseFloat(abono) || 0) > saldoActual ? parseFloat(((parseFloat(abono) || 0) - saldoActual).toFixed(2)) : 0;
+  const deudaTotal = deudas.reduce((s, d) => s + parseFloat(d.saldo_pendiente || 0), 0);
+  const refActiva = REF_META[metodoPago];
 
   async function handleCobrar() {
     if (!deudaSel) { setError('Selecciona una deuda'); return; }
@@ -174,25 +185,6 @@ export default function CobrarDeuda() {
       setError(res.data?.resultado || 'Error al registrar el abono');
     }
   }
-
-  // Computed
-  const deudasFiltradas = filtroDeuda.trim()
-    ? deudas.filter(d =>
-        (d.id_personalizado || '').toLowerCase().includes(filtroDeuda.toLowerCase()) ||
-        (d.cliente_nombre || '').toLowerCase().includes(filtroDeuda.toLowerCase()) ||
-        String(d.id).includes(filtroDeuda)
-      )
-    : deudas;
-
-  const deudaSel = deudaIdx !== null ? deudasFiltradas[deudaIdx] : null;
-  const cliente = deudaSel ? { nombres: deudaSel.cliente_nombres, apellidos: deudaSel.cliente_apellidos, telefono: deudaSel.cliente_telefono, email: deudaSel.cliente_email, id: deudaSel.cliente_id } : null;
-  
-  const saldoActual = parseFloat(deudaSel?.saldo_pendiente || 0);
-  const abonoNum = Math.min(parseFloat(abono) || 0, saldoActual);
-  const saldoNuevo = Math.max(0, parseFloat((saldoActual - abonoNum).toFixed(2)));
-  const vuelto = (parseFloat(abono) || 0) > saldoActual ? parseFloat(((parseFloat(abono) || 0) - saldoActual).toFixed(2)) : 0;
-  const deudaTotal = deudas.reduce((s, d) => s + parseFloat(d.saldo_pendiente || 0), 0);
-  const refActiva = REF_META[metodoPago];
 
   // Render
   return (

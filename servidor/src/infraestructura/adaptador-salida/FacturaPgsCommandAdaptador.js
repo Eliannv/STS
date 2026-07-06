@@ -69,6 +69,32 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
         `, [venta.clienteId]);
             }
 
+            // Si es pago con TARJETA, registrar en ventas_tarjeta
+            if (venta.metodoPago && venta.metodoPago.toUpperCase() === 'TARJETA') {
+                console.log('💳 [VentaTarjeta] Registrando venta con tarjeta - factura:', facturaCreada.id);
+                
+                await client.query(`
+          INSERT INTO ventas_tarjeta
+            (factura_id, factura_id_personalizado, cliente_id, cliente_nombre,
+             monto_total, monto_recibido, saldo_pendiente, estado,
+             ultimos_cuatro_tarjeta, banco, numero_lote, observacion)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        `, [
+                    facturaCreada.id,
+                    facturaCreada.id_personalizado,
+                    venta.clienteId,
+                    venta.nombreCliente,
+                    venta.total,
+                    0,                           // monto_recibido siempre 0 (banco aún no pagó)
+                    venta.total,                 // saldo_pendiente = total (pendiente que llegue del banco)
+                    'PENDIENTE',                 // estado siempre PENDIENTE inicialmente
+                    venta.ultimosCuatroTarjeta || null,
+                    venta.banco || null,
+                    venta.numeroLote || null,
+                    venta.observacion || null
+                ]);
+            }
+
             await client.query('COMMIT');
             return { estado: 'ok', resultado: facturaCreada };
         } catch (error) {

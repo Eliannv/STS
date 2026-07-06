@@ -47,22 +47,22 @@ export default class FacturaControlador extends FacturaEntradaPuerto {
                 }
             }
 
-            // ── Integración con Caja Banco (TRANSFERENCIA, TARJETA) ──
-            if ((metodoPago === 'transferencia' || metodoPago === 'tarjeta') && abonado > 0 && this.cajaBancoQueryUC && this.cajaBancoCommandUC) {
+            // ── Integración con Caja Banco (SOLO TRANSFERENCIA) ──
+            // Para TARJETA no registramos nada aquí, se registra cuando se reciben abonos del banco
+            if (metodoPago === 'transferencia' && abonado > 0 && this.cajaBancoQueryUC && this.cajaBancoCommandUC) {
                 try {
-                    console.log('🔵 Buscando caja banco abierta para', metodoPago, '...');
+                    console.log('🔵 Buscando caja banco abierta para transferencia ...');
                     const cajaRes = await this.cajaBancoQueryUC.cajaAbierta();
                     console.log('📦 Respuesta cajaAbierta:', cajaRes);
 
                     if (cajaRes.estado === 'ok' && cajaRes.resultado.id) {
                         console.log('✅ Caja banco encontrada:', cajaRes.resultado.id);
 
-                        const categoria = metodoPago === 'transferencia' ? 'TRANSFERENCIA_CLIENTE' : 'OTRO_INGRESO';
                         const movimientoData = {
                             cajaBancoId: cajaRes.resultado.id,
                             tipo: 'INGRESO',
-                            categoria: categoria,
-                            descripcion: `Venta por ${metodoPago} - ${factura.cliente_nombre || 'Cliente'} - Factura #${factura.id_personalizado || factura.id}`,
+                            categoria: 'TRANSFERENCIA_CLIENTE',
+                            descripcion: `Venta por transferencia - ${factura.cliente_nombre || 'Cliente'} - Factura #${factura.id_personalizado || factura.id}`,
                             monto: abonado,
                             ventaId: factura.id,
                             usuarioId: req.usuario ? req.usuario.id : null,

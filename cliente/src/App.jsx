@@ -18,6 +18,8 @@ import FichaCliente from './pages/clientes/FichaCliente';
 import Ventas from './pages/ventas/Ventas';
 import CrearVenta from './pages/ventas/CrearVenta';
 import CobrarDeuda from './pages/ventas/CobrarDeuda';
+import VentaTarjeta from './pages/ventas/VentaTarjeta';
+import VerVentaTarjeta from './pages/ventas/VerVentaTarjeta';
 import VerFactura from './pages/facturas/VerFactura';
 import CajaChica from './pages/cajas/CajaChica';
 import VerCajaChica from './pages/cajas/VerCajaChica';
@@ -47,6 +49,8 @@ export default function App() {
             <Route path="/facturas" element={<Ventas />} />
             <Route path="/facturas/nueva" element={<CrearVenta />} />
             <Route path="/facturas/cobrar" element={<CobrarDeuda />} />
+            <Route path="/ventas/venta-tarjeta" element={<VentaTarjeta />} />
+            <Route path="/ventas/venta-tarjeta/:id" element={<VerVentaTarjeta />} />
             <Route path="/facturas/:id" element={<VerFactura />} />
             <Route path="/caja-chica" element={<CajaChica />} />
             <Route path="/caja-chica/:id" element={<VerCajaChica />} />

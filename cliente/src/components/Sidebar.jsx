@@ -60,6 +60,7 @@ const allMenuItems = [
       { label: 'Facturas',     route: '/facturas',        end: true },
       { label: 'Venta POS',   route: '/facturas/nueva',  end: true },
       { label: 'Cobrar deuda', route: '/facturas/cobrar', end: true },
+      { label: 'Venta con Tarjeta', route: '/ventas/venta-tarjeta' },
     ],
   },
   // CAJA

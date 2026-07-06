@@ -50,11 +50,14 @@ export default class CobroDeudaControlador extends CobroDeudaEntradaPuerto {
       const montoPagado = parseFloat(datos.montoPagado ?? 0);
 
       // ── Integración con Caja Chica (efectivo del día) ──
-      // El cobro de deuda va a Caja Chica, NO directamente a Caja Banco
+      // El cobro de deuda en EFECTIVO va a Caja Chica, NO directamente a Caja Banco
+      // Transferencias y Tarjeta van directamente a Caja Banco
       // Cuando se cierra Caja Chica, el monto se transfiere a Caja Banco
-      if (this.cajaChicaCommandUC && this.cajaChicaQueryUC) {
+      const esEfectivo = datos.metodoPago === 'Efectivo';
+      
+      if (esEfectivo && this.cajaChicaCommandUC && this.cajaChicaQueryUC) {
         try {
-          console.log('🔵 [CobroDeuda] Buscando Caja Chica abierta...');
+          console.log('🔵 [CobroDeuda] Cobro en EFECTIVO - Buscando Caja Chica abierta...');
           // Buscar caja chica abierta
           const cajaChicaRes = await this.cajaChicaQueryUC.cajaAbierta();
           console.log('📦 [CobroDeuda] Respuesta cajaChicaAbierta:', cajaChicaRes);
@@ -78,11 +81,13 @@ export default class CobroDeudaControlador extends CobroDeudaEntradaPuerto {
               console.log('✅ [CobroDeuda] Movimiento de Caja Chica registrado para abono:', resultado.id);
             }
           } else {
-            console.warn('⚠️ [CobroDeuda] No hay caja chica abierta - cobro registrado pero sin movimiento de caja');
+            console.warn('⚠️ [CobroDeuda] No hay caja chica abierta - cobro en efectivo registrado pero sin movimiento de caja');
           }
         } catch (e) {
           console.error('❌ [CobroDeuda] Error registrando en caja chica:', e.message);
         }
+      } else if (!esEfectivo) {
+        console.log('💳 [CobroDeuda] Cobro por', datos.metodoPago, '- No se registra en Caja Chica');
       }
 
       return res.status(201).json({

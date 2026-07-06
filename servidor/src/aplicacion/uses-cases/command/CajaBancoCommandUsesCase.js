@@ -14,6 +14,19 @@ export default class CajaBancoCommandUsesCase {
     if (!dto.getFecha())     return { estado: 'error', resultado: 'La fecha es requerida' };
     if (!dto.getUsuarioId()) return { estado: 'error', resultado: 'El usuario es requerido' };
 
+    // ── Validar que no exista otra Caja Banco abierta ──
+    if (this._adaptadorQuery) {
+      const cajaAbiertaResp = await this._adaptadorQuery.cajaAbierta();
+      if (cajaAbiertaResp.resultado) {
+        console.log('❌ Ya existe una Caja Banco abierta');
+        return { 
+          estado: 'error', 
+          resultado: 'Ya existe una Caja Banco abierta. Ciérrala primero.'
+        };
+      }
+      console.log('✅ No hay Caja Banco abierta, verificando mes...');
+    }
+
     // ── Validar que no exista otra Caja Banco para el mismo mes ──
     if (this._adaptadorQuery) {
       console.log('🔍 Verificando si ya existe una Caja Banco para este mes...');
@@ -24,7 +37,7 @@ export default class CajaBancoCommandUsesCase {
         console.log('❌ Ya existe una Caja Banco para el mes:', fechaFormato);
         return { 
           estado: 'error', 
-          resultado: `Ya existe una Caja Banco abierta o cerrada para ${fechaFormato}. Ciérrala primero o abre una nueva el siguiente mes.`
+          resultado: `Ya existe una Caja Banco abierta o cerrada para ${fechaFormato}. Abre una nueva el siguiente mes.`
         };
       }
       console.log('✅ No existe Caja Banco para este mes, procediendo...');

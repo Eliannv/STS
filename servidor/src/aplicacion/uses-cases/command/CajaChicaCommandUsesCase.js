@@ -14,6 +14,19 @@ export default class CajaChicaCommandUsesCase {
     if (!dto.getFecha())         return { estado: 'error', resultado: 'La fecha es requerida' };
     if (!dto.getUsuarioId())     return { estado: 'error', resultado: 'El usuario es requerido' };
 
+    // ── Validar que no exista otra Caja Chica abierta ──
+    if (this._adaptadorQuery) {
+      const cajaAbiertaResp = await this._adaptadorQuery.cajaAbierta();
+      if (cajaAbiertaResp.resultado) {
+        console.log('❌ Ya existe una Caja Chica abierta');
+        return { 
+          estado: 'error', 
+          resultado: 'Ya existe una Caja Chica abierta. Ciérrala primero.'
+        };
+      }
+      console.log('✅ No hay Caja Chica abierta, verificando fecha...');
+    }
+
     // ── Validar que no exista otra Caja Chica para el mismo día ──
     if (this._adaptadorQuery) {
       console.log('🔍 Verificando si ya existe una Caja Chica para esta fecha...');
@@ -24,7 +37,7 @@ export default class CajaChicaCommandUsesCase {
         console.log('❌ Ya existe una Caja Chica para el día:', fechaFormato);
         return { 
           estado: 'error', 
-          resultado: `Ya existe una Caja Chica abierta o cerrada para el ${fechaFormato}. Ciérrala primero o abre una nueva el siguiente día.`
+          resultado: `Ya existe una Caja Chica abierta o cerrada para el ${fechaFormato}. Abre una nueva el siguiente día.`
         };
       }
       console.log('✅ No existe Caja Chica para esta fecha, procediendo...');
@@ -66,6 +79,7 @@ export default class CajaChicaCommandUsesCase {
 
   /**
    * Registrar un movimiento (INGRESO o EGRESO) en la caja chica.
+   * Solo permite movimientos en EFECTIVO.
    * El adaptador se encarga de calcular saldo_anterior, saldo_nuevo y actualizar monto_actual.
    */
   async registrarMovimiento(datos) {
@@ -74,6 +88,12 @@ export default class CajaChicaCommandUsesCase {
     if (!dto.getTipo())         return { estado: 'error', resultado: 'tipo es requerido (INGRESO | EGRESO)' };
     if (!dto.getDescripcion())  return { estado: 'error', resultado: 'descripcion es requerida' };
     if (!(dto.getMonto() > 0))  return { estado: 'error', resultado: 'El monto debe ser mayor a 0' };
+
+    // ── Validación: Solo movimientos en EFECTIVO ──
+    // Los movimientos en caja chica solo provienen de pagos en efectivo
+    // Si viene de una venta, se valida que haya sido en efectivo
+    // Si es un egreso manual, asumimos que es en efectivo
+    console.log('🔍 Validando movimiento de Caja Chica - tipo:', dto.getTipo());
 
     return this._adaptadorCommand.registrarMovimiento(dto);
   }

@@ -25,9 +25,9 @@ const S = {
   page:      { display: 'flex', flexDirection: 'column', height: '100%', background: '#f4f6fa', overflow: 'hidden' },
   header:    { background: '#fff', borderBottom: '1px solid #dee2e6', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0 },
   cliBar:    { background: '#fff', borderBottom: '1px solid #dee2e6', padding: '7px 16px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', flexShrink: 0 },
-  body:      { display: 'grid', gridTemplateColumns: '1fr 440px', flex: 1, overflow: 'hidden', minHeight: 0 },
+  body:      { display: 'grid', gridTemplateColumns: '1fr minmax(320px, 440px)', flex: 1, overflow: 'hidden', minHeight: 0 },
   panelL:    { display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid #dee2e6', background: '#fafafa' },
-  panelR:    { display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fff' },
+  panelR:    { display: 'flex', flexDirection: 'column', overflowY: 'auto', background: '#fff' },
   panelHead: { padding: '9px 14px', borderBottom: '1px solid #dee2e6', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0, background: '#fff' },
   input:     { padding: '7px 10px', border: '1px solid #ced4da', borderRadius: 6, fontSize: 13, width: '100%', background: '#fff', outline: 'none', fontFamily: 'inherit' },
   lbl:       { fontSize: 10, fontWeight: 700, color: '#6c757d', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 3, display: 'block' },
@@ -697,7 +697,7 @@ export default function CrearVenta() {
           </div>
 
           {/* Items del carrito — siempre flex:1 */}
-          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', ...(carrito.length === 0 && { justifyContent: 'center', alignItems: 'center' })}}>
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 80, display: 'flex', flexDirection: 'column', ...(carrito.length === 0 && { justifyContent: 'center', alignItems: 'center' })}}>
             {carrito.length === 0 && (
               <div style={{
                 display: 'flex',

@@ -1,9 +1,210 @@
 services:
+  usuario-postgres:
+    image: postgres:17
+    container_name: sts-usuario-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: usuario_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - usuario_postgres_data:/var/lib/postgresql/data
+      - ./usuario-servicio/sql/01_usuario_schema.sql:/docker-entrypoint-initdb.d/01_usuario_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d usuario_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  usuario-servicio:
+    build: ./usuario-servicio
+    container_name: sts-usuario-servicio
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./usuario-servicio/.env
+    environment:
+      DB_HOST: usuario-postgres
+      DB_PORT: 5432
+      DB_NAME: usuario_db
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_SSL: "false"
+      PORT: 3001
+      NODE_ENV: development
+    depends_on:
+      usuario-postgres:
+        condition: service_healthy
+
+  cliente-postgres:
+    image: postgres:17
+    container_name: sts-cliente-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: cliente_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - cliente_postgres_data:/var/lib/postgresql/data
+      - ./cliente-servicio/sql/01_cliente_schema.sql:/docker-entrypoint-initdb.d/01_cliente_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cliente_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  cliente-servicio:
+    build: ./cliente-servicio
+    container_name: sts-cliente-servicio
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./cliente-servicio/.env
+    environment:
+      DB_HOST: cliente-postgres
+      DB_PORT: 5432
+      DB_NAME: cliente_db
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_SSL: "false"
+      PORT: 3002
+      NODE_ENV: development
+    depends_on:
+      cliente-postgres:
+        condition: service_healthy
+
+  inventario-postgres:
+    image: postgres:17
+    container_name: sts-inventario-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: inventario_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - inventario_postgres_data:/var/lib/postgresql/data
+      - ./inventario-servicio/sql/01_inventario_schema.sql:/docker-entrypoint-initdb.d/01_inventario_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d inventario_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  inventario-servicio:
+    build: ./inventario-servicio
+    container_name: sts-inventario-servicio
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./inventario-servicio/.env
+    environment:
+      DB_HOST: inventario-postgres
+      DB_PORT: 5432
+      DB_NAME: inventario_db
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_SSL: "false"
+      PORT: 3003
+      NODE_ENV: development
+    depends_on:
+      inventario-postgres:
+        condition: service_healthy
+
+  facturacion-postgres:
+    image: postgres:17
+    container_name: sts-facturacion-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: facturacion_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - facturacion_postgres_data:/var/lib/postgresql/data
+      - ./facturacion-servicio/sql/01_facturacion_schema.sql:/docker-entrypoint-initdb.d/01_facturacion_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d facturacion_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  facturacion-servicio:
+    build: ./facturacion-servicio
+    container_name: sts-facturacion-servicio
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    env_file:
+      - ./facturacion-servicio/.env
+    environment:
+      DB_HOST: facturacion-postgres
+      DB_PORT: 5432
+      DB_NAME: facturacion_db
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_SSL: "false"
+      PORT: 3004
+      NODE_ENV: development
+    depends_on:
+      facturacion-postgres:
+        condition: service_healthy
+
+  caja-postgres:
+    image: postgres:17
+    container_name: sts-caja-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: caja_db
+    ports:
+      - "5437:5432"
+    volumes:
+      - caja_postgres_data:/var/lib/postgresql/data
+      - ./caja-servicio/sql/01_caja_schema.sql:/docker-entrypoint-initdb.d/01_caja_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d caja_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  caja-servicio:
+    build: ./caja-servicio
+    container_name: sts-caja-servicio
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    env_file:
+      - ./caja-servicio/.env
+    environment:
+      DB_HOST: caja-postgres
+      DB_PORT: 5432
+      DB_NAME: caja_db
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_SSL: "false"
+      PORT: 3005
+      NODE_ENV: development
+    depends_on:
+      caja-postgres:
+        condition: service_healthy
+
   servidor:
+    profiles: ["legacy"]
     build: ./servidor
     container_name: sts-servidor
     ports:
-      - "3000:3000"
+      - "3010:3000"
     volumes:
       - ./servidor:/app
       - /app/node_modules
@@ -18,7 +219,34 @@ services:
       postgres:
         condition: service_healthy
 
+  bff-servicio:
+    build: ./bff-servicio
+    container_name: sts-bff-servicio
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: development
+      USUARIO_SERVICIO_URL: http://usuario-servicio:3001
+      CLIENTE_SERVICIO_URL: http://cliente-servicio:3002
+      INVENTARIO_SERVICIO_URL: http://inventario-servicio:3003
+      FACTURACION_SERVICIO_URL: http://facturacion-servicio:3004
+      CAJA_SERVICIO_URL: http://caja-servicio:3005
+    depends_on:
+      usuario-servicio:
+        condition: service_started
+      cliente-servicio:
+        condition: service_started
+      inventario-servicio:
+        condition: service_started
+      facturacion-servicio:
+        condition: service_started
+      caja-servicio:
+        condition: service_started
+
   postgres:
+    profiles: ["legacy"]
     image: postgres:17
     container_name: sts-postgres
     restart: always
@@ -39,3 +267,8 @@ services:
 
 volumes:
   postgres_data:
+  usuario_postgres_data:
+  cliente_postgres_data:
+  inventario_postgres_data:
+  facturacion_postgres_data:
+  caja_postgres_data:

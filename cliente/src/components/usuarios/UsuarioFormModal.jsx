@@ -50,7 +50,7 @@ export default function UsuarioFormModal({ abierto, editando, usuarioInicial, on
         ? await api.put('/usuario/editar', { id: editando, ...form })
         : await api.post('/usuario/crear', form);
       if (res.ok) { onGuardado(); onCerrar(); }
-      else setError(res.data.mensaje || 'Error al guardar');
+      else setError(res.data?.resultado || res.data?.mensaje || 'Error al guardar');
     } catch { setError('Error de conexión'); }
     finally { setSaving(false); }
   }

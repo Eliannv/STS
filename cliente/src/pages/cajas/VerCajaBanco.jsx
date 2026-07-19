@@ -19,13 +19,12 @@ const FECHAHORA = s => {
 };
 
 const CATEGORIA_LABEL = {
-  VENTA_EFECTIVO:   'Venta efectivo',
-  COBRO_DEUDA:      'Cobro deuda',
-  CIERRE_CAJA_CHICA:'Cierre caja chica',
-  OTROS_INGRESOS:   'Otros ingresos',
+  CIERRE_CAJA_CHICA: 'Cierre caja chica',
+  TRANSFERENCIA_CLIENTE: 'Transferencia de cliente',
+  OTRO_INGRESO: 'Otros ingresos',
   PAGO_PROVEEDORES: 'Pago proveedores',
-  GASTOS_OPERATIVOS:'Gastos operativos',
-  OTROS_EGRESOS:    'Otros egresos',
+  PAGO_TRABAJADOR: 'Pago trabajador',
+  OTRO_EGRESO: 'Otros egresos',
 };
 
 const BADGE = {

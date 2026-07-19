@@ -9,7 +9,7 @@ export class UsuarioDTO {
     this.fechaNacimiento = datos.fechaNacimiento ?? null;
     this.rol = datos.rol ?? 'OPERADOR';
     this.activo = datos.activo ?? true;
-    this.sucursalId = datos.sucursalId ?? null;
+    this.sucursalId = datos.sucursalId === '' || datos.sucursalId == null ? null : Number(datos.sucursalId);
   }
 
   getId() { return this.id; }

@@ -21,7 +21,8 @@ export class UsuarioControlador extends UsuarioEntradaPuerto {
   async lista(req, res) {
     const resultado = await this.query.lista(req.query.buscar, {
       limit: Math.min(Number(req.query.limit) || 20, 100),
-      offset: Math.max(Number(req.query.offset) || 0, 0)
+      offset: Math.max(Number(req.query.offset) || 0, 0),
+      incluirInactivos: req.query.incluirInactivos === 'true'
     });
     return res.status(200).json({ ...resultado, traceId: req.traceId });
   }

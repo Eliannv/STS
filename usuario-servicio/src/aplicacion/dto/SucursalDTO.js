@@ -6,6 +6,7 @@ export class SucursalDTO {
     this.activo = datos.activo ?? true;
     this.direccion = datos.direccion ?? null;
     this.telefono = datos.telefono ?? null;
+    this.email = datos.email ?? null;
     this.creadoPorId = datos.creadoPorId ?? null;
   }
 }

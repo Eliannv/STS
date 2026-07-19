@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { api } from '../../api/api';
+import { resumenEmpleados } from '../../api/empleadoMetricasApi';
 import { useAuth } from '../../context/AuthContext';
 import StatCard from '../../components/common/StatCard';
 import TableCard from '../../components/common/TableCard';
@@ -88,7 +88,7 @@ export default function EmpleadoEstadisticas() {
   const cargar = useCallback(async () => {
     setLoading(true); setError('');
     const [mes, anio] = periodoSel.split('/').map(Number);
-    const res = await api.get(`/empleado-metricas/resumen?mes=${mes}&anio=${anio}`);
+    const res = await resumenEmpleados(mes, anio);
     if (res.ok) {
       const { empleados: emps, rankingVentas: rv, rankingMontos: rm } = res.data.resultado;
       setEmpleados(emps || []);

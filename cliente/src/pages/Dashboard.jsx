@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../api/api';
+import { cargarDashboardResumen } from '../api/dashboardApi';
 import StatCard from '../components/common/StatCard';
 import {
   ShoppingCart, DollarSign, Users, PackageOpen, Handshake,
@@ -135,7 +135,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/dashboard/resumen').then(r => {
+    cargarDashboardResumen().then(r => {
       if (r.ok) setKpis(r.data.resultado);
       setLoading(false);
     });

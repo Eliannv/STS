@@ -3,8 +3,8 @@ import { Op } from 'sequelize';
 import ModeloUsuario from '../modelos/ModeloUsuario.js';
 
 export default class UsuarioPgsQueryAdaptador extends UsuarioSalidaQueryPuerto {
-  async lista(buscar, { limit = 20, offset = 0 } = {}) {
-    const where = { activo: true };
+  async lista(buscar, { limit = 20, offset = 0, incluirInactivos = false } = {}) {
+    const where = incluirInactivos ? {} : { activo: true };
     if (buscar) {
       where[Op.or] = [
         { nombre: { [Op.iLike]: `%${buscar}%` } },

@@ -8,6 +8,7 @@ const ModeloSucursal = sequelize.define('Sucursal', {
   activo: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
   direccion: DataTypes.STRING(255),
   telefono: DataTypes.STRING(30),
+  email: DataTypes.STRING(150),
   fecha_creacion: DataTypes.DATE,
   creado_por_id: DataTypes.INTEGER
 }, { tableName: 'sucursales', timestamps: false, freezeTableName: true });

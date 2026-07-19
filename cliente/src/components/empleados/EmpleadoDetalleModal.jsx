@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../../api/api';
+import { detalleEmpleado, historialEmpleado } from '../../api/empleadoMetricasApi';
 import StatCard from '../common/StatCard';
 import { ShoppingCart, DollarSign, CreditCard, TrendingUp, Handshake, Wallet, CircleDollarSign, Landmark, X } from 'lucide-react';
 
@@ -23,8 +23,8 @@ export default function EmpleadoDetalleModal({ empleado, mes, anio, onCerrar }) 
     if (!empleado) return;
     setLoading(true);
     Promise.all([
-      api.get(`/empleado-metricas/detalle/${empleado.id}?mes=${mes}&anio=${anio}`),
-      api.get(`/empleado-metricas/historial/${empleado.id}?meses=6`),
+      detalleEmpleado(empleado.id, mes, anio),
+      historialEmpleado(empleado.id, 6),
     ]).then(([dRes, hRes]) => {
       if (dRes.ok) setDetalle(dRes.data.resultado);
       if (hRes.ok) setHistorial(hRes.data.resultado || []);

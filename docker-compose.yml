@@ -12,6 +12,7 @@ services:
     volumes:
       - usuario_postgres_data:/var/lib/postgresql/data
       - ./usuario-servicio/sql/01_usuario_schema.sql:/docker-entrypoint-initdb.d/01_usuario_schema.sql:ro
+      - ./usuario-servicio/sql/02_usuario_schema_migration.sql:/docker-entrypoint-initdb.d/02_usuario_schema_migration.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d usuario_db"]
       interval: 5s

@@ -6,15 +6,14 @@ const HOY_HORA = () => new Date().toISOString().slice(0, 16);
 
 const CATEGORIAS = {
   INGRESO: [
-    { value: 'VENTA_EFECTIVO',   label: 'Venta efectivo'   },
-    { value: 'COBRO_DEUDA',      label: 'Cobro de deuda'   },
     { value: 'CIERRE_CAJA_CHICA', label: 'Cierre caja chica' },
-    { value: 'OTROS_INGRESOS',   label: 'Otros ingresos'   },
+    { value: 'TRANSFERENCIA_CLIENTE', label: 'Transferencia de cliente' },
+    { value: 'OTRO_INGRESO', label: 'Otros ingresos' },
   ],
   EGRESO: [
-    { value: 'PAGO_PROVEEDORES',   label: 'Pago a proveedores' },
-    { value: 'GASTOS_OPERATIVOS',  label: 'Gastos operativos'  },
-    { value: 'OTROS_EGRESOS',      label: 'Otros egresos'      },
+    { value: 'PAGO_PROVEEDORES', label: 'Pago a proveedores' },
+    { value: 'PAGO_TRABAJADOR', label: 'Pago a trabajador' },
+    { value: 'OTRO_EGRESO', label: 'Otros egresos' },
   ],
 };
 

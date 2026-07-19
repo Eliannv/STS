@@ -62,7 +62,7 @@ function TicketPreview({ html }) {
     try {
       const h = ref.current.contentWindow.document.body.scrollHeight;
       ref.current.style.height = (h + 10) + 'px';
-    } catch (_) {}
+    } catch { ref.current.style.height = '80px'; }
   }
   return (
     <iframe
@@ -92,7 +92,7 @@ export default function VerFactura() {
     api.get(`/factura/buscar/${id}`).then(async r => {
       if (!r.ok) { setError(r.data?.resultado || 'No se encontró la factura'); setLoading(false); return; }
       const f = r.data.resultado;
-      setFactura(f);
+      setFactura({ ...f, items: f.items ?? f.detalles ?? [] });
       if (f.historial_clinico_id) {
         const rh = await api.get(`/historial-clinico/buscar/${f.historial_clinico_id}`);
         if (rh.ok && rh.data?.resultado) setHistorial(rh.data.resultado);
@@ -151,11 +151,11 @@ export default function VerFactura() {
 
   function mapItems(raw = []) {
     return (raw || []).map(it => ({
-      codigo:          it.idInterno || it.codigo || '—',
+      codigo:          it.idInterno || it.id_interno || it.codigo || '—',
       nombre:          it.nombre    || it.nombreProducto || '—',
       cantidad:        it.cantidad  || 1,
       precio_unitario: parseFloat(it.precio_unitario ?? it.precioUnitario ?? it.pvp1 ?? 0),
-      precio_total:    parseFloat(it.precio_total ?? it.precioTotal ??
+      precio_total:    parseFloat(it.precio_total ?? it.precioTotal ?? it.total ??
         (parseFloat(it.precio_unitario ?? it.precioUnitario ?? it.pvp1 ?? 0) * parseInt(it.cantidad || 1))),
     }));
   }

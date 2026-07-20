@@ -1,5 +1,7 @@
+import { Op } from 'sequelize';
 import ProductoSalidaCommandPuerto from '../../aplicacion/puertos/salida/ProductoSalidaCommandPuerto.js';
 import { Producto as ProductoModel } from '../modelos/Modelos.js';
+import sequelize from '../base-dato/Postgresql.js';
 
 const aPersistencia = (producto) => ({
   id_interno: producto.idInterno,
@@ -43,5 +45,29 @@ export default class ProductoPgsCommandAdaptador extends ProductoSalidaCommandPu
   async eliminar(id) {
     const [cantidad] = await ProductoModel.update({ activo: false, updated_at: new Date() }, { where: { id } });
     return cantidad ? { estado: 'ok', resultado: 'Producto desactivado correctamente' } : { estado: 'error', resultado: 'Producto no encontrado' };
+  }
+
+  async reducirStock(items) {
+    if (!items || items.length === 0) return { estado: 'ok', resultado: 'Sin items para procesar' };
+    const transaction = await sequelize.transaction();
+    try {
+      for (const item of items) {
+        if (item.productoId && Number(item.cantidad) > 0) {
+          const [resultado] = await sequelize.query(
+            `UPDATE productos SET stock = GREATEST(0, stock - $1), updated_at = NOW() WHERE id = $2 RETURNING id, stock`,
+            { bind: [Number(item.cantidad), item.productoId], transaction }
+          );
+          if (!resultado || resultado.length === 0) {
+            await transaction.rollback();
+            return { estado: 'error', resultado: `Producto ID ${item.productoId} no encontrado` };
+          }
+        }
+      }
+      await transaction.commit();
+      return { estado: 'ok', resultado: 'Stock deducido correctamente' };
+    } catch (error) {
+      await transaction.rollback();
+      return { estado: 'error', resultado: error.message };
+    }
   }
 }

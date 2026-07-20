@@ -50,6 +50,22 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
         await VentaTarjeta.create({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: venta.clienteId, cliente_nombre: venta.nombreCliente, monto_total: venta.total, monto_recibido: montoRecibido, saldo_pendiente: saldoPendiente, estado: saldoPendiente <= 0.01 ? 'LIQUIDADA' : 'PENDIENTE', observacion: venta.observacion, created_at: new Date(), updated_at: new Date() }, { transaction });
       }
       await transaction.commit();
+
+      // --- Deducir stock en inventario-servicio ---
+      const inventarioUrl = process.env.INVENTARIO_SERVICIO_URL;
+      if (inventarioUrl) {
+        const itemsStock = (venta.items || [])
+          .filter(i => !i.esServicio && !i.es_servicio && (i.productoId ?? i.producto_id ?? i.id))
+          .map(i => ({ productoId: i.productoId ?? i.producto_id ?? i.id, cantidad: Number(i.cantidad) || 1 }));
+        if (itemsStock.length > 0) {
+          fetch(`${inventarioUrl}/api/v1/productos/reducir-stock`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: itemsStock }),
+          }).catch(err => console.error('Error al deducir stock:', err.message));
+        }
+      }
+
       return { estado: 'ok', resultado: factura };
     } catch (error) {
       await transaction.rollback();

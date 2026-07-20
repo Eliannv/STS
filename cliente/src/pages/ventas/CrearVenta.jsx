@@ -77,6 +77,7 @@ export default function CrearVenta() {
   const [selectedIdx,      setSelectedIdx]      = useState(-1);
   const [page,    setPage]    = useState(0);
   const [hasNext, setHasNext] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const searchProdRef = useRef(null);
 
   /* ── carrito ── */
@@ -102,14 +103,20 @@ export default function CrearVenta() {
 
   /* ── consumidor final ── */
   const [consumidorFinalId, setConsumidorFinalId] = useState(null);
+
+  const buscarConsumidorFinal = useCallback(async () => {
+    if (consumidorFinalId) return consumidorFinalId;
+    const r = await api.get('/cliente/lista');
+    if (r.ok) {
+      const found = (r.data.resultado || []).find(c => c.es_consumidor_final);
+      if (found) { setConsumidorFinalId(found.id); return found.id; }
+    }
+    return null;
+  }, [consumidorFinalId]);
+
   useEffect(() => {
-    api.get('/cliente/lista?buscar=consumidor').then(r => {
-      if (r.ok) {
-        const found = (r.data.resultado || []).find(c => c.es_consumidor_final);
-        if (found) setConsumidorFinalId(found.id);
-      }
-    });
-  }, []);
+    buscarConsumidorFinal();
+  }, [buscarConsumidorFinal]);
 
   /* ── guardar ── */
   const [saving, setSaving] = useState(false);
@@ -211,10 +218,14 @@ export default function CrearVenta() {
 
     // búsqueda de productos
     setBuscarProd('');
+    setPage(0);
     setSelectedIdx(-1);
 
     // error
     setError('');
+
+    // refrescar productos (stock actualizado tras venta)
+    setRefreshKey(k => k + 1);
   }
 
   /* ── cargar productos: server-side paginado, o búsqueda completa ── */
@@ -246,7 +257,7 @@ export default function CrearVenta() {
       }
       setCargandoProd(false);
     });
-  }, [buscarProd, page, hayFiltrosLocales]); // eslint-disable-line
+  }, [buscarProd, page, hayFiltrosLocales, refreshKey]); // eslint-disable-line
 
   useEffect(() => { if (buscarProd.trim() || hayFiltrosLocales) setPage(0); }, [buscarProd, hayFiltrosLocales]);
 
@@ -343,14 +354,18 @@ export default function CrearVenta() {
       fechaPago = `${fechaCustom}T${horaCustom || '00:00'}:00`;
     }
 
-    if (consumidorFinal && !consumidorFinalId) {
+    let cfId = consumidorFinal ? consumidorFinalId : null;
+    if (consumidorFinal && !cfId) {
+      cfId = await buscarConsumidorFinal();
+    }
+    if (consumidorFinal && !cfId) {
       setSaving(false);
       setError('No se encontró el cliente "Consumidor Final" en la base de datos. Por favor créalo primero.');
       return;
     }
 
     const res = await api.post('/factura/crear', {
-      clienteId:          consumidorFinal ? consumidorFinalId : clienteSel?.id,
+      clienteId:          consumidorFinal ? cfId : clienteSel?.id,
       nombreCliente:      consumidorFinal ? 'Consumidor Final' : (clienteSel ? `${clienteSel.nombres} ${clienteSel.apellidos}` : null),
       tipo:               (esCredito || saldoPendiente > 0) ? 'CREDITO' : 'CONTADO',
       estado:             estadoFinal,
@@ -1005,8 +1020,8 @@ export default function CrearVenta() {
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Venta registrada</h3>
               <button onClick={() => {
                 setVentaCreada(null);
-                resetFormularioVenta();
-              }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#aaa' }}>✕</button>
+      resetFormularioVenta();
+    }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#aaa' }}>✕</button>
             </div>
 
             {/* Icono central + texto, mismo tono que el subtítulo gris */}

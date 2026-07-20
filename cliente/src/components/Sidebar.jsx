@@ -89,6 +89,17 @@ const allMenuItems = [
       </svg>
     ),
   },
+  // REPORTES
+  {
+    label: 'Reportes',
+    route: '/reportes',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M3 3v18h18" />
+        <path d="m7 16 4-5 3 3 5-7" />
+      </svg>
+    ),
+  },
 ];
 
 function ChevronIcon({ open }) {

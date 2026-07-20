@@ -40,8 +40,8 @@ export default function Ventas() {
 
   // Stats derivados
   const totalVentas   = lista.length;
-  const totalPagadas  = lista.filter(v => v.estado === 'PAGADA').length;
-  const totalPendientes = lista.filter(v => v.estado === 'PENDIENTE').length;
+  const totalPagadas  = lista.filter(v => v.estado_pago === 'PAGADA').length;
+  const totalPendientes = lista.filter(v => v.estado_pago === 'PENDIENTE').length;
   const totalFacturado = lista.reduce((s, v) => s + parseFloat(v.total || 0), 0);
   const totalDeuda     = lista.reduce((s, v) => s + parseFloat(v.saldo_pendiente || 0), 0);
 
@@ -69,11 +69,11 @@ export default function Ventas() {
 
   async function handleEliminar(id) {
   const confirm = await Swal.fire({
-    title: "Eliminar venta",
-    text: "¿Eliminar esta venta? Esta acción no se puede revertir.",
+    title: "Anular venta",
+    text: "¿Anular esta venta? La venta quedará marcada como anulada.",
     icon: "warning",
     showCancelButton: true,
-    confirmButtonText: "Sí, eliminar",
+    confirmButtonText: "Sí, anular",
     cancelButtonText: "Cancelar",
     confirmButtonColor: "#d33",
     reverseButtons: true,
@@ -86,7 +86,7 @@ export default function Ventas() {
   if (res.ok) {
     cargar();
     Swal.fire({
-      title: "Venta eliminada",
+      title: "Venta anulada",
       icon: "success",
       timer: 3000,
             toast: true,
@@ -95,8 +95,8 @@ export default function Ventas() {
     });
   } else {
     Swal.fire({
-      title: "No se pudo eliminar",
-      text: res.data?.resultado || "Error al eliminar",
+      title: "No se pudo anular",
+      text: res.data?.resultado || "Error al anular",
       icon: "error",
       timer: 3000,
             toast: true,
@@ -107,7 +107,25 @@ export default function Ventas() {
 }
 
   async function handleCobrar(v) {
-    navigate(`/facturas/cobrar?clienteId=${v.cliente_id}`);
+    const montoPendiente = parseFloat(v.saldo_pendiente);
+    const result = await Swal.fire({
+      title: 'Cobrar deuda',
+      text: `Factura #${v.id_personalizado || v.id} — Saldo pendiente: ${FMT(montoPendiente)}`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#27ae60',
+      confirmButtonText: `Cobrar ${FMT(montoPendiente)}`,
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+    });
+    if (!result.isConfirmed) return;
+    const res = await api.put(`/factura/cobrar/${v.id}`);
+    if (res.ok) {
+      Swal.fire({ title: 'Venta marcada como pagada', icon: 'success', timer: 2000, toast: true, position: 'top-end', showConfirmButton: false });
+      cargar();
+    } else {
+      Swal.fire({ title: 'Error', text: res.data?.resultado || 'No se pudo procesar el pago', icon: 'error', timer: 3000, toast: true, position: 'top-end', showConfirmButton: false });
+    }
   }
 
   function limpiarFiltros() {
@@ -172,6 +190,7 @@ export default function Ventas() {
             <option value="">Todos</option>
             <option value="PENDIENTE">Pendiente</option>
             <option value="PAGADA">Pagada</option>
+            <option value="ANULADA">Anulada</option>
           </select>
         </FilterItem>
         <FilterItem label="Tipo">
@@ -216,8 +235,8 @@ export default function Ventas() {
           </thead>
           <tbody>
             {lista.map(v => {
-              const est = ESTADO[v.estado] || ESTADO.PENDIENTE;
-              const tip = TIPO[v.tipo]     || TIPO.CONTADO;
+              const est = ESTADO[v.estado_pago] || ESTADO.PENDIENTE;
+              const tip = TIPO[v.tipo_venta]     || TIPO.CONTADO;
               return (
                 <tr key={v.id}>
                   <td>
@@ -265,7 +284,7 @@ export default function Ventas() {
                         </svg>
                       </button>
                       {isAdmin && (
-                        <button className="btn-icon danger" onClick={() => handleEliminar(v.id)} title="Eliminar venta">
+                        <button className="btn-icon danger" onClick={() => handleEliminar(v.id)} title="Anular venta">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                           </svg>

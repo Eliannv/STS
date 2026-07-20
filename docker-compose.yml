@@ -156,6 +156,7 @@ services:
       DB_SSL: "false"
       PORT: 3004
       NODE_ENV: development
+      INVENTARIO_SERVICIO_URL: http://inventario-servicio:3003
     depends_on:
       facturacion-postgres:
         condition: service_healthy
@@ -200,6 +201,33 @@ services:
       caja-postgres:
         condition: service_healthy
 
+  reportes-servicio:
+    build: ./reportes-servicio
+    container_name: sts-reportes-servicio
+    restart: unless-stopped
+    ports:
+      - "3006:3006"
+    environment:
+      PORT: 3006
+      NODE_ENV: development
+      JWT_SECRET: cambia_este_secreto_por_un_valor_de_al_menos_32_caracteres
+      INVENTARIO_SERVICIO_URL: http://inventario-servicio:3003
+      FACTURACION_SERVICIO_URL: http://facturacion-servicio:3004
+      CAJA_SERVICIO_URL: http://caja-servicio:3005
+      USUARIO_SERVICIO_URL: http://usuario-servicio:3001
+      CLIENTE_SERVICIO_URL: http://cliente-servicio:3002
+    depends_on:
+      usuario-servicio:
+        condition: service_started
+      cliente-servicio:
+        condition: service_started
+      inventario-servicio:
+        condition: service_started
+      facturacion-servicio:
+        condition: service_started
+      caja-servicio:
+        condition: service_started
+
   servidor:
     profiles: ["legacy"]
     build: ./servidor
@@ -234,6 +262,7 @@ services:
       INVENTARIO_SERVICIO_URL: http://inventario-servicio:3003
       FACTURACION_SERVICIO_URL: http://facturacion-servicio:3004
       CAJA_SERVICIO_URL: http://caja-servicio:3005
+      REPORTES_SERVICIO_URL: http://reportes-servicio:3006
     depends_on:
       usuario-servicio:
         condition: service_started
@@ -244,6 +273,8 @@ services:
       facturacion-servicio:
         condition: service_started
       caja-servicio:
+        condition: service_started
+      reportes-servicio:
         condition: service_started
 
   postgres:

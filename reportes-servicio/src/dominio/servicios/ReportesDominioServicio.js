@@ -1,0 +1,311 @@
+import ReporteDTO from '../../aplicacion/dto/ReporteDTO.js';
+
+const numero = (valor) => Number(valor || 0);
+const lista = (respuesta) => Array.isArray(respuesta?.resultado) ? respuesta.resultado : [];
+const fechaRegistro = (registro) => registro.created_at || registro.fecha || registro.fecha_pago || registro.fecha_venta || registro.fecha_emision;
+const dentroDeRango = (valor, desde, hasta) => {
+  if (!desde && !hasta) return true;
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) return false;
+  if (desde && fecha < new Date(`${desde}T00:00:00`)) return false;
+  if (hasta && fecha > new Date(`${hasta}T23:59:59.999`)) return false;
+  return true;
+};
+const filtrarRango = (registros, filtros = {}) => registros.filter((registro) => dentroDeRango(fechaRegistro(registro), filtros.fechaDesde, filtros.fechaHasta));
+const columnas = (...nombres) => nombres.map(([clave, etiqueta]) => ({ clave, etiqueta }));
+const columna = (key, label, type = 'text') => ({ key, label, type });
+const columnasPorReporte = {
+  'productos-sin-stock': [columna('codigo', 'Código'), columna('nombre', 'Producto'), columna('grupo', 'Grupo'), columna('stock', 'Stock', 'number'), columna('costo', 'Costo', 'currency'), columna('pvp1', 'Precio venta', 'currency')],
+  'productos-stock-minimo': [columna('codigo', 'Código'), columna('nombre', 'Producto'), columna('grupo', 'Grupo'), columna('stock', 'Stock', 'number'), columna('costo', 'Costo', 'currency'), columna('pvp1', 'Precio venta', 'currency')],
+  'ventas-mas-vendidos': [columna('codigo', 'Código'), columna('nombre', 'Producto'), columna('cantidad_vendida', 'Cantidad vendida', 'number'), columna('total_vendido', 'Total vendido', 'currency'), columna('stock_actual', 'Stock actual', 'number')],
+  'ventas-menos-vendidos': [columna('codigo', 'Código'), columna('nombre', 'Producto'), columna('cantidad_vendida', 'Cantidad vendida', 'number'), columna('total_vendido', 'Total vendido', 'currency'), columna('stock_actual', 'Stock actual', 'number')],
+  'compras-proveedor': [columna('proveedor_nombre', 'Proveedor'), columna('compras', 'Compras', 'number'), columna('total_comprado', 'Total comprado', 'currency')],
+  'ingresos-mercaderia': [columna('id_personalizado', 'Código'), columna('numero_factura', 'Factura'), columna('proveedor_nombre', 'Proveedor'), columna('fecha', 'Fecha', 'date'), columna('estado', 'Estado'), columna('total', 'Total', 'currency')],
+  'egresos-mercaderia': [columna('fecha', 'Fecha', 'date'), columna('motivo', 'Motivo'), columna('descripcion', 'Descripción'), columna('usuario_nombre', 'Usuario'), columna('sucursal_nombre', 'Sucursal'), columna('costo_total', 'Costo total', 'currency')],
+  'ventas-sucursal': [columna('sucursal_nombre', 'Sucursal'), columna('ventas', 'Ventas', 'number'), columna('total', 'Total', 'currency'), columna('abonado', 'Abonado', 'currency'), columna('saldo_pendiente', 'Saldo pendiente', 'currency')],
+  'ventas-usuario': [columna('usuario_nombre', 'Usuario'), columna('ventas', 'Ventas', 'number'), columna('total', 'Total', 'currency'), columna('abonado', 'Abonado', 'currency'), columna('saldo_pendiente', 'Saldo pendiente', 'currency')],
+  'ventas-cliente': [columna('cliente_nombre', 'Cliente'), columna('ventas', 'Ventas', 'number'), columna('total', 'Total', 'currency'), columna('abonado', 'Abonado', 'currency'), columna('saldo_pendiente', 'Saldo pendiente', 'currency')],
+  'utilidad-ventas': [columna('id_personalizado', 'Factura'), columna('fecha', 'Fecha', 'date'), columna('venta', 'Venta', 'currency'), columna('costo', 'Costo', 'currency'), columna('utilidad', 'Utilidad', 'currency')],
+  'flujo-caja': [columna('fecha', 'Fecha', 'date'), columna('tipo_caja', 'Caja'), columna('tipo', 'Tipo'), columna('descripcion', 'Descripción'), columna('usuario_nombre', 'Usuario'), columna('monto', 'Monto', 'currency')],
+  'cuentas-cobrar': [columna('factura_id_personalizado', 'Factura'), columna('cliente_nombre', 'Cliente'), columna('total', 'Total', 'currency'), columna('abonado', 'Abonado', 'currency'), columna('saldo_pendiente', 'Saldo pendiente', 'currency'), columna('fecha', 'Fecha', 'date')],
+};
+const shortTitles = {
+  'kardex-producto': 'Kardex producto', 'kardex-fecha': 'Kardex fechas', 'inventario-actual': 'Inventario', 'inventario-valorizado': 'Valorizado',
+  'productos-sin-stock': 'Sin stock', 'productos-stock-minimo': 'Stock mínimo', 'ventas-mas-vendidos': 'Más vendidos', 'ventas-menos-vendidos': 'Menos vendidos',
+  'compras-proveedor': 'Por proveedor', 'ingresos-mercaderia': 'Ingresos', 'egresos-mercaderia': 'Egresos', 'ventas-generales': 'Ventas',
+  'ventas-fecha': 'Ventas por fecha', 'ventas-sucursal': 'Por sucursal', 'ventas-usuario': 'Por usuario', 'ventas-cliente': 'Por cliente',
+  'utilidad-ventas': 'Utilidad', 'flujo-caja': 'Flujo de caja', 'cuentas-cobrar': 'Cuentas por cobrar', 'dashboard-indicadores': 'Indicadores',
+};
+columnasPorReporte['productos-mas-vendidos'] = columnasPorReporte['ventas-mas-vendidos'];
+columnasPorReporte['productos-menos-vendidos'] = columnasPorReporte['ventas-menos-vendidos'];
+columnasPorReporte['estado-cuentas-cobrar'] = columnasPorReporte['cuentas-cobrar'];
+shortTitles['productos-mas-vendidos'] = shortTitles['ventas-mas-vendidos'];
+shortTitles['productos-menos-vendidos'] = shortTitles['ventas-menos-vendidos'];
+shortTitles['estado-cuentas-cobrar'] = shortTitles['cuentas-cobrar'];
+const reporte = (codigo, titulo, filtros, filas, resumen = {}, datos = null, campos = [], opciones = {}) => new ReporteDTO({
+  codigo,
+  titulo,
+  shortTitle: opciones.shortTitle || shortTitles[codigo] || titulo,
+  filtros,
+  filas,
+  resumen,
+  datos,
+  columnas: opciones.columnas || columnasPorReporte[codigo] || columnas(...campos),
+  pagination: opciones.pagination,
+});
+const ordenar = (filas, clave, ascendente = false) => [...filas].sort((a, b) => ascendente ? numero(a[clave]) - numero(b[clave]) : numero(b[clave]) - numero(a[clave]));
+
+export default class ReportesDominioServicio {
+  constructor(salida) { this.salida = salida; }
+
+  async productos(contexto) { return this.salida.listarTodos('inventario', 'productos', {}, contexto); }
+  async movimientos(contexto, query = {}) { return this.salida.listarTodos('inventario', 'movimientos', query, contexto); }
+  async facturas(contexto) { return this.salida.listarTodos('facturacion', 'facturas', {}, contexto); }
+  async detallesFacturas(contexto) { return this.salida.listarTodos('facturacion', 'detalle-facturas', {}, contexto); }
+
+  async kardexProducto(filtros, contexto) {
+    const { codigo } = filtros;
+    if (!codigo) return reporte('kardex-producto', 'Kardex por producto', filtros, [], {}, null,
+      [['fecha', 'Fecha'], ['tipo', 'Tipo'], ['referencia', 'Referencia'], ['cantidad', 'Cantidad'], ['stock_anterior', 'Stock anterior'], ['stock_nuevo', 'Stock nuevo'], ['costo_unitario', 'Costo unitario'], ['precio_venta', 'Precio venta']]);
+    const coincidencias = await this.salida.listarTodos('inventario', 'productos', { buscar: codigo }, contexto);
+    const producto = coincidencias.find((p) => p.codigo === codigo);
+    if (!producto) return reporte('kardex-producto', 'Kardex por producto', filtros, [], { producto: null, movimientos: 0, stock_actual: null }, null,
+      [['fecha', 'Fecha'], ['tipo', 'Tipo'], ['referencia', 'Referencia'], ['cantidad', 'Cantidad'], ['stock_anterior', 'Stock anterior'], ['stock_nuevo', 'Stock nuevo'], ['costo_unitario', 'Costo unitario'], ['precio_venta', 'Precio venta']]);
+    const productoId = Number(producto.id);
+    const movimientos = filtrarRango(await this.movimientos(contexto, { productoId }), filtros).sort((a, b) => new Date(fechaRegistro(a)) - new Date(fechaRegistro(b))).map((movimiento) => ({
+      fecha: fechaRegistro(movimiento), tipo: movimiento.tipo, referencia: movimiento.referencia_id || movimiento.referencia_tipo || null,
+      cantidad: movimiento.cantidad, stock_anterior: movimiento.stock_anterior, stock_nuevo: movimiento.stock_nuevo,
+      costo_unitario: movimiento.costo_unitario, precio_venta: movimiento.precio_venta,
+    }));
+    return reporte('kardex-producto', 'Kardex por producto', filtros, movimientos, { producto, movimientos: movimientos.length, stock_actual: producto?.stock ?? null }, null,
+      [['fecha', 'Fecha'], ['tipo', 'Tipo'], ['referencia', 'Referencia'], ['cantidad', 'Cantidad'], ['stock_anterior', 'Stock anterior'], ['stock_nuevo', 'Stock nuevo'], ['costo_unitario', 'Costo unitario'], ['precio_venta', 'Precio venta']]);
+  }
+
+  async kardexFecha(filtros, contexto) {
+    const filas = filtrarRango(await this.movimientos(contexto), filtros).sort((a, b) => new Date(fechaRegistro(b)) - new Date(fechaRegistro(a)));
+    return reporte('kardex-fecha', 'Kardex por rango de fechas', filtros, filas, { movimientos: filas.length, unidades: filas.reduce((suma, item) => suma + numero(item.cantidad), 0) }, null,
+      [['created_at', 'Fecha'], ['producto_nombre', 'Producto'], ['tipo', 'Tipo'], ['cantidad', 'Cantidad'], ['stock_nuevo', 'Stock nuevo']]);
+  }
+
+  async inventarioActual(filtros, contexto) {
+    const productos = await this.productos(contexto);
+    const filas = productos.map((producto) => ({ id: producto.id, codigo: producto.codigo, nombre: producto.nombre, grupo: producto.grupo, stock: numero(producto.stock), costo: numero(producto.costo), pvp1: numero(producto.pvp1), tipo_control_stock: producto.tipo_control_stock }));
+    return reporte('inventario-actual', 'Inventario actual', filtros, filas, { productos: filas.length, unidades: filas.reduce((suma, item) => suma + item.stock, 0) }, null,
+      [['codigo', 'Código'], ['nombre', 'Producto'], ['grupo', 'Grupo'], ['stock', 'Stock'], ['costo', 'Costo'], ['pvp1', 'Precio venta'], ['tipo_control_stock', 'Control de stock']]);
+  }
+
+  async inventarioValorizado(filtros, contexto) {
+    const base = await this.inventarioActual(filtros, contexto);
+    const filas = base.filas.map((producto) => ({ ...producto, valor_costo: Number((producto.stock * producto.costo).toFixed(2)), valor_venta: Number((producto.stock * producto.pvp1).toFixed(2)) }));
+    return reporte('inventario-valorizado', 'Inventario valorizado', filtros, filas, { valor_costo: filas.reduce((suma, item) => suma + item.valor_costo, 0), valor_venta: filas.reduce((suma, item) => suma + item.valor_venta, 0) }, null,
+      [['codigo', 'Código'], ['nombre', 'Producto'], ['stock', 'Stock'], ['costo', 'Costo unitario'], ['valor_costo', 'Valor a costo'], ['pvp1', 'Precio venta'], ['valor_venta', 'Valor a precio venta']]);
+  }
+
+  async productosSinStock(filtros, contexto) {
+    const base = await this.inventarioActual(filtros, contexto);
+    const filas = base.filas.filter((producto) => producto.stock <= 0 && producto.tipo_control_stock !== 'ILIMITADO');
+    return reporte('productos-sin-stock', 'Productos sin stock', filtros, filas, { productos: filas.length });
+  }
+
+  async productosStockMinimo(filtros, contexto) {
+    const minimo = numero(filtros.stockMinimo) || 5;
+    const base = await this.inventarioActual({ ...filtros, stockMinimo: minimo }, contexto);
+    const filas = base.filas.filter((producto) => producto.stock <= minimo && producto.tipo_control_stock !== 'ILIMITADO');
+    return reporte('productos-stock-minimo', 'Productos con stock mínimo', { ...filtros, stockMinimo: minimo }, filas, { productos: filas.length, stock_minimo: minimo });
+  }
+
+  async contextoVentas(filtros, contexto, incluirProductos = false) {
+    const consultas = [this.facturas(contexto), this.detallesFacturas(contexto)];
+    if (incluirProductos) consultas.push(this.productos(contexto));
+    const [facturas, detalles, productos = []] = await Promise.all(consultas);
+    const coincide = (valor, filtro) => !filtro || String(valor) === String(filtro);
+    const vigentes = filtrarRango(facturas.filter((factura) => factura.estado_pago !== 'ANULADA'), filtros)
+      .filter((factura) => coincide(factura.sucursal_id, filtros.sucursalId))
+      .filter((factura) => coincide(factura.usuario_id, filtros.usuarioId))
+      .filter((factura) => coincide(factura.cliente_id, filtros.clienteId))
+      .filter((factura) => coincide(factura.estado_pago, filtros.estado));
+    const ids = new Set(vigentes.map((factura) => Number(factura.id)));
+    return { facturas: vigentes, detalles: detalles.filter((detalle) => ids.has(Number(detalle.factura_id))), productos };
+  }
+
+  async productosVendidos(filtros, contexto, ascendente) {
+    const { facturas, detalles, productos } = await this.contextoVentas(filtros, contexto, true);
+    const productosPorId = new Map(productos.map((producto) => [Number(producto.id), producto]));
+    const acumulado = new Map();
+    detalles.filter((detalle) => detalle.producto_id).forEach((detalle) => {
+      const id = Number(detalle.producto_id);
+      const actual = acumulado.get(id) || { producto_id: id, codigo: detalle.codigo, nombre: detalle.nombre, cantidad_vendida: 0, total_vendido: 0 };
+      actual.cantidad_vendida += numero(detalle.cantidad);
+      actual.total_vendido += numero(detalle.total);
+      acumulado.set(id, actual);
+    });
+    const filas = [...acumulado.values()].map((fila) => ({ ...fila, stock_actual: numero(productosPorId.get(fila.producto_id)?.stock) }));
+    return reporte(ascendente ? 'productos-menos-vendidos' : 'productos-mas-vendidos', ascendente ? 'Productos menos vendidos' : 'Productos más vendidos', filtros, ordenar(filas, 'cantidad_vendida', ascendente), { facturas: facturas.length, productos: filas.length });
+  }
+
+  productosMasVendidos(filtros, contexto) { return this.productosVendidos(filtros, contexto, false); }
+  productosMenosVendidos(filtros, contexto) { return this.productosVendidos(filtros, contexto, true); }
+
+  async ingresosBase(filtros, contexto) { return filtrarRango(await this.salida.listarTodos('inventario', 'ingresos', {}, contexto), filtros); }
+
+  async comprasPorProveedor(filtros, contexto) {
+    const ingresos = await this.ingresosBase(filtros, contexto);
+    const acumulado = new Map();
+    ingresos.filter((ingreso) => !filtros.proveedorId || Number(ingreso.proveedor_id) === Number(filtros.proveedorId)).forEach((ingreso) => {
+      const id = ingreso.proveedor_id || 'sin-proveedor';
+      const actual = acumulado.get(id) || { proveedor_id: ingreso.proveedor_id || null, proveedor_nombre: ingreso.proveedor_nombre || 'Sin proveedor', compras: 0, total_comprado: 0 };
+      actual.compras += 1;
+      actual.total_comprado += numero(ingreso.total);
+      acumulado.set(id, actual);
+    });
+    return reporte('compras-proveedor', 'Compras por proveedor', filtros, ordenar([...acumulado.values()], 'total_comprado'), { compras: ingresos.length });
+  }
+
+  async ingresosMercaderia(filtros, contexto) {
+    const filas = await this.ingresosBase(filtros, contexto);
+    return reporte('ingresos-mercaderia', 'Ingresos de mercadería por fechas', filtros, filas, { ingresos: filas.length, total: filas.reduce((suma, item) => suma + numero(item.total), 0) });
+  }
+
+  async egresosMercaderia(filtros, contexto) {
+    const filas = filtrarRango(await this.salida.listarTodos('inventario', 'egresos', {}, contexto), filtros);
+    return reporte('egresos-mercaderia', 'Egresos de mercadería por fechas', filtros, filas, { egresos: filas.length, costo_total: filas.reduce((suma, item) => suma + numero(item.costo_total), 0) });
+  }
+
+  async ventasGenerales(filtros, contexto, configuracion = {}) {
+    const { facturas } = await this.contextoVentas(filtros, contexto);
+    const filasCompletas = facturas.map((factura) => ({
+      numeroFactura: factura.id_personalizado || `#${factura.id}`,
+      cliente: factura.cliente_nombre || (factura.cliente_id ? `Cliente #${factura.cliente_id}` : 'Consumidor final'),
+      sucursal: factura.sucursal_id ? `Sucursal #${factura.sucursal_id}` : 'Sin sucursal',
+      usuario: factura.usuario_id ? `Usuario #${factura.usuario_id}` : 'Sin usuario',
+      fecha: fechaRegistro(factura),
+      subtotal: numero(factura.subtotal),
+      iva: numero(factura.iva),
+      total: numero(factura.total),
+      abonado: numero(factura.abonado),
+      saldoPendiente: numero(factura.saldo_pendiente),
+      estado: factura.estado_pago,
+    }));
+    const totalRows = filasCompletas.length;
+    const pageSize = Math.min(Math.max(Number(filtros.pageSize) || 20, 1), 100);
+    const totalPages = Math.ceil(totalRows / pageSize);
+    const page = totalPages ? Math.min(Math.max(Number(filtros.page) || 1, 1), totalPages) : 1;
+    const filas = filasCompletas.slice((page - 1) * pageSize, page * pageSize);
+    const montoTotal = filasCompletas.reduce((suma, item) => suma + item.total, 0);
+    const filtrosUsados = {
+      fechaDesde: filtros.fechaDesde || '',
+      fechaHasta: filtros.fechaHasta || '',
+      sucursal: filtros.sucursalId || '',
+      usuario: filtros.usuarioId || '',
+      cliente: filtros.clienteId || '',
+      estado: filtros.estado || '',
+    };
+    return reporte(configuracion.id || 'ventas-generales', configuracion.title || 'Ventas generales', filtrosUsados, filas, {
+      totalVentas: totalRows,
+      montoTotal: Number(montoTotal.toFixed(2)),
+      promedioVenta: totalRows ? Number((montoTotal / totalRows).toFixed(2)) : 0,
+      abonado: Number(filasCompletas.reduce((suma, item) => suma + item.abonado, 0).toFixed(2)),
+      saldoPendiente: Number(filasCompletas.reduce((suma, item) => suma + item.saldoPendiente, 0).toFixed(2)),
+    }, null, [], {
+      shortTitle: configuracion.shortTitle || 'Ventas',
+      pagination: { page, pageSize, totalRows, totalPages },
+      columnas: [
+        { key: 'numeroFactura', label: 'Factura', type: 'text' },
+        { key: 'cliente', label: 'Cliente', type: 'text' },
+        { key: 'sucursal', label: 'Sucursal', type: 'text' },
+        { key: 'usuario', label: 'Usuario', type: 'text' },
+        { key: 'fecha', label: 'Fecha', type: 'date' },
+        { key: 'subtotal', label: 'Subtotal', type: 'currency' },
+        { key: 'iva', label: 'IVA', type: 'currency' },
+        { key: 'total', label: 'Total', type: 'currency' },
+        { key: 'abonado', label: 'Abonado', type: 'currency' },
+        { key: 'saldoPendiente', label: 'Saldo pendiente', type: 'currency' },
+        { key: 'estado', label: 'Estado', type: 'text' },
+      ],
+    });
+  }
+
+  async ventasPorFecha(filtros, contexto) {
+    return this.ventasGenerales(filtros, contexto, { id: 'ventas-fecha', title: 'Ventas por rango de fechas', shortTitle: 'Ventas por fecha' });
+  }
+
+  async ventasAgrupadas(filtros, contexto, campoId, campoNombre, codigo, titulo) {
+    const { facturas } = await this.contextoVentas(filtros, contexto);
+    let catalogo = [];
+    try {
+      catalogo = campoId === 'sucursal_id'
+        ? await this.salida.listarTodos('usuario', 'sucursales', {}, contexto)
+        : campoId === 'usuario_id'
+          ? await this.salida.listarTodos('usuario', 'usuarios', { incluirInactivos: true }, contexto)
+          : [];
+    } catch (error) {
+      if (![401, 403].includes(error.status)) throw error;
+    }
+    const nombres = new Map(catalogo.map((item) => [Number(item.id), item.nombre_completo || [item.nombre, item.apellido].filter(Boolean).join(' ') || 'Sin asignar']));
+    const acumulado = new Map();
+    facturas.forEach((factura) => {
+      const id = factura[campoId] || 'sin-asignar';
+      const nombre = factura[campoNombre] || nombres.get(Number(factura[campoId])) || (factura[campoId] ? `#${factura[campoId]}` : 'Sin asignar');
+      const actual = acumulado.get(id) || { [campoId]: factura[campoId] || null, [campoNombre]: nombre, ventas: 0, total: 0, abonado: 0, saldo_pendiente: 0 };
+      actual.ventas += 1;
+      actual.total += numero(factura.total);
+      actual.abonado += numero(factura.abonado);
+      actual.saldo_pendiente += numero(factura.saldo_pendiente);
+      acumulado.set(id, actual);
+    });
+    return reporte(codigo, titulo, filtros, ordenar([...acumulado.values()], 'total'), { ventas: facturas.length });
+  }
+
+  ventasPorSucursal(filtros, contexto) { return this.ventasAgrupadas(filtros, contexto, 'sucursal_id', 'sucursal_nombre', 'ventas-sucursal', 'Ventas por sucursal'); }
+  ventasPorUsuario(filtros, contexto) { return this.ventasAgrupadas(filtros, contexto, 'usuario_id', 'usuario_nombre', 'ventas-usuario', 'Ventas por usuario'); }
+  ventasPorCliente(filtros, contexto) { return this.ventasAgrupadas(filtros, contexto, 'cliente_id', 'cliente_nombre', 'ventas-cliente', 'Ventas por cliente'); }
+
+  async utilidadVentas(filtros, contexto) {
+    const { facturas, detalles, productos } = await this.contextoVentas(filtros, contexto, true);
+    const costos = new Map(productos.map((producto) => [Number(producto.id), numero(producto.costo)]));
+    const filas = facturas.map((factura) => {
+      const detallesFactura = detalles.filter((detalle) => Number(detalle.factura_id) === Number(factura.id));
+      const costo = detallesFactura.reduce((suma, detalle) => suma + (costos.get(Number(detalle.producto_id)) || 0) * numero(detalle.cantidad), 0);
+      const venta = numero(factura.total);
+      return { id: factura.id, id_personalizado: factura.id_personalizado, fecha: fechaRegistro(factura), venta, costo: Number(costo.toFixed(2)), utilidad: Number((venta - costo).toFixed(2)) };
+    });
+    return reporte('utilidad-ventas', 'Utilidad por ventas', filtros, filas, { ventas: filas.length, venta: filas.reduce((suma, item) => suma + item.venta, 0), costo: filas.reduce((suma, item) => suma + item.costo, 0), utilidad: filas.reduce((suma, item) => suma + item.utilidad, 0) });
+  }
+
+  async movimientosCajas(contexto) {
+    const [banco, chica] = await Promise.all([
+      this.salida.listarTodos('caja', 'cajas-banco', {}, contexto),
+      this.salida.listarTodos('caja', 'cajas-chicas', {}, contexto),
+    ]);
+    const cargar = async (cajas, ruta, tipo) => (await Promise.all(cajas.map(async (caja) => {
+      const respuesta = await this.salida.leer('caja', `${ruta}/${caja.id}/movimientos`, {}, contexto);
+      return lista(respuesta).map((movimiento) => ({ ...movimiento, tipo_caja: tipo, caja_id: caja.id }));
+    }))).flat();
+    return [...await cargar(banco, 'cajas-banco', 'BANCO'), ...await cargar(chica, 'cajas-chicas', 'CHICA')];
+  }
+
+  async flujoCaja(filtros, contexto) {
+    const filas = filtrarRango(await this.movimientosCajas(contexto), filtros).sort((a, b) => new Date(fechaRegistro(b)) - new Date(fechaRegistro(a)));
+    return reporte('flujo-caja', 'Flujo de caja', filtros, filas, { ingresos: filas.filter((item) => item.tipo === 'INGRESO').reduce((suma, item) => suma + numero(item.monto), 0), egresos: filas.filter((item) => item.tipo === 'EGRESO').reduce((suma, item) => suma + numero(item.monto), 0) });
+  }
+
+  async estadoCuentasCobrar(filtros, contexto) {
+    const { facturas } = await this.contextoVentas(filtros, contexto);
+    const filas = facturas.filter((factura) => numero(factura.saldo_pendiente) > 0).map((factura) => ({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: factura.cliente_id, cliente_nombre: factura.cliente_nombre, total: numero(factura.total), abonado: numero(factura.abonado), saldo_pendiente: numero(factura.saldo_pendiente), fecha: fechaRegistro(factura) }));
+    return reporte('estado-cuentas-cobrar', 'Estado de cuentas por cobrar', filtros, filas, { facturas: filas.length, saldo_total: filas.reduce((suma, item) => suma + item.saldo_pendiente, 0) });
+  }
+
+  async dashboardIndicadores(filtros, contexto) {
+    const [inventario, ventas, cuentas, caja] = await Promise.all([
+      this.inventarioActual(filtros, contexto), this.ventasGenerales(filtros, contexto), this.estadoCuentasCobrar(filtros, contexto), this.flujoCaja(filtros, contexto),
+    ]);
+    return reporte('dashboard-indicadores', 'Dashboard de indicadores', filtros, [], {
+      productos: inventario.resumen.productos,
+      unidades_stock: inventario.resumen.unidades,
+      ventas: ventas.resumen.ventas,
+      total_ventas: ventas.resumen.total,
+      cuentas_por_cobrar: cuentas.resumen.saldo_total,
+      flujo_neto: caja.resumen.ingresos - caja.resumen.egresos,
+    }, { inventario, ventas, cuentas_por_cobrar: cuentas, flujo_caja: caja });
+  }
+}

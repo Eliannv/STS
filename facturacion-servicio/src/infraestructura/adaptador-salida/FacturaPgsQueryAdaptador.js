@@ -11,7 +11,7 @@ export default class FacturaPgsQueryAdaptador extends FacturaSalidaQueryPuerto {
   }
 
   async buscarPorId(id) {
-    const factura = await Factura.findOne({ where: { id, deleted_at: null } });
+    const factura = await Factura.findByPk(id);
     return factura ? { estado: 'ok', resultado: await conDetalles(factura) } : { estado: 'error', resultado: 'Factura no encontrada' };
   }
 
@@ -23,7 +23,7 @@ export default class FacturaPgsQueryAdaptador extends FacturaSalidaQueryPuerto {
   }
 
   async listaGeneral({ buscar, estado, tipo, fechaDesde, fechaHasta, limit = 15, offset = 0 } = {}) {
-    const where = { deleted_at: null };
+    const where = {};
     if (estado) where.estado_pago = estado;
     if (tipo) where.tipo_venta = tipo;
     if (buscar) where[Op.or] = [{ id_personalizado: { [Op.iLike]: `%${buscar}%` } }, { cliente_nombre: { [Op.iLike]: `%${buscar}%` } }];

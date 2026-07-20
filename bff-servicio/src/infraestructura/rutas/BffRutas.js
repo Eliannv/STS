@@ -9,6 +9,7 @@ const cliente = process.env.CLIENTE_SERVICIO_URL;
 const inventario = process.env.INVENTARIO_SERVICIO_URL;
 const facturacion = process.env.FACTURACION_SERVICIO_URL;
 const caja = process.env.CAJA_SERVICIO_URL;
+const reportes = process.env.REPORTES_SERVICIO_URL;
 
 forward('/usuarios', usuario, '/api/v1/usuarios');
 forward('/sucursales', usuario, '/api/v1/sucursales');
@@ -18,5 +19,6 @@ for (const recurso of ['proveedores','productos','catalogo','ingresos','detalle-
 for (const recurso of ['facturas','detalle-facturas','deudas','ventas-tarjeta','abonos-tarjeta']) forward(`/${recurso}`, facturacion, `/api/v1/${recurso}`);
 forward('/cobro-deuda', facturacion, '/api/v1/cobro-deuda');
 for (const recurso of ['cajas-banco','cajas-chicas','cuentas']) forward(`/${recurso}`, caja, `/api/v1/${recurso}`);
+forward('/reportes', reportes, '/api/v1/reportes');
 
 export default router;

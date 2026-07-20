@@ -50,7 +50,7 @@ function facturaAVenta(f) {
     total:            f.total,
     saldo_pendiente:  f.saldo_pendiente,
     created_at:       f.fecha_pago || f.created_at,
-    tipo:             f.tipo,
+    tipo:             f.tipo_venta,
   };
 }
 
@@ -121,7 +121,7 @@ export default function VerFactura() {
   const r = await api.put(`/factura/anular/${factura.id}`);
 
   if (r.ok) {
-    setFactura(prev => ({ ...prev, estado: 'ANULADA', saldo_pendiente: 0 }));
+    setFactura(prev => ({ ...prev, estado_pago: 'ANULADA', saldo_pendiente: 0 }));
     Swal.fire({
       title: "Factura anulada",
       text: "El stock de los productos fue restaurado correctamente.",
@@ -173,8 +173,8 @@ export default function VerFactura() {
     </div>
   );
 
-  const est     = ESTADO_META[factura.estado] || ESTADO_META.PENDIENTE;
-  const tipo    = TIPO_META[factura.tipo]     || TIPO_META.CONTADO;
+  const est     = ESTADO_META[factura.estado_pago] || ESTADO_META.PENDIENTE;
+  const tipo    = TIPO_META[factura.tipo_venta]    || TIPO_META.CONTADO;
   const abonado = parseFloat(factura.abonado         || 0);
   const saldo   = parseFloat(factura.saldo_pendiente || 0);
   const items   = mapItems(factura.items);
@@ -210,7 +210,14 @@ export default function VerFactura() {
             </svg>
             Ver cliente
           </button>
-          {factura.estado !== 'ANULADA' && isAdmin && (
+          {factura.estado_pago === 'ANULADA' ? (
+            <span style={{ background: '#f8d7da', color: '#721c24', padding: '6px 14px', borderRadius: 6, fontWeight: 700, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              Anulada
+            </span>
+          ) : isAdmin && (
             <button
               className="btn btn-sm"
               style={{ background: '#dc3545', color: '#fff', border: 'none' }}

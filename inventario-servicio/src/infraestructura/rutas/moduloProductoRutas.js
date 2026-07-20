@@ -12,6 +12,7 @@ router.get('/buscar/:id', authMiddleware(), (req, res) => productoControlador.bu
 router.post('/crear', authMiddleware('ADMINISTRADOR'), (req, res) => productoControlador.crear(req, res));
 router.put('/editar', authMiddleware('ADMINISTRADOR'), (req, res) => productoControlador.editar(req, res));
 router.delete('/eliminar', authMiddleware('ADMINISTRADOR'), (req, res) => productoControlador.eliminar(req, res));
+router.post('/reducir-stock', (req, res) => productoControlador.reducirStock(req, res));
 router.get('/:id', authMiddleware(), (req, res) => productoControlador.buscarPorId(req, res));
 router.put('/:id', authMiddleware('ADMINISTRADOR'), (req, res) => productoControlador.editar(req, res));
 router.delete('/:id', authMiddleware('ADMINISTRADOR'), (req, res) => productoControlador.eliminar(req, res));

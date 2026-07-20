@@ -24,4 +24,11 @@ export default class ProductoCommandUsesCase {
       ? this.adaptadorBDSalida.eliminar(dtoProducto.id)
       : Promise.resolve({ estado: 'error', resultado: 'El ID es requerido para eliminar' });
   }
+
+  reducirStock(items) {
+    if (!items || items.length === 0) {
+      return Promise.resolve({ estado: 'error', resultado: 'Se requiere un array de items con productoId y cantidad' });
+    }
+    return this.adaptadorBDSalida.reducirStock(items);
+  }
 }

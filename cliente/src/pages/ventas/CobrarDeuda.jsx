@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/api';
 import { imprimirTicketAbono } from '../../utils/ticketVenta';
 import { Search, ReceiptText, ChevronDown } from 'lucide-react';
@@ -20,6 +20,8 @@ const FECHAFMT = s => {
 
 export default function CobrarDeuda() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const clienteIdInit = searchParams.get('clienteId');
 
   // State
   const [deudas, setDeudas] = useState([]);
@@ -57,7 +59,14 @@ export default function CobrarDeuda() {
   // Effects
   useEffect(() => {
     cargarDeudas(0);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-seleccionar deuda del clienteId del query param
+  useEffect(() => {
+    if (!clienteIdInit || deudas.length === 0) return;
+    const idx = deudas.findIndex(d => String(d.cliente_id) === clienteIdInit);
+    if (idx >= 0) handleSelectDeuda(idx);
+  }, [clienteIdInit, deudas]);
 
   // Event Handlers
   function cargarMasDeudas() {

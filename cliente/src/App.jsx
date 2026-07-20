@@ -25,6 +25,9 @@ import CajaChica from './pages/cajas/CajaChica';
 import VerCajaChica from './pages/cajas/VerCajaChica';
 import CajaBanco from './pages/cajas/CajaBanco';
 import VerCajaBanco from './pages/cajas/VerCajaBanco';
+import Reportes from './pages/reportes/Reportes';
+import ReportCategory from './pages/reportes/ReportCategory';
+import ReportPage from './pages/reportes/ReportPage';
 
 export default function App() {
   return (
@@ -56,6 +59,9 @@ export default function App() {
             <Route path="/caja-chica/:id" element={<VerCajaChica />} />
             <Route path="/caja-banco" element={<CajaBanco />} />
             <Route path="/caja-banco/:id" element={<VerCajaBanco />} />
+            <Route path="/reportes" element={<Reportes />} />
+            <Route path="/reportes/:categoria/:reporte" element={<ReportPage />} />
+            <Route path="/reportes/:categoria" element={<ReportCategory />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

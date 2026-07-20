@@ -101,7 +101,7 @@ export default function ReportCategory() {
       <div className="page-header" style={{ marginBottom: 20 }}>
         <div>
           <Breadcrumb items={[
-            { label: 'Reportes', href: '/reportes' },
+            { label: 'Reportes' },
             { label: category.title },
           ]} />
           <h1 className="page-title">{category.title}</h1>

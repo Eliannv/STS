@@ -15,6 +15,7 @@ const allPages = [
   { label: 'Ingresos',        route: '/ingresos' },
   { label: 'Facturas',        route: '/facturas' },
   { label: 'Venta POS',       route: '/facturas/nueva' },
+  { label: 'Venta con Tarjeta',       route: '/ventas/venta-tarjeta' },
   { label: 'Cobrar deuda',    route: '/facturas/cobrar' },
   { label: 'Caja Chica',      route: '/caja-chica' },
   { label: 'Caja Banco',      route: '/caja-banco',     adminOnly: true },

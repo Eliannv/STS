@@ -1,7 +1,22 @@
 import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import categoriesConfig from '../config/reportes/categories.config';
+import reportsConfig from '../config/reportes/reports.config';
 import './Sidebar.css';
+
+function buildReportesChildren() {
+  const items = [];
+  for (const cat of categoriesConfig) {
+    items.push({ header: true, label: cat.title });
+    const raw = reportsConfig[cat.id];
+    for (const reportId of cat.reports) {
+      const rep = raw?.[reportId];
+      if (rep) items.push({ label: rep.title || rep.shortTitle, route: `/reportes/${cat.id}/${rep.id}` });
+    }
+  }
+  return items;
+}
 
 const allMenuItems = [
   // DASHBOARD
@@ -78,6 +93,17 @@ const allMenuItems = [
       { label: 'Caja Banco', route: '/caja-banco', adminOnly: true },
     ],
   },
+  // REPORTES
+  {
+    label: 'Reportes',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M3 3v18h18" />
+        <path d="m7 16 4-5 3 3 5-7" />
+      </svg>
+    ),
+    children: buildReportesChildren(),
+  },
   // SUCURSALES
   {
     label: 'Sucursales',
@@ -89,17 +115,7 @@ const allMenuItems = [
       </svg>
     ),
   },
-  // REPORTES
-  {
-    label: 'Reportes',
-    route: '/reportes',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M3 3v18h18" />
-        <path d="m7 16 4-5 3 3 5-7" />
-      </svg>
-    ),
-  },
+  
 ];
 
 function ChevronIcon({ open }) {
@@ -136,7 +152,7 @@ export default function Sidebar() {
   }
 
   function hasActiveChild(children) {
-    return filterChildren(children).some(c => location.pathname === c.route);
+    return filterChildren(children).some(c => !c.header && location.pathname === c.route);
   }
 
   return (
@@ -206,17 +222,26 @@ export default function Sidebar() {
 
                 {!collapsed && (
                   <ul className={`submenu-list ${isOpen ? 'open' : ''}`}>
-                    {visibleChildren.map(child => (
-                      <li key={child.route} className="submenu-item">
-                        <NavLink
-                          to={child.route}
-                          end={!!child.end}
-                          className={({ isActive }) => `submenu-link ${isActive ? 'active' : ''}`}
-                        >
-                          {child.label}
-                        </NavLink>
-                      </li>
-                    ))}
+                    {visibleChildren.map((child, idx) => {
+                      if (child.header) {
+                        return (
+                          <li key={`hdr-${idx}`} className="submenu-header">
+                            <span>{child.label}</span>
+                          </li>
+                        );
+                      }
+                      return (
+                        <li key={child.route} className="submenu-item">
+                          <NavLink
+                            to={child.route}
+                            end={!!child.end}
+                            className={({ isActive }) => `submenu-link ${isActive ? 'active' : ''}`}
+                          >
+                            {child.label}
+                          </NavLink>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </li>

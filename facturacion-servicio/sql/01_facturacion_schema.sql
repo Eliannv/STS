@@ -11,6 +11,7 @@ CREATE TABLE facturas (
   total NUMERIC(14,2) NOT NULL DEFAULT 0, metodo_pago VARCHAR(30) NOT NULL, codigo_transferencia VARCHAR(100), es_credito BOOLEAN NOT NULL DEFAULT FALSE,
   abonado NUMERIC(14,2) DEFAULT 0, saldo_pendiente NUMERIC(14,2) DEFAULT 0, estado_credito estado_credito, tipo_venta tipo_venta NOT NULL DEFAULT 'CONTADO',
   estado_pago estado_pago NOT NULL DEFAULT 'PAGADA', observacion TEXT, fecha TIMESTAMPTZ NOT NULL DEFAULT NOW(), usuario_id INTEGER, sucursal_id INTEGER,
+  estado_inventario VARCHAR(30) NOT NULL DEFAULT 'PENDIENTE',
   created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW(), deleted_at TIMESTAMPTZ DEFAULT NULL
 );
 

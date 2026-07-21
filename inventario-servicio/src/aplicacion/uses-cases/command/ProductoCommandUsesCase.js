@@ -25,10 +25,10 @@ export default class ProductoCommandUsesCase {
       : Promise.resolve({ estado: 'error', resultado: 'El ID es requerido para eliminar' });
   }
 
-  reducirStock(items) {
+  reducirStock(items, contexto = {}) {
     if (!items || items.length === 0) {
       return Promise.resolve({ estado: 'error', resultado: 'Se requiere un array de items con productoId y cantidad' });
     }
-    return this.adaptadorBDSalida.reducirStock(items);
+    return this.adaptadorBDSalida.reducirStock(items, contexto);
   }
 }

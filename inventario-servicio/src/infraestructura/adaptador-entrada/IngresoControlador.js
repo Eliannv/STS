@@ -29,12 +29,28 @@ export default class IngresoControlador extends IngresoEntradaPuerto {
   }
 
   async finalizar(req, res) {
-    const respuesta = await this.commandUC.finalizar(new IngresoDTO({ id: req.params.id ?? req.body.id }));
+    const respuesta = await this.commandUC.finalizar(new IngresoDTO({
+      ...req.body,
+      id: req.params.id ?? req.body.id,
+      usuarioId: req.usuario?.id,
+      usuarioNombre: req.usuario ? `${req.usuario.nombre || ''} ${req.usuario.apellido || ''}`.trim() : null,
+      sucursalId: req.usuario?.sucursalId ?? req.body.sucursalId,
+      operacionId: req.body.operacionId || `INGRESO-${req.params.id ?? req.body.id}`,
+      idempotencyKey: req.body.idempotencyKey || `INGRESO-${req.params.id ?? req.body.id}`,
+      traceId: req.traceId,
+    }));
     return res.status(respuesta.estado === 'ok' ? 200 : 400).json({ ...respuesta, traceId: req.traceId });
   }
 
   async eliminar(req, res) {
-    const respuesta = await this.commandUC.eliminar(new IngresoDTO({ id: req.params.id ?? req.body.id }));
+    const respuesta = await this.commandUC.eliminar(new IngresoDTO({
+      id: req.params.id ?? req.body.id,
+      usuarioId: req.usuario?.id,
+      usuarioNombre: req.usuario ? `${req.usuario.nombre || ''} ${req.usuario.apellido || ''}`.trim() : null,
+      sucursalId: req.usuario?.sucursalId,
+      motivo: req.body.motivo,
+      traceId: req.traceId,
+    }));
     return res.status(respuesta.estado === 'ok' ? 200 : 400).json({ ...respuesta, traceId: req.traceId });
   }
 

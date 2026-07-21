@@ -66,19 +66,46 @@ export default class ReportesDominioServicio {
   async kardexProducto(filtros, contexto) {
     const { codigo } = filtros;
     if (!codigo) return reporte('kardex-producto', 'Kardex por producto', filtros, [], {}, null,
-      [['fecha', 'Fecha'], ['tipo', 'Tipo'], ['referencia', 'Referencia'], ['cantidad', 'Cantidad'], ['stock_anterior', 'Stock anterior'], ['stock_nuevo', 'Stock nuevo'], ['costo_unitario', 'Costo unitario'], ['precio_venta', 'Precio venta']]);
-    const coincidencias = await this.salida.listarTodos('inventario', 'productos', { buscar: codigo }, contexto);
-    const producto = coincidencias.find((p) => p.codigo === codigo);
-    if (!producto) return reporte('kardex-producto', 'Kardex por producto', filtros, [], { producto: null, movimientos: 0, stock_actual: null }, null,
-      [['fecha', 'Fecha'], ['tipo', 'Tipo'], ['referencia', 'Referencia'], ['cantidad', 'Cantidad'], ['stock_anterior', 'Stock anterior'], ['stock_nuevo', 'Stock nuevo'], ['costo_unitario', 'Costo unitario'], ['precio_venta', 'Precio venta']]);
-    const productoId = Number(producto.id);
-    const movimientos = filtrarRango(await this.movimientos(contexto, { productoId }), filtros).sort((a, b) => new Date(fechaRegistro(a)) - new Date(fechaRegistro(b))).map((movimiento) => ({
-      fecha: fechaRegistro(movimiento), tipo: movimiento.tipo, referencia: movimiento.referencia_id || movimiento.referencia_tipo || null,
-      cantidad: movimiento.cantidad, stock_anterior: movimiento.stock_anterior, stock_nuevo: movimiento.stock_nuevo,
-      costo_unitario: movimiento.costo_unitario, precio_venta: movimiento.precio_venta,
+      [['fecha', 'Fecha'], ['tipo_movimiento', 'Movimiento'], ['referencia_codigo', 'Documento'], ['origen', 'Origen'], ['usuario_nombre', 'Usuario'], ['entrada', 'Entrada'], ['salida', 'Salida'], ['stock_nuevo', 'Stock'], ['costo_unitario', 'Costo'], ['observacion', 'Observación']]);
+    const base = filtrarRango(await this.movimientos(contexto, { codigo }), filtros).sort((a, b) => new Date(fechaRegistro(a)) - new Date(fechaRegistro(b)));
+    if (!base.length) return reporte('kardex-producto', 'Kardex por producto', filtros, [], { producto: null, movimientos: 0, stock_actual: null, entradas: 0, salidas: 0 }, null,
+      [['fecha', 'Fecha'], ['tipo_movimiento', 'Movimiento'], ['referencia_codigo', 'Documento'], ['origen', 'Origen'], ['usuario_nombre', 'Usuario'], ['entrada', 'Entrada'], ['salida', 'Salida'], ['stock_nuevo', 'Stock'], ['costo_unitario', 'Costo'], ['observacion', 'Observación']]);
+    const ultimo = base.at(-1);
+    const producto = { id: ultimo.producto_id, codigo: ultimo.producto_codigo, nombre: ultimo.producto_nombre, grupo: ultimo.grupo_producto, stock: ultimo.stock_nuevo, costo: ultimo.costo_promedio_nuevo };
+    const movimientos = base.map((movimiento) => ({
+      id: movimiento.id,
+      fecha: movimiento.fecha_operacion || fechaRegistro(movimiento),
+      created_at: movimiento.fecha_operacion || fechaRegistro(movimiento),
+      tipo: movimiento.tipo,
+      naturaleza: movimiento.naturaleza,
+      tipo_movimiento: movimiento.tipo_movimiento,
+      referencia: movimiento.referencia_id,
+      referencia_tipo: movimiento.referencia_tipo,
+      referencia_codigo: movimiento.referencia_codigo,
+      origen: movimiento.origen,
+      usuario_id: movimiento.usuario_id,
+      usuario_nombre: movimiento.usuario_nombre,
+      sucursal_id: movimiento.sucursal_id,
+      sucursal_nombre: movimiento.sucursal_nombre,
+      cantidad: movimiento.cantidad,
+      entrada: movimiento.naturaleza === 'ENTRADA' ? movimiento.cantidad : 0,
+      salida: movimiento.naturaleza === 'SALIDA' ? movimiento.cantidad : 0,
+      stock_anterior: movimiento.stock_anterior,
+      stock_nuevo: movimiento.stock_nuevo,
+      costo_unitario: movimiento.costo_unitario,
+      costo_promedio_anterior: movimiento.costo_promedio_anterior,
+      costo_promedio_nuevo: movimiento.costo_promedio_nuevo,
+      motivo: movimiento.motivo,
+      observacion: movimiento.observacion,
     }));
-    return reporte('kardex-producto', 'Kardex por producto', filtros, movimientos, { producto, movimientos: movimientos.length, stock_actual: producto?.stock ?? null }, null,
-      [['fecha', 'Fecha'], ['tipo', 'Tipo'], ['referencia', 'Referencia'], ['cantidad', 'Cantidad'], ['stock_anterior', 'Stock anterior'], ['stock_nuevo', 'Stock nuevo'], ['costo_unitario', 'Costo unitario'], ['precio_venta', 'Precio venta']]);
+    return reporte('kardex-producto', 'Kardex por producto', filtros, movimientos, {
+      producto,
+      movimientos: movimientos.length,
+      stock_actual: producto.stock,
+      entradas: movimientos.reduce((suma, item) => suma + numero(item.entrada), 0),
+      salidas: movimientos.reduce((suma, item) => suma + numero(item.salida), 0),
+    }, null,
+    [['fecha', 'Fecha'], ['tipo_movimiento', 'Movimiento'], ['referencia_codigo', 'Documento'], ['origen', 'Origen'], ['usuario_nombre', 'Usuario'], ['entrada', 'Entrada'], ['salida', 'Salida'], ['stock_nuevo', 'Stock'], ['costo_unitario', 'Costo'], ['observacion', 'Observación']]);
   }
 
   async kardexFecha(filtros, contexto) {

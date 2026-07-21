@@ -93,6 +93,7 @@ services:
     volumes:
       - inventario_postgres_data:/var/lib/postgresql/data
       - ./inventario-servicio/sql/01_inventario_schema.sql:/docker-entrypoint-initdb.d/01_inventario_schema.sql:ro
+      - ./inventario-servicio/sql/02_movimientos_stock_ledger.sql:/docker-entrypoint-initdb.d/02_movimientos_stock_ledger.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d inventario_db"]
       interval: 5s
@@ -133,6 +134,7 @@ services:
     volumes:
       - facturacion_postgres_data:/var/lib/postgresql/data
       - ./facturacion-servicio/sql/01_facturacion_schema.sql:/docker-entrypoint-initdb.d/01_facturacion_schema.sql:ro
+      - ./facturacion-servicio/sql/02_factura_estado_inventario.sql:/docker-entrypoint-initdb.d/02_factura_estado_inventario.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d facturacion_db"]
       interval: 5s

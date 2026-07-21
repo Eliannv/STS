@@ -18,6 +18,7 @@ const facturaDb = (venta) => ({
   estado_pago: venta.estado,
   observacion: venta.observacion,
   usuario_id: venta.usuarioId,
+  sucursal_id: venta.sucursalId,
   updated_at: new Date()
 });
 
@@ -39,7 +40,7 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
   async guardar(venta) {
     const transaction = await sequelize.transaction();
     try {
-      const factura = await Factura.create({ ...facturaDb(venta), fecha: venta.fechaPago || new Date(), created_at: new Date() }, { transaction });
+      const factura = await Factura.create({ ...facturaDb(venta), estado_inventario: 'PENDIENTE', fecha: venta.fechaPago || new Date(), created_at: new Date() }, { transaction });
       for (const item of venta.items) await DetalleFactura.create(detalleDb(item, factura.id), { transaction });
       if (Number(venta.total) - Number(venta.saldoPendiente) > 0) {
         await Deuda.create({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: venta.clienteId, cliente_nombre: venta.nombreCliente || 'Cliente', metodo_pago: venta.metodoPago, fecha_pago: venta.fechaPago || new Date(), monto_pagado: factura.abonado, total_factura: venta.total, saldo_restante: venta.saldoPendiente, estado_pago: venta.estado, es_credito: venta.tipo === 'CREDITO', usuario_id: venta.usuarioId, created_at: new Date() }, { transaction });
@@ -50,22 +51,6 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
         await VentaTarjeta.create({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: venta.clienteId, cliente_nombre: venta.nombreCliente, monto_total: venta.total, monto_recibido: montoRecibido, saldo_pendiente: saldoPendiente, estado: saldoPendiente <= 0.01 ? 'LIQUIDADA' : 'PENDIENTE', observacion: venta.observacion, created_at: new Date(), updated_at: new Date() }, { transaction });
       }
       await transaction.commit();
-
-      // --- Deducir stock en inventario-servicio ---
-      const inventarioUrl = process.env.INVENTARIO_SERVICIO_URL;
-      if (inventarioUrl) {
-        const itemsStock = (venta.items || [])
-          .filter(i => !i.esServicio && !i.es_servicio && (i.productoId ?? i.producto_id ?? i.id))
-          .map(i => ({ productoId: i.productoId ?? i.producto_id ?? i.id, cantidad: Number(i.cantidad) || 1 }));
-        if (itemsStock.length > 0) {
-          fetch(`${inventarioUrl}/api/v1/productos/reducir-stock`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: itemsStock }),
-          }).catch(err => console.error('Error al deducir stock:', err.message));
-        }
-      }
-
       return { estado: 'ok', resultado: factura };
     } catch (error) {
       await transaction.rollback();
@@ -87,13 +72,18 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
     return cantidad ? { estado: 'ok', resultado: 'Factura marcada como pagada' } : { estado: 'error', resultado: 'Factura no encontrada' };
   }
 
-  async anular(id) {
-    const [cantidad] = await Factura.update({ estado_pago: 'ANULADA', saldo_pendiente: 0, deleted_at: new Date(), updated_at: new Date() }, { where: { id, estado_pago: { [Op.ne]: 'ANULADA' } } });
+  async anular(id, estadoInventario = 'REVERSADO') {
+    const [cantidad] = await Factura.update({ estado_pago: 'ANULADA', estado_inventario: estadoInventario, saldo_pendiente: 0, deleted_at: new Date(), updated_at: new Date() }, { where: { id, estado_pago: { [Op.ne]: 'ANULADA' } } });
     return cantidad ? { estado: 'ok', resultado: 'Factura anulada correctamente' } : { estado: 'error', resultado: 'Factura no encontrada o ya estaba anulada' };
   }
 
   async eliminar(id) {
-    const [cantidad] = await Factura.update({ estado_pago: 'ANULADA', deleted_at: new Date(), updated_at: new Date() }, { where: { id, deleted_at: null } });
+    const [cantidad] = await Factura.update({ estado_pago: 'ANULADA', estado_inventario: 'REVERSADO', deleted_at: new Date(), updated_at: new Date() }, { where: { id, deleted_at: null } });
     return cantidad ? { estado: 'ok', resultado: 'Factura eliminada correctamente' } : { estado: 'error', resultado: 'Factura no encontrada o ya eliminada' };
+  }
+
+  async actualizarEstadoInventario(id, estado) {
+    const [cantidad] = await Factura.update({ estado_inventario: estado, updated_at: new Date() }, { where: { id } });
+    return cantidad ? { estado: 'ok', resultado: estado } : { estado: 'error', resultado: 'Factura no encontrada' };
   }
 }

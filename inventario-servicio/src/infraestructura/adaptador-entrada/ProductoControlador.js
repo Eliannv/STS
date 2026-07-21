@@ -9,7 +9,15 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
   }
 
   async crear(req, res) {
-    const respuesta = await this.commandUC.crear(new ProductoDTO(req.body));
+    const respuesta = await this.commandUC.crear(new ProductoDTO({
+      ...req.body,
+      usuarioId: req.usuario?.id,
+      usuarioNombre: req.usuario ? `${req.usuario.nombre || ''} ${req.usuario.apellido || ''}`.trim() : null,
+      sucursalId: req.usuario?.sucursalId ?? req.body.sucursalId,
+      operacionId: req.body.operacionId || req.traceId,
+      idempotencyKey: req.body.idempotencyKey || req.headers['x-idempotency-key'] || req.traceId,
+      traceId: req.traceId,
+    }));
     return res.status(respuesta.estado === 'ok' ? 201 : 400).json({ ...respuesta, traceId: req.traceId });
   }
 
@@ -26,7 +34,16 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
   }
 
   async editar(req, res) {
-    const respuesta = await this.commandUC.editar(new ProductoDTO({ ...req.body, id: req.params.id ?? req.body.id }));
+    const respuesta = await this.commandUC.editar(new ProductoDTO({
+      ...req.body,
+      id: req.params.id ?? req.body.id,
+      usuarioId: req.usuario?.id,
+      usuarioNombre: req.usuario ? `${req.usuario.nombre || ''} ${req.usuario.apellido || ''}`.trim() : null,
+      sucursalId: req.usuario?.sucursalId ?? req.body.sucursalId,
+      operacionId: req.body.operacionId || req.traceId,
+      idempotencyKey: req.body.idempotencyKey || req.headers['x-idempotency-key'] || req.traceId,
+      traceId: req.traceId,
+    }));
     return res.status(respuesta.estado === 'ok' ? 200 : 400).json({ ...respuesta, traceId: req.traceId });
   }
 
@@ -41,7 +58,16 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
   }
 
   async reducirStock(req, res) {
-    const respuesta = await this.commandUC.reducirStock(req.body.items || []);
+    const respuesta = await this.commandUC.reducirStock(req.body.items || [], {
+      usuarioId: req.usuario?.id,
+      usuarioNombre: req.usuario ? `${req.usuario.nombre || ''} ${req.usuario.apellido || ''}`.trim() : null,
+      sucursalId: req.usuario?.sucursalId,
+      referenciaId: req.body.referenciaId,
+      referenciaCodigo: req.body.referenciaCodigo,
+      operacionId: req.body.operacionId || req.traceId,
+      idempotencyKey: req.body.idempotencyKey || req.headers['x-idempotency-key'] || req.traceId,
+      traceId: req.traceId,
+    });
     return res.status(respuesta.estado === 'ok' ? 200 : 400).json({ ...respuesta, traceId: req.traceId });
   }
 }

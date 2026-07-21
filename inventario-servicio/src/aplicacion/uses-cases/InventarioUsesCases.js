@@ -4,5 +4,5 @@ export default class InventarioUsesCases {
   obtener(recurso, id) { return this.adaptador.obtener(recurso, id); }
   crear(recurso, datos) { return this.adaptador.crear(recurso, datos); }
   actualizar(recurso, id, datos) { return this.adaptador.actualizar(recurso, id, datos); }
-  eliminar(recurso, id) { return this.adaptador.eliminar(recurso, id); }
+  eliminar(recurso, id, contexto) { return this.adaptador.eliminar(recurso, id, contexto); }
 }

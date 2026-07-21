@@ -17,8 +17,8 @@ export default class IngresoCommandUsesCase {
     return this.adaptadorBDSalida.actualizar(new Ingreso(dto.id, dto));
   }
 
-  finalizar(dto) { return dto.id ? this.adaptadorBDSalida.finalizar(dto.id) : Promise.resolve({ estado: 'error', resultado: 'El ID es requerido para finalizar' }); }
-  eliminar(dto) { return dto.id ? this.adaptadorBDSalida.eliminar(dto.id) : Promise.resolve({ estado: 'error', resultado: 'El ID es requerido para eliminar' }); }
+  finalizar(dto) { return dto.id ? this.adaptadorBDSalida.finalizar(dto) : Promise.resolve({ estado: 'error', resultado: 'El ID es requerido para finalizar' }); }
+  eliminar(dto) { return dto.id ? this.adaptadorBDSalida.eliminar(dto) : Promise.resolve({ estado: 'error', resultado: 'El ID es requerido para eliminar' }); }
 
   agregarDetalle(dto) {
     if (!dto.ingresoId) return Promise.resolve({ estado: 'error', resultado: 'El ID del ingreso es requerido' });

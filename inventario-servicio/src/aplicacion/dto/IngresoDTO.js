@@ -14,6 +14,14 @@ export class IngresoDTO {
     this.total = Number(datos.total) || 0;
     this.estado = datos.estado ?? null;
     this.usuarioId = datos.usuarioId ?? null;
+    this.usuarioNombre = datos.usuarioNombre ?? null;
+    this.sucursalId = datos.sucursalId ?? null;
+    this.sucursalNombre = datos.sucursalNombre ?? null;
+    this.origen = datos.origen ?? 'INVENTARIO';
+    this.operacionId = datos.operacionId ?? null;
+    this.idempotencyKey = datos.idempotencyKey ?? null;
+    this.motivo = datos.motivo ?? null;
+    this.traceId = datos.traceId ?? null;
     this.buscar = datos.buscar ?? null;
     this.fechaDesde = datos.fechaDesde ?? null;
     this.fechaHasta = datos.fechaHasta ?? null;

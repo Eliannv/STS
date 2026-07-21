@@ -39,6 +39,47 @@ export function exportarProductosExcel(productos) {
   XLSX.writeFile(wb, `productos_${fecha}.xlsx`);
 }
 
+export function exportarKardexExcel({ product, productFields, indicators, indicatorDefinitions, filters, filterDefinitions, columns, rows, generatedAt }) {
+  const data = [];
+  data.push(['KARDEX POR PRODUCTO']);
+  data.push(['Fecha de generación', new Date(generatedAt).toLocaleString('es-EC')]);
+  data.push([]);
+  data.push(['FICHA DEL PRODUCTO']);
+  productFields.forEach(field => data.push([field.label, valorExportacion(product?.[field.key], field.type)]));
+  data.push([]);
+  data.push(['INDICADORES']);
+  indicatorDefinitions.forEach(item => data.push([item.label, valorExportacion(indicators?.[item.key], item.type)]));
+  data.push([]);
+  data.push(['FILTROS UTILIZADOS']);
+  filterDefinitions.forEach(filter => data.push([filter.label, valorFiltro(filters?.[filter.key], filter)]));
+  data.push([]);
+  data.push(columns.map(column => column.label));
+  rows.forEach(row => data.push(columns.map(column => valorExportacion(row[column.key], column.type))));
+
+  const worksheet = XLSX.utils.aoa_to_sheet(data);
+  worksheet['!cols'] = columns.map(column => ({ wch: Math.max(column.label.length + 4, 14) }));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Kardex');
+  const code = String(product?.codigo || 'producto').replace(/[^a-zA-Z0-9_-]/g, '_');
+  XLSX.writeFile(workbook, `kardex_${code}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+function valorExportacion(value, type) {
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value === 'object') return value.nombre || value.descripcion || value.label || value.codigo || '';
+  if (type === 'currency' || type === 'number') return Number(value) || 0;
+  if (type === 'date' || type === 'datetime') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('es-EC');
+  }
+  return value;
+}
+
+function valorFiltro(value, filter) {
+  if (value === null || value === undefined || value === '') return 'Todos';
+  return filter.options?.find(option => String(option.value) === String(value))?.label || valorExportacion(value);
+}
+
 /* ──────────────────────────────────────────────
    Exportar historial clínico — usa plantilla formato_pedidos_michael.xlsx
    Usa ExcelJS para preservar estilos, colores y bordes del template.

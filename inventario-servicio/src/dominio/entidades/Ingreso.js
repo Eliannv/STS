@@ -14,5 +14,12 @@ export default class Ingreso {
     this.total = datos.total ?? 0;
     this.estado = datos.estado ?? 'BORRADOR';
     this.usuarioId = datos.usuarioId ?? null;
+    this.usuarioNombre = datos.usuarioNombre ?? null;
+    this.sucursalId = datos.sucursalId ?? null;
+    this.sucursalNombre = datos.sucursalNombre ?? null;
+    this.origen = datos.origen ?? 'INVENTARIO';
+    this.operacionId = datos.operacionId ?? null;
+    this.idempotencyKey = datos.idempotencyKey ?? null;
+    this.traceId = datos.traceId ?? null;
   }
 }

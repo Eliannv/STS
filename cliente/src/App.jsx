@@ -27,6 +27,7 @@ import CajaBanco from './pages/cajas/CajaBanco';
 import VerCajaBanco from './pages/cajas/VerCajaBanco';
 import ReportCategory from './pages/reportes/ReportCategory';
 import ReportPage from './pages/reportes/ReportPage';
+import KardexProductoPage from './pages/reportes/KardexProductoPage';
 
 export default function App() {
   return (
@@ -58,6 +59,7 @@ export default function App() {
             <Route path="/caja-chica/:id" element={<VerCajaChica />} />
             <Route path="/caja-banco" element={<CajaBanco />} />
             <Route path="/caja-banco/:id" element={<VerCajaBanco />} />
+            <Route path="/reportes/inventario/kardex-producto" element={<KardexProductoPage />} />
             <Route path="/reportes/:categoria/:reporte" element={<ReportPage />} />
             <Route path="/reportes/:categoria" element={<ReportCategory />} />
           </Route>

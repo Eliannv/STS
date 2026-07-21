@@ -326,7 +326,7 @@ export default function ImportarIngreso() {
       // Los detalles ya se guardaron en /ingreso/crear (el backend los procesa juntos)
       // Solo queda finalizar el ingreso para actualizar stock y estado
 
-      const resFin = await api.put('/ingreso/finalizar', { id: ingresoId });
+      const resFin = await api.put('/ingreso/finalizar', { id: ingresoId, origen: 'IMPORTACION' });
       if (!resFin.ok) {
         setErrorPaso2(resFin.data?.resultado || 'Error al finalizar el ingreso');
         setGuardando(false);

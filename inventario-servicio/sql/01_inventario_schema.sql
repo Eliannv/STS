@@ -1,10 +1,12 @@
 CREATE TYPE tipo_control_stock AS ENUM ('NORMAL', 'ILIMITADO');
 CREATE TYPE categoria_catalogo AS ENUM ('LUNA', 'LENTE_CONTACTO', 'LIQUIDO', 'SERVICIO');
 CREATE TYPE tipo_compra AS ENUM ('CONTADO', 'CREDITO');
-CREATE TYPE estado_ingreso AS ENUM ('BORRADOR', 'FINALIZADO');
+CREATE TYPE estado_ingreso AS ENUM ('BORRADOR', 'FINALIZADO', 'ANULADO');
 CREATE TYPE tipo_detalle_ingreso AS ENUM ('EXISTENTE', 'NUEVO');
 CREATE TYPE motivo_egreso AS ENUM ('DEVOLUCION_PROVEEDOR','PRODUCTO_DANADO','AJUSTE_INVENTARIO','DONACION','USO_INTERNO','PERDIDA_ROBO','OTRO');
 CREATE TYPE tipo_movimiento_stock AS ENUM ('INGRESO','AJUSTE','ANULACION','VENTA NORMAL','VENTA','SALIDA','ELIMINACION','VENTA_EDITADA','COMPRA_EDITADA');
+CREATE TYPE naturaleza_movimiento_stock AS ENUM ('ENTRADA','SALIDA','NEUTRO');
+CREATE TYPE tipo_kardex_stock AS ENUM ('INVENTARIO_INICIAL','COMPRA','VENTA','DEVOLUCION_CLIENTE','DEVOLUCION_PROVEEDOR','EGRESO','AJUSTE','TRANSFERENCIA_ENTRADA','TRANSFERENCIA_SALIDA','ANULACION_VENTA','ANULACION_COMPRA','ANULACION_EGRESO','REVALORIZACION','COMPENSACION');
 
 CREATE SEQUENCE seq_id_ingresos START 1 INCREMENT 1 NO CYCLE;
 CREATE OR REPLACE FUNCTION gen_id_ingreso() RETURNS CHAR(10) LANGUAGE SQL AS $$ SELECT LPAD(nextval('seq_id_ingresos')::TEXT, 10, '0') $$;
@@ -55,12 +57,72 @@ CREATE TABLE detalle_egresos (
 );
 
 CREATE TABLE movimientos_stock (
-  id SERIAL PRIMARY KEY, producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE, producto_nombre VARCHAR(150), grupo_producto VARCHAR(60),
-  sucursal_id INTEGER, tipo tipo_movimiento_stock NOT NULL, cantidad INTEGER NOT NULL, costo_unitario NUMERIC(14,2), precio_venta NUMERIC(14,2),
-  stock_anterior INTEGER NOT NULL, stock_nuevo INTEGER NOT NULL, referencia_id INTEGER, referencia_tipo VARCHAR(50), observacion TEXT, created_at TIMESTAMPTZ DEFAULT NOW()
+  id SERIAL PRIMARY KEY,
+  producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE RESTRICT,
+  producto_codigo VARCHAR(50),
+  producto_nombre VARCHAR(150),
+  grupo_producto VARCHAR(60),
+  sucursal_id INTEGER,
+  sucursal_nombre VARCHAR(100),
+  tipo tipo_movimiento_stock NOT NULL,
+  naturaleza naturaleza_movimiento_stock NOT NULL,
+  tipo_movimiento tipo_kardex_stock NOT NULL,
+  origen VARCHAR(30) NOT NULL,
+  cantidad INTEGER NOT NULL,
+  costo_unitario NUMERIC(14,2),
+  precio_venta NUMERIC(14,2),
+  costo_promedio_anterior NUMERIC(14,4),
+  costo_promedio_nuevo NUMERIC(14,4),
+  stock_anterior INTEGER NOT NULL,
+  stock_nuevo INTEGER NOT NULL,
+  referencia_id INTEGER,
+  referencia_tipo VARCHAR(50),
+  referencia_codigo VARCHAR(50),
+  usuario_id INTEGER,
+  usuario_nombre VARCHAR(150),
+  fecha_operacion TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  operacion_id VARCHAR(100) NOT NULL,
+  idempotency_key VARCHAR(180) NOT NULL,
+  movimiento_revertido_id INTEGER REFERENCES movimientos_stock(id) ON DELETE RESTRICT,
+  motivo VARCHAR(150),
+  observacion TEXT,
+  trace_id VARCHAR(100),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT chk_movimiento_cantidad_positiva CHECK (cantidad > 0),
+  CONSTRAINT chk_movimiento_stock_no_negativo CHECK (stock_anterior >= 0 AND stock_nuevo >= 0)
 );
 
 CREATE INDEX idx_productos_busqueda ON productos (nombre, codigo, modelo, color);
 CREATE INDEX idx_productos_proveedor ON productos (proveedor_id);
 CREATE INDEX idx_ingresos_fecha ON ingresos (fecha DESC);
 CREATE INDEX idx_movimientos_producto ON movimientos_stock (producto_id, created_at DESC);
+CREATE INDEX idx_movimientos_sucursal ON movimientos_stock (sucursal_id, fecha_operacion DESC);
+CREATE INDEX idx_movimientos_referencia ON movimientos_stock (referencia_tipo, referencia_id);
+CREATE INDEX idx_movimientos_operacion ON movimientos_stock (operacion_id);
+CREATE UNIQUE INDEX uq_movimientos_idempotency ON movimientos_stock (idempotency_key);
+CREATE UNIQUE INDEX uq_movimiento_reversion ON movimientos_stock (movimiento_revertido_id) WHERE movimiento_revertido_id IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION impedir_mutacion_movimiento_stock() RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'movimientos_stock es un ledger inmutable; registre un movimiento compensatorio';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_movimientos_stock_inmutables
+BEFORE UPDATE OR DELETE ON movimientos_stock
+FOR EACH ROW EXECUTE FUNCTION impedir_mutacion_movimiento_stock();
+
+CREATE OR REPLACE FUNCTION impedir_stock_fuera_ledger() RETURNS TRIGGER AS $$
+BEGIN
+  IF current_setting('app.movimiento_stock_autorizado', TRUE) IS DISTINCT FROM 'true' THEN
+    RAISE EXCEPTION 'El stock y costo del producto solo pueden cambiar mediante el servicio de movimientos';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_productos_stock_solo_ledger
+BEFORE UPDATE OF stock, costo ON productos
+FOR EACH ROW
+WHEN (OLD.stock IS DISTINCT FROM NEW.stock OR OLD.costo IS DISTINCT FROM NEW.costo)
+EXECUTE FUNCTION impedir_stock_fuera_ledger();

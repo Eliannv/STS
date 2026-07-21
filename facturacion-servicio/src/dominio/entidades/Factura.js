@@ -12,8 +12,13 @@ export default class Factura {
     this.observacion = datos.observacion ?? null;
     this.metodoPago = datos.metodoPago ?? 'EFECTIVO';
     this.usuarioId = datos.usuarioId ?? null;
+    this.usuarioNombre = datos.usuarioNombre ?? null;
+    this.sucursalId = datos.sucursalId ?? null;
     this.historialClinicoId = datos.historialClinicoId ?? null;
     this.fechaPago = datos.fechaPago ?? null;
     this.items = datos.items ?? [];
+    this.authorization = datos.authorization ?? null;
+    this.traceId = datos.traceId ?? null;
+    this.motivo = datos.motivo ?? null;
   }
 }

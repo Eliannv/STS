@@ -3,7 +3,8 @@ import IngresoPgsCommandAdaptador from '../adaptador-salida/IngresoPgsCommandAda
 import IngresoPgsQueryAdaptador from '../adaptador-salida/IngresoPgsQueryAdaptador.js';
 import IngresoCommandUsesCase from '../../aplicacion/uses-cases/command/IngresoCommandUsesCase.js';
 import IngresoQueryUsesCase from '../../aplicacion/uses-cases/query/IngresoQueryUsesCase.js';
+import { movimientoStockDominioServicio } from './MovimientoStockContenedor.js';
 
-const command = new IngresoPgsCommandAdaptador();
+const command = new IngresoPgsCommandAdaptador(movimientoStockDominioServicio);
 const query = new IngresoPgsQueryAdaptador();
 export const ingresoControlador = new IngresoControlador(new IngresoCommandUsesCase(command), new IngresoQueryUsesCase(query));

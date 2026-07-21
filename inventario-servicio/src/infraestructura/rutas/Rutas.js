@@ -4,14 +4,16 @@ import { inventarioControlador } from '../contenedor/InventarioContenedor.js';
 import moduloProductoRutas from './moduloProductoRutas.js';
 import moduloProveedorRutas from './moduloProveedorRutas.js';
 import moduloIngresoRutas from './moduloIngresoRutas.js';
+import moduloMovimientoStockRutas from './moduloMovimientoStockRutas.js';
 
 const router = Router();
-const lectura = ['catalogo', 'detalle-ingresos', 'egresos', 'detalle-egresos', 'movimientos'];
-const escritura = ['catalogo', 'detalle-ingresos', 'egresos', 'detalle-egresos', 'movimientos'];
+const lectura = ['catalogo', 'detalle-ingresos', 'egresos', 'detalle-egresos'];
+const escritura = ['catalogo', 'detalle-ingresos', 'egresos', 'detalle-egresos'];
 
 router.use('/productos', moduloProductoRutas);
 router.use('/proveedores', moduloProveedorRutas);
 router.use('/ingresos', moduloIngresoRutas);
+router.use('/movimientos', moduloMovimientoStockRutas);
 
 for (const recurso of lectura) {
   router.get(`/${recurso}`, authMiddleware(), (req, res) => { req.params.recurso = recurso; return inventarioControlador.lista(req, res); });

@@ -27,7 +27,7 @@ import CajaBanco from './pages/cajas/CajaBanco';
 import VerCajaBanco from './pages/cajas/VerCajaBanco';
 import ReportCategory from './pages/reportes/ReportCategory';
 import ReportPage from './pages/reportes/ReportPage';
-import KardexProductoPage from './pages/reportes/KardexProductoPage';
+import KardexPage from './pages/reportes/KardexPage';
 
 export default function App() {
   return (
@@ -59,7 +59,13 @@ export default function App() {
             <Route path="/caja-chica/:id" element={<VerCajaChica />} />
             <Route path="/caja-banco" element={<CajaBanco />} />
             <Route path="/caja-banco/:id" element={<VerCajaBanco />} />
-            <Route path="/reportes/inventario/kardex-producto" element={<KardexProductoPage />} />
+            <Route path="/reportes/inventario/kardex" element={<KardexPage />} />
+            <Route path="/reportes/inventario/kardex-producto" element={<Navigate to="/reportes/inventario/kardex" replace />} />
+            <Route path="/reportes/inventario/kardex-fecha" element={<Navigate to="/reportes/inventario/kardex" replace />} />
+            <Route path="/reportes/inventario/inventario-actual" element={<Navigate to="/productos" replace />} />
+            <Route path="/reportes/inventario/inventario-valorizado" element={<Navigate to="/productos" replace />} />
+            <Route path="/reportes/inventario/productos-sin-stock" element={<Navigate to="/productos" replace />} />
+            <Route path="/reportes/inventario/productos-stock-minimo" element={<Navigate to="/productos" replace />} />
             <Route path="/reportes/:categoria/:reporte" element={<ReportPage />} />
             <Route path="/reportes/:categoria" element={<ReportCategory />} />
           </Route>

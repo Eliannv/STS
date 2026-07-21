@@ -3,8 +3,8 @@ import { REPORT_PERMISSIONS } from './categories.config';
 const filters = {
   fechaDesde: { key: 'fechaDesde', label: 'Fecha desde', type: 'date', queryParam: 'fechaDesde' },
   fechaHasta: { key: 'fechaHasta', label: 'Fecha hasta', type: 'date', queryParam: 'fechaHasta' },
-  codigo: { key: 'codigo', label: 'Producto', type: 'product-search', source: 'productos', queryParam: 'codigo', pathParam: true },
-  grupo: { key: 'grupo', label: 'Grupo', type: 'text', queryParam: 'grupo' },
+  codigo: { key: 'codigo', label: 'Producto', type: 'product-search', source: 'productos', queryParam: 'codigo' },
+  grupo: { key: 'grupo', label: 'Grupo', type: 'entity', source: 'grupos', queryParam: 'grupo' },
   proveedorId: { key: 'proveedorId', label: 'Proveedor', type: 'entity', source: 'proveedores', queryParam: 'proveedorId' },
   sucursalId: { key: 'sucursalId', label: 'Sucursal', type: 'entity', source: 'sucursales', queryParam: 'sucursalId' },
   usuarioId: { key: 'usuarioId', label: 'Usuario', type: 'entity', source: 'usuarios', queryParam: 'usuarioId' },
@@ -21,12 +21,22 @@ const filters = {
     key: 'tipoMovimiento', label: 'Tipo de movimiento', type: 'select', queryParam: 'tipoMovimiento',
     options: [
       { value: '', label: 'Todos' },
-      { value: 'entry', label: 'Entradas' },
-      { value: 'exit', label: 'Salidas' },
-      { value: 'adjustment', label: 'Ajustes' },
+      { value: 'INVENTARIO_INICIAL', label: 'Inventario inicial' },
+      { value: 'COMPRA', label: 'Compra' },
+      { value: 'VENTA', label: 'Venta' },
+      { value: 'DEVOLUCION_CLIENTE', label: 'Devolución de cliente' },
+      { value: 'DEVOLUCION_PROVEEDOR', label: 'Devolución a proveedor' },
+      { value: 'EGRESO', label: 'Egreso' },
+      { value: 'AJUSTE', label: 'Ajuste' },
+      { value: 'TRANSFERENCIA_ENTRADA', label: 'Transferencia de entrada' },
+      { value: 'TRANSFERENCIA_SALIDA', label: 'Transferencia de salida' },
+      { value: 'ANULACION_VENTA', label: 'Anulación de venta' },
+      { value: 'ANULACION_COMPRA', label: 'Anulación de compra' },
+      { value: 'ANULACION_EGRESO', label: 'Anulación de egreso' },
+      { value: 'REVALORIZACION', label: 'Revalorización' },
+      { value: 'COMPENSACION', label: 'Compensación' },
     ],
   },
-  stockMinimo: { key: 'stockMinimo', label: 'Stock mínimo', type: 'number', queryParam: 'stockMinimo' },
 };
 
 const actions = ['refresh', 'exportExcel', 'exportPdf', 'clearFilters'];
@@ -47,14 +57,12 @@ const createReport = (report) => ({
 
 export const reportsConfig = {
   inventario: {
-    'kardex-producto': createReport({
-      id: 'kardex-producto', category: 'inventario', title: 'Kardex por producto', shortTitle: 'Kardex producto',
-      description: 'Consulta los movimientos y existencias históricas de un producto.',
-      endpoint: 'kardex/producto/:codigo', pathParams: ['codigo'], permission: REPORT_PERMISSIONS.INVENTARIO,
-      defaultFilters: { codigo: '', fechaDesde: '', fechaHasta: '', tipoMovimiento: '', sucursalId: '', usuarioId: '' },
+    kardex: createReport({
+      id: 'kardex', category: 'inventario', title: 'Kardex', shortTitle: 'Kardex',
+      description: 'Consulta todos los movimientos del inventario y filtra opcionalmente por producto.',
+      endpoint: 'kardex/fecha', permission: REPORT_PERMISSIONS.INVENTARIO,
+      defaultFilters: { codigo: '', grupo: '', proveedorId: '', usuarioId: '', tipoMovimiento: '', sucursalId: '', fechaDesde: '', fechaHasta: '' },
       summary: [
-        { key: 'producto', label: 'Producto', type: 'text', color: '#3498db' },
-        { key: 'movimientos', label: 'Movimientos', type: 'number', color: '#3498db' },
         { key: 'stockActual', label: 'Stock actual', type: 'number', color: '#1abc9c' },
         { key: 'entradas', label: 'Entradas', type: 'number', color: '#27ae60' },
         { key: 'salidas', label: 'Salidas', type: 'number', color: '#e74c3c' },
@@ -62,7 +70,7 @@ export const reportsConfig = {
         { key: 'valorInventario', label: 'Valor del inventario', type: 'currency', color: '#f39c12' },
         { key: 'ultimoMovimiento', label: 'Último movimiento', type: 'datetime', color: '#607d8b' },
       ],
-      filters: [filters.codigo, filters.fechaDesde, filters.fechaHasta, filters.tipoMovimiento, filters.sucursalId, filters.usuarioId],
+      filters: [filters.codigo, filters.grupo, filters.proveedorId, filters.usuarioId, filters.tipoMovimiento, filters.sucursalId, filters.fechaDesde, filters.fechaHasta],
       productFields: [
         { key: 'codigo', label: 'Código' }, { key: 'modelo', label: 'Modelo' }, { key: 'color', label: 'Color' },
         { key: 'grupo', label: 'Grupo' }, { key: 'costo', label: 'Costo', type: 'currency' },
@@ -71,63 +79,13 @@ export const reportsConfig = {
         { key: 'estado', label: 'Estado' },
       ],
       columns: [
-        { key: 'fecha', label: 'Fecha' }, { key: 'hora', label: 'Hora' }, { key: 'documento', label: 'Documento' },
+        { key: 'fecha', label: 'Fecha' }, { key: 'hora', label: 'Hora' }, { key: 'productoCodigo', label: 'Código' },
+        { key: 'productoNombre', label: 'Producto' }, { key: 'grupo', label: 'Grupo' }, { key: 'documento', label: 'Documento' },
         { key: 'tipoMovimiento', label: 'Tipo de movimiento' }, { key: 'detalle', label: 'Detalle' },
         { key: 'entrada', label: 'Entrada', type: 'number', align: 'right' }, { key: 'salida', label: 'Salida', type: 'number', align: 'right' },
         { key: 'stockAnterior', label: 'Stock anterior', type: 'number', align: 'right' }, { key: 'stockActual', label: 'Stock actual', type: 'number', align: 'right' },
         { key: 'costoUnitario', label: 'Costo unitario', type: 'currency', align: 'right' }, { key: 'saldo', label: 'Saldo', type: 'currency', align: 'right' },
-        { key: 'usuario', label: 'Usuario' }, { key: 'observacion', label: 'Observación' },
-      ],
-    }),
-    'kardex-fecha': createReport({
-      id: 'kardex-fecha', category: 'inventario', title: 'Kardex por rango de fechas', shortTitle: 'Kardex fechas',
-      description: 'Consulta los movimientos de inventario dentro de un periodo.', endpoint: 'kardex/fecha', permission: REPORT_PERMISSIONS.INVENTARIO,
-      defaultFilters: { fechaDesde: '', fechaHasta: '' }, summary: [
-        { key: 'movimientos', label: 'Movimientos', type: 'number', color: '#3498db' }, { key: 'unidades', label: 'Unidades', type: 'number', color: '#1abc9c' },
-      ], filters: [filters.fechaDesde, filters.fechaHasta], columns: [
-        { key: 'created_at', label: 'Fecha', type: 'datetime' }, { key: 'producto_nombre', label: 'Producto' }, { key: 'tipo', label: 'Tipo' },
-        { key: 'cantidad', label: 'Cantidad', type: 'number', align: 'right' }, { key: 'stock_nuevo', label: 'Stock nuevo', type: 'number', align: 'right' },
-      ],
-    }),
-    'inventario-actual': createReport({
-      id: 'inventario-actual', category: 'inventario', title: 'Inventario actual', shortTitle: 'Inventario',
-      description: 'Consulta las existencias disponibles por producto.', endpoint: 'inventario/actual', permission: REPORT_PERMISSIONS.INVENTARIO,
-      defaultFilters: { grupo: '', proveedorId: '' }, refreshInterval: 60000,
-      summary: [{ key: 'productos', label: 'Productos', type: 'number', color: '#3498db' }, { key: 'unidades', label: 'Unidades en stock', type: 'number', color: '#1abc9c' }],
-      filters: [filters.grupo, filters.proveedorId], columns: [
-        { key: 'codigo', label: 'Código' }, { key: 'nombre', label: 'Nombre' }, { key: 'modelo', label: 'Modelo' }, { key: 'grupo', label: 'Grupo' },
-        { key: 'stock', label: 'Stock', type: 'number', align: 'right' }, { key: 'costo', label: 'Costo', type: 'currency', align: 'right' },
-        { key: 'pvp1', label: 'Precio venta', type: 'currency', align: 'right' }, { key: 'tipo_control_stock', label: 'Control stock' },
-      ],
-    }),
-    'inventario-valorizado': createReport({
-      id: 'inventario-valorizado', category: 'inventario', title: 'Inventario valorizado', shortTitle: 'Valorizado',
-      description: 'Consulta el valor del inventario a costo y precio de venta.', endpoint: 'inventario/valorizado', permission: REPORT_PERMISSIONS.INVENTARIO,
-      defaultFilters: { grupo: '', proveedorId: '' }, refreshInterval: 60000,
-      summary: [{ key: 'valor_costo', label: 'Valor a costo', type: 'currency', color: '#e67e22' }, { key: 'valor_venta', label: 'Valor a venta', type: 'currency', color: '#27ae60' }],
-      filters: [filters.grupo, filters.proveedorId], columns: [
-        { key: 'codigo', label: 'Código' }, { key: 'nombre', label: 'Nombre' }, { key: 'stock', label: 'Stock', type: 'number', align: 'right' },
-        { key: 'costo', label: 'Costo unitario', type: 'currency', align: 'right' }, { key: 'valor_costo', label: 'Valor a costo', type: 'currency', align: 'right' },
-        { key: 'pvp1', label: 'Precio venta', type: 'currency', align: 'right' }, { key: 'valor_venta', label: 'Valor a venta', type: 'currency', align: 'right' },
-      ],
-    }),
-    'productos-sin-stock': createReport({
-      id: 'productos-sin-stock', category: 'inventario', title: 'Productos sin stock', shortTitle: 'Sin stock',
-      description: 'Consulta los productos activos sin existencias disponibles.', endpoint: 'inventario/sin-stock', permission: REPORT_PERMISSIONS.INVENTARIO,
-      defaultFilters: { grupo: '', proveedorId: '' }, refreshInterval: 60000,
-      summary: [{ key: 'productos', label: 'Sin stock', type: 'number', color: '#e74c3c' }], filters: [filters.grupo, filters.proveedorId], columns: [
-        { key: 'codigo', label: 'Código' }, { key: 'nombre', label: 'Nombre' }, { key: 'grupo', label: 'Grupo' }, { key: 'stock', label: 'Stock', type: 'number', align: 'right' },
-        { key: 'costo', label: 'Costo', type: 'currency', align: 'right' }, { key: 'pvp1', label: 'Precio venta', type: 'currency', align: 'right' },
-      ],
-    }),
-    'productos-stock-minimo': createReport({
-      id: 'productos-stock-minimo', category: 'inventario', title: 'Productos con stock mínimo', shortTitle: 'Stock mínimo',
-      description: 'Consulta los productos cuyo stock está bajo el umbral configurado.', endpoint: 'inventario/stock-minimo', permission: REPORT_PERMISSIONS.INVENTARIO,
-      defaultFilters: { stockMinimo: 5, grupo: '', proveedorId: '' }, refreshInterval: 60000,
-      summary: [{ key: 'productos', label: 'Productos', type: 'number', color: '#f39c12' }, { key: 'stock_minimo', label: 'Umbral', type: 'number', color: '#e67e22' }],
-      filters: [filters.stockMinimo, filters.grupo, filters.proveedorId], columns: [
-        { key: 'codigo', label: 'Código' }, { key: 'nombre', label: 'Nombre' }, { key: 'grupo', label: 'Grupo' }, { key: 'stock', label: 'Stock', type: 'number', align: 'right' },
-        { key: 'costo', label: 'Costo', type: 'currency', align: 'right' }, { key: 'pvp1', label: 'Precio venta', type: 'currency', align: 'right' },
+        { key: 'usuario', label: 'Usuario' }, { key: 'sucursal', label: 'Sucursal' }, { key: 'observacion', label: 'Observación' },
       ],
     }),
   },

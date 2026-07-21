@@ -30,7 +30,7 @@ const columnasPorReporte = {
   'cuentas-cobrar': [columna('factura_id_personalizado', 'Factura'), columna('cliente_nombre', 'Cliente'), columna('total', 'Total', 'currency'), columna('abonado', 'Abonado', 'currency'), columna('saldo_pendiente', 'Saldo pendiente', 'currency'), columna('fecha', 'Fecha', 'date')],
 };
 const shortTitles = {
-  'kardex-producto': 'Kardex producto', 'kardex-fecha': 'Kardex fechas', 'inventario-actual': 'Inventario', 'inventario-valorizado': 'Valorizado',
+  kardex: 'Kardex', 'kardex-producto': 'Kardex producto', 'kardex-fecha': 'Kardex fechas', 'inventario-actual': 'Inventario', 'inventario-valorizado': 'Valorizado',
   'productos-sin-stock': 'Sin stock', 'productos-stock-minimo': 'Stock mínimo', 'ventas-mas-vendidos': 'Más vendidos', 'ventas-menos-vendidos': 'Menos vendidos',
   'compras-proveedor': 'Por proveedor', 'ingresos-mercaderia': 'Ingresos', 'egresos-mercaderia': 'Egresos', 'ventas-generales': 'Ventas',
   'ventas-fecha': 'Ventas por fecha', 'ventas-sucursal': 'Por sucursal', 'ventas-usuario': 'Por usuario', 'ventas-cliente': 'Por cliente',
@@ -64,18 +64,28 @@ export default class ReportesDominioServicio {
   async detallesFacturas(contexto) { return this.salida.listarTodos('facturacion', 'detalle-facturas', {}, contexto); }
 
   async kardexProducto(filtros, contexto) {
-    const { codigo } = filtros;
-    if (!codigo) return reporte('kardex-producto', 'Kardex por producto', filtros, [], {}, null,
-      [['fecha', 'Fecha'], ['tipo_movimiento', 'Movimiento'], ['referencia_codigo', 'Documento'], ['origen', 'Origen'], ['usuario_nombre', 'Usuario'], ['entrada', 'Entrada'], ['salida', 'Salida'], ['stock_nuevo', 'Stock'], ['costo_unitario', 'Costo'], ['observacion', 'Observación']]);
-    const base = filtrarRango(await this.movimientos(contexto, { codigo }), filtros).sort((a, b) => new Date(fechaRegistro(a)) - new Date(fechaRegistro(b)));
-    if (!base.length) return reporte('kardex-producto', 'Kardex por producto', filtros, [], { producto: null, movimientos: 0, stock_actual: null, entradas: 0, salidas: 0 }, null,
-      [['fecha', 'Fecha'], ['tipo_movimiento', 'Movimiento'], ['referencia_codigo', 'Documento'], ['origen', 'Origen'], ['usuario_nombre', 'Usuario'], ['entrada', 'Entrada'], ['salida', 'Salida'], ['stock_nuevo', 'Stock'], ['costo_unitario', 'Costo'], ['observacion', 'Observación']]);
-    const ultimo = base.at(-1);
-    const producto = { id: ultimo.producto_id, codigo: ultimo.producto_codigo, nombre: ultimo.producto_nombre, grupo: ultimo.grupo_producto, stock: ultimo.stock_nuevo, costo: ultimo.costo_promedio_nuevo };
+    return this.kardexFecha(filtros, contexto);
+  }
+
+  async kardexFecha(filtros, contexto) {
+    const base = (await this.movimientos(contexto, {
+      codigo: filtros.codigo,
+      grupo: filtros.grupo,
+      proveedorId: filtros.proveedorId,
+      usuarioId: filtros.usuarioId,
+      sucursalId: filtros.sucursalId,
+      tipoMovimiento: filtros.tipoMovimiento,
+      fechaDesde: filtros.fechaDesde,
+      fechaHasta: filtros.fechaHasta,
+    })).sort((a, b) => new Date(fechaRegistro(a)) - new Date(fechaRegistro(b)));
     const movimientos = base.map((movimiento) => ({
       id: movimiento.id,
       fecha: movimiento.fecha_operacion || fechaRegistro(movimiento),
       created_at: movimiento.fecha_operacion || fechaRegistro(movimiento),
+      producto_id: movimiento.producto_id,
+      producto_codigo: movimiento.producto_codigo,
+      producto_nombre: movimiento.producto_nombre,
+      grupo_producto: movimiento.grupo_producto,
       tipo: movimiento.tipo,
       naturaleza: movimiento.naturaleza,
       tipo_movimiento: movimiento.tipo_movimiento,
@@ -95,23 +105,30 @@ export default class ReportesDominioServicio {
       costo_unitario: movimiento.costo_unitario,
       costo_promedio_anterior: movimiento.costo_promedio_anterior,
       costo_promedio_nuevo: movimiento.costo_promedio_nuevo,
+      saldo: numero(movimiento.stock_nuevo) * numero(movimiento.costo_promedio_nuevo ?? movimiento.costo_unitario),
       motivo: movimiento.motivo,
       observacion: movimiento.observacion,
     }));
-    return reporte('kardex-producto', 'Kardex por producto', filtros, movimientos, {
+    const ultimo = filtros.codigo && base.length ? base.at(-1) : null;
+    const producto = ultimo ? {
+      id: ultimo.producto_id,
+      codigo: ultimo.producto_codigo,
+      nombre: ultimo.producto_nombre,
+      grupo: ultimo.grupo_producto,
+      stock: numero(ultimo.stock_nuevo),
+      costo: numero(ultimo.costo_promedio_nuevo ?? ultimo.costo_unitario),
+    } : null;
+    return reporte('kardex', 'Kardex', filtros, movimientos, {
       producto,
       movimientos: movimientos.length,
-      stock_actual: producto.stock,
+      stock_actual: producto?.stock ?? null,
       entradas: movimientos.reduce((suma, item) => suma + numero(item.entrada), 0),
       salidas: movimientos.reduce((suma, item) => suma + numero(item.salida), 0),
+      costo_promedio: producto?.costo ?? null,
+      valor_inventario: producto ? producto.stock * producto.costo : null,
+      ultimo_movimiento: ultimo ? fechaRegistro(ultimo) : null,
     }, null,
-    [['fecha', 'Fecha'], ['tipo_movimiento', 'Movimiento'], ['referencia_codigo', 'Documento'], ['origen', 'Origen'], ['usuario_nombre', 'Usuario'], ['entrada', 'Entrada'], ['salida', 'Salida'], ['stock_nuevo', 'Stock'], ['costo_unitario', 'Costo'], ['observacion', 'Observación']]);
-  }
-
-  async kardexFecha(filtros, contexto) {
-    const filas = filtrarRango(await this.movimientos(contexto), filtros).sort((a, b) => new Date(fechaRegistro(b)) - new Date(fechaRegistro(a)));
-    return reporte('kardex-fecha', 'Kardex por rango de fechas', filtros, filas, { movimientos: filas.length, unidades: filas.reduce((suma, item) => suma + numero(item.cantidad), 0) }, null,
-      [['created_at', 'Fecha'], ['producto_nombre', 'Producto'], ['tipo', 'Tipo'], ['cantidad', 'Cantidad'], ['stock_nuevo', 'Stock nuevo']]);
+    [['fecha', 'Fecha'], ['producto_codigo', 'Código'], ['producto_nombre', 'Producto'], ['tipo_movimiento', 'Movimiento'], ['referencia_codigo', 'Documento'], ['origen', 'Origen'], ['usuario_nombre', 'Usuario'], ['entrada', 'Entrada'], ['salida', 'Salida'], ['stock_anterior', 'Stock anterior'], ['stock_nuevo', 'Stock'], ['costo_unitario', 'Costo'], ['saldo', 'Saldo'], ['observacion', 'Observación']]);
   }
 
   async inventarioActual(filtros, contexto) {

@@ -18,9 +18,11 @@ export function exportarProductosExcel(productos) {
     'Costo':      parseFloat(p.costo || 0),
     'PVP1':       parseFloat(p.pvp1  || 0),
     'Stock':      p.stock        ?? 0,
+    'Valor a costo': parseFloat(p.stock || 0) * parseFloat(p.costo || 0),
+    'Valor a precio de venta': parseFloat(p.stock || 0) * parseFloat(p.pvp1 || 0),
     'IVA (%)':    p.iva          ?? 0,
     'Estado':     p.activo ? 'Activo' : 'Inactivo',
-    'Proveedor':  p.proveedor    || '',
+    'Proveedor':  p.proveedor_nombre || p.proveedor || '',
   }));
 
   const ws = XLSX.utils.json_to_sheet(filas);
@@ -29,7 +31,7 @@ export function exportarProductosExcel(productos) {
   ws['!cols'] = [
     { wch: 14 }, { wch: 30 }, { wch: 20 }, { wch: 14 },
     { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 8  },
-    { wch: 8  }, { wch: 10 }, { wch: 20 },
+    { wch: 16 }, { wch: 22 }, { wch: 8  }, { wch: 10 }, { wch: 20 },
   ];
 
   const wb = XLSX.utils.book_new();
@@ -41,14 +43,18 @@ export function exportarProductosExcel(productos) {
 
 export function exportarKardexExcel({ product, productFields, indicators, indicatorDefinitions, filters, filterDefinitions, columns, rows, generatedAt }) {
   const data = [];
-  data.push(['KARDEX POR PRODUCTO']);
+  data.push(['KARDEX']);
   data.push(['Fecha de generación', new Date(generatedAt).toLocaleString('es-EC')]);
-  data.push([]);
-  data.push(['FICHA DEL PRODUCTO']);
-  productFields.forEach(field => data.push([field.label, valorExportacion(product?.[field.key], field.type)]));
-  data.push([]);
-  data.push(['INDICADORES']);
-  indicatorDefinitions.forEach(item => data.push([item.label, valorExportacion(indicators?.[item.key], item.type)]));
+  if (product) {
+    data.push([]);
+    data.push(['FICHA DEL PRODUCTO']);
+    productFields.forEach(field => data.push([field.label, valorExportacion(product[field.key], field.type)]));
+  }
+  if (indicatorDefinitions.length) {
+    data.push([]);
+    data.push(['INDICADORES']);
+    indicatorDefinitions.forEach(item => data.push([item.label, valorExportacion(indicators?.[item.key], item.type)]));
+  }
   data.push([]);
   data.push(['FILTROS UTILIZADOS']);
   filterDefinitions.forEach(filter => data.push([filter.label, valorFiltro(filters?.[filter.key], filter)]));
@@ -60,7 +66,7 @@ export function exportarKardexExcel({ product, productFields, indicators, indica
   worksheet['!cols'] = columns.map(column => ({ wch: Math.max(column.label.length + 4, 14) }));
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Kardex');
-  const code = String(product?.codigo || 'producto').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const code = String(product?.codigo || 'todos').replace(/[^a-zA-Z0-9_-]/g, '_');
   XLSX.writeFile(workbook, `kardex_${code}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 

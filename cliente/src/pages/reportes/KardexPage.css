@@ -29,9 +29,9 @@
 .kardex-product-field span { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .55px; }
 .kardex-product-field strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .kardex-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 12px; margin-bottom: 20px; }
-.kardex-timeline { background: #fff; border: 1px solid #e9ecef; border-radius: 10px; padding: 17px 20px; margin-bottom: 20px; overflow-x: auto; }
+.kardex-timeline { background: #fff; border: 1px solid #e9ecef; border-radius: 10px; padding: 17px 20px; margin-bottom: 20px; }
 .kardex-timeline h3 { font-size: 14px; margin: 0 0 16px; }
-.kardex-timeline__track { min-width: 680px; display: grid; grid-template-columns: repeat(5, 1fr); align-items: start; }
+.kardex-timeline__track { display: grid; grid-template-columns: repeat(5, 1fr); align-items: start; }
 .kardex-timeline__item { position: relative; text-align: center; color: var(--text-muted); }
 .kardex-timeline__item:not(:last-child)::after { content: ''; position: absolute; top: 13px; left: calc(50% + 14px); width: calc(100% - 28px); height: 2px; background: #dce3e9; }
 .kardex-timeline__dot { position: relative; z-index: 1; width: 28px; height: 28px; margin: 0 auto 7px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--primary-color); }

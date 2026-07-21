@@ -18,19 +18,12 @@ export const categoriesConfig = [
   {
     id: 'inventario',
     title: 'Inventario',
-    description: 'Existencias, kardex y valorización de productos.',
+    description: 'Movimientos y trazabilidad del inventario.',
     icon: Package,
     color: '#1abc9c',
     permission: REPORT_PERMISSIONS.INVENTARIO,
     order: 1,
-    reports: [
-      'kardex-producto',
-      'kardex-fecha',
-      'inventario-actual',
-      'inventario-valorizado',
-      'productos-sin-stock',
-      'productos-stock-minimo',
-    ],
+    reports: ['kardex'],
   },
   {
     id: 'ventas',

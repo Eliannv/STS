@@ -1,0 +1,72 @@
+.info-tooltip-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.info-icon {
+    color: #3498db;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.info-icon:hover {
+    color: #2980b9;
+    transform: scale(1.1);
+}
+
+.info-tooltip {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    /* Comienza desde el borde izquierdo del icono */
+    transform: none;
+    /* Quitamos el centrado */
+    width: 380px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .15);
+    padding: 1.25rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all .25s ease;
+    z-index: 9999;
+}
+
+.info-tooltip::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 18px;
+    /* La flecha queda debajo del icono */
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    border-left: 1px solid #e5e7eb;
+    transform: rotate(45deg);
+}
+
+.info-tooltip-container:hover .info-tooltip {
+    opacity: 1;
+    visibility: visible;
+    top: calc(100% + 8px);
+}
+
+.tooltip-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #3498db;
+    margin: 0 0 0.75rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tooltip-text {
+    font-size: 0.875rem;
+    color: #4b5563;
+    line-height: 1.6;
+    margin: 0;
+}

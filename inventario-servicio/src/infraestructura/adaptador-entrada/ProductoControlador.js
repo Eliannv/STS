@@ -23,7 +23,7 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
 
   async lista(req, res) {
     const dto = new ProductoDTO({ buscar: req.query.buscar, sucursalId: req.query.sucursalId });
-    const pag = { limit: Number(req.query.limit) || 20, offset: Number(req.query.offset) || 0 };
+    const pag = { limit: Number(req.query.limit) || 20, offset: Number(req.query.offset) || 0, estado: req.query.estado || 'activos' };
     const respuesta = await this.queryUC.lista(dto, pag);
     return res.status(200).json({ ...respuesta, traceId: req.traceId });
   }

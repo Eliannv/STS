@@ -102,7 +102,7 @@
   overflow: hidden;
   transition: max-height 0.3s ease;
 }
-.submenu-list.open { max-height: 400px; }
+.submenu-list.open { max-height: 1000px; overflow-y: auto; }
 
 .submenu-item { }
 .submenu-header {

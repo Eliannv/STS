@@ -3,6 +3,7 @@ export default class Producto {
     this.id = id;
     this.idInterno = datos.idInterno ?? null;
     this.codigo = datos.codigo;
+    this.codigoBarras = datos.codigoBarras ?? datos.codigo_barras ?? null;
     this.nombre = datos.nombre;
     this.modelo = datos.modelo ?? null;
     this.color = datos.color ?? null;

@@ -28,6 +28,7 @@ import VerCajaBanco from './pages/cajas/VerCajaBanco';
 import ReportCategory from './pages/reportes/ReportCategory';
 import ReportPage from './pages/reportes/ReportPage';
 import KardexPage from './pages/reportes/KardexPage';
+import AnalisisVentas from './pages/reportes/AnalisisVentas';
 
 export default function App() {
   return (
@@ -66,6 +67,20 @@ export default function App() {
             <Route path="/reportes/inventario/inventario-valorizado" element={<Navigate to="/productos" replace />} />
             <Route path="/reportes/inventario/productos-sin-stock" element={<Navigate to="/productos" replace />} />
             <Route path="/reportes/inventario/productos-stock-minimo" element={<Navigate to="/productos" replace />} />
+            <Route path="/reportes/ventas/analisis-ventas" element={<AnalisisVentas />} />
+            <Route path="/reportes/ventas/ventas-mas-vendidos" element={<Navigate to="/productos" replace />} />
+            <Route path="/reportes/ventas/ventas-menos-vendidos" element={<Navigate to="/productos" replace />} />
+            <Route path="/reportes/ventas/productos-mas-vendidos" element={<Navigate to="/productos" replace />} />
+            <Route path="/reportes/ventas/productos-menos-vendidos" element={<Navigate to="/productos" replace />} />
+            <Route path="/reportes/ventas/ventas-generales" element={<Navigate to="/reportes/ventas/analisis-ventas" replace />} />
+            <Route path="/reportes/ventas/ventas-fecha" element={<Navigate to="/reportes/ventas/analisis-ventas" replace />} />
+            <Route path="/reportes/ventas/ventas-sucursal" element={<Navigate to="/reportes/ventas/analisis-ventas" replace />} />
+            <Route path="/reportes/ventas/ventas-usuario" element={<Navigate to="/reportes/ventas/analisis-ventas" replace />} />
+            <Route path="/reportes/ventas/ventas-cliente" element={<Navigate to="/reportes/ventas/analisis-ventas" replace />} />
+            <Route path="/reportes/ventas/utilidad-ventas" element={<Navigate to="/reportes/ventas/analisis-ventas" replace />} />
+            <Route path="/reportes/ventas/cuentas-cobrar" element={<Navigate to="/facturas" replace />} />
+            <Route path="/reportes/compras/compras-proveedor" element={<Navigate to="/proveedores" replace />} />
+            <Route path="/reportes/compras/ingresos-mercaderia" element={<Navigate to="/ingresos" replace />} />
             <Route path="/reportes/:categoria/:reporte" element={<ReportPage />} />
             <Route path="/reportes/:categoria" element={<ReportCategory />} />
           </Route>

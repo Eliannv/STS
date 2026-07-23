@@ -3,6 +3,7 @@ export class ProductoDTO {
     this.id = datos.id ?? null;
     this.idInterno = datos.idInterno ?? null;
     this.codigo = datos.codigo ?? null;
+    this.codigoBarras = datos.codigoBarras ?? datos.codigo_barras ?? null;
     this.nombre = datos.nombre ?? null;
     this.modelo = datos.modelo ?? null;
     this.color = datos.color ?? null;

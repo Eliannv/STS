@@ -41,6 +41,29 @@ export function exportarProductosExcel(productos) {
   XLSX.writeFile(wb, `productos_${fecha}.xlsx`);
 }
 
+export function exportarIngresosExcel(ingresos, filtros = {}) {
+  const filas = ingresos.map(ingreso => ({
+    Código: ingreso.id_personalizado || ingreso.id || '',
+    Factura: ingreso.numero_factura || '',
+    Proveedor: ingreso.proveedor_nombre || 'Sin proveedor',
+    Fecha: ingreso.fecha || '',
+    Tipo: ingreso.tipo_compra || '',
+    Productos: Number(ingreso.cantidad_detalles || 0),
+    Unidades: Number(ingreso.total_items || 0),
+    Total: Number(ingreso.total || 0),
+    Estado: ingreso.estado || '',
+  }));
+  const worksheet = XLSX.utils.json_to_sheet(filas);
+  worksheet['!cols'] = [
+    { wch: 14 }, { wch: 18 }, { wch: 28 }, { wch: 14 }, { wch: 12 },
+    { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 },
+  ];
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Ingresos');
+  const periodo = [filtros.fechaDesde, filtros.fechaHasta].filter(Boolean).join('_') || new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(workbook, `ingresos_${periodo}.xlsx`);
+}
+
 export function exportarKardexExcel({ product, productFields, indicators, indicatorDefinitions, filters, filterDefinitions, columns, rows, generatedAt }) {
   const data = [];
   data.push(['KARDEX']);

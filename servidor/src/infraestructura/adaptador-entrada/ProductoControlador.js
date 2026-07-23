@@ -18,6 +18,14 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
         });
     }
 
+    async siguienteCodigo(req, res) {
+        const respuesta = await this.queryUC.siguienteCodigo();
+        return res.status(respuesta.estado === 'ok' ? 200 : 500).json({
+            ...respuesta,
+            traceId: req.traceId
+        });
+    }
+
     async lista(req, res) {
         const dto = new ProductoDTO({
             buscar: req.query.buscar,

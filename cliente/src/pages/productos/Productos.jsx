@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Boxes, CircleDollarSign, Package, PackageX, TrendingUp, TriangleAlert } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Boxes, CircleDollarSign, Package, PackageX, Printer, TrendingUp, TriangleAlert } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import useBarcodeScanner from '../../hooks/useBarcodeScanner';
+import JsBarcode from 'jsbarcode';
 import ProductoFormModal from '../../components/productos/ProductoFormModal';
 import InfoTooltip from '../../components/common/InfoTooltip';
 import FilterCard, { FilterItem, filterInputStyle } from '../../components/common/FilterCard';
@@ -39,7 +42,9 @@ export default function Productos() {
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
   const [productoSel, setProductoSel] = useState(null);
+  const [productoEscaneadoId, setProductoEscaneadoId] = useState(null);
   const [page, setPage] = useState(0);
+  const barcodeScanLockRef = useRef(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -50,6 +55,79 @@ export default function Productos() {
 
   useEffect(() => { cargar(); }, [cargar]);
   useEffect(() => { setPage(0); }, [buscarProd, filtroGrupo, filtroProveedor, filtroRapido, orden]);
+
+  const buscarPorCodigoBarras = useCallback(async codigoBarras => {
+    if (barcodeScanLockRef.current) return;
+    barcodeScanLockRef.current = true;
+    try {
+      const respuesta = await api.get(`/producto/por-codigo-barras/${encodeURIComponent(codigoBarras)}`);
+      if (respuesta.ok && respuesta.data.resultado) {
+        const producto = respuesta.data.resultado;
+        setBuscarProd(producto.codigo_barras || codigoBarras);
+        setFiltroGrupo('');
+        setFiltroProveedor('');
+        setFiltroRapido('todos');
+        setProductoEscaneadoId(producto.id);
+        setPage(0);
+      } else {
+        setProductoEscaneadoId(null);
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Producto no encontrado',
+          text: `No existe un producto activo con el código de barras ${codigoBarras}.`,
+          confirmButtonColor: '#3498db',
+        });
+      }
+    } catch {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error de conexión',
+        text: 'No fue posible consultar el código de barras.',
+        confirmButtonColor: '#3498db',
+      });
+    } finally {
+      barcodeScanLockRef.current = false;
+    }
+  }, []);
+
+  useBarcodeScanner({ enabled: !modal, onScan: buscarPorCodigoBarras });
+
+  function imprimirCodigos() {
+    const labels = filtrados.map(prod => {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      try { JsBarcode(svg, prod.codigo_barras || prod.codigo || '', { format: 'CODE128', width: 1.2, height: 22, fontSize: 8, margin: 0, displayValue: false }); } catch {}
+      return {
+        svg: svg.outerHTML,
+        nombre: String(prod.nombre || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])),
+        codigo: String(prod.codigo_barras || prod.codigo || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])),
+        precio: numberValue(prod.pvp1),
+      };
+    });
+
+    const pw = window.open('', '_blank');
+    pw.document.write(`<!DOCTYPE html>
+<html><head><style>
+  @page { margin: 2mm; }
+  body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 1mm; }
+  .grid { display: flex; flex-wrap: wrap; }
+  .label { width: 33.33%; box-sizing: border-box; text-align: center; padding: 2mm 1mm; border: 1px dashed #ddd; }
+  .nombre { font-size: 7px; font-weight: 600; margin-bottom: 1px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .codigo-texto { font-size: 6px; color: #666; margin-top: 1px; }
+  .precio { font-size: 10px; font-weight: 700; margin-top: 1px; }
+  svg { display: block; margin: 0 auto; max-width: 100%; }
+</style></head><body>
+<div class="grid">
+${labels.map(l => `<div class="label">
+  <div class="nombre">${l.nombre}</div>
+  ${l.svg}
+  <div class="codigo-texto">${l.codigo}</div>
+  <div class="precio">$${l.precio.toFixed(2)}</div>
+</div>`).join('')}
+</div>
+<script>window.onload=function(){setTimeout(function(){window.print();window.close()},500)}</script>
+</body></html>`);
+    pw.document.close();
+  }
 
   const grupos = useMemo(() => [...new Set(lista.map(producto => producto.grupo).filter(Boolean))].sort(), [lista]);
   const proveedores = useMemo(() => [...new Set(lista.map(producto => producto.proveedor_nombre).filter(Boolean))].sort(), [lista]);
@@ -73,7 +151,7 @@ export default function Productos() {
     const busqueda = searchable(buscarProd.trim());
     const resultado = lista.filter(producto => {
       const stock = numberValue(producto.stock);
-      if (busqueda && ![producto.codigo, producto.nombre, producto.modelo, producto.color, producto.grupo, producto.proveedor_nombre].some(valor => searchable(valor).includes(busqueda))) return false;
+      if (busqueda && ![producto.codigo, producto.codigo_barras, producto.nombre, producto.modelo, producto.color, producto.grupo, producto.proveedor_nombre].some(valor => searchable(valor).includes(busqueda))) return false;
       if (filtroGrupo && producto.grupo !== filtroGrupo) return false;
       if (filtroProveedor && producto.proveedor_nombre !== filtroProveedor) return false;
       if (filtroRapido === 'con-stock' && stock <= 0) return false;
@@ -97,6 +175,7 @@ export default function Productos() {
     setFiltroGrupo('');
     setFiltroProveedor('');
     setFiltroRapido('todos');
+    setProductoEscaneadoId(null);
   }
 
   function abrirEditar(producto) {
@@ -134,6 +213,9 @@ export default function Productos() {
           </h1>
           <p className="page-subtitle">Centro de consulta y valorización del inventario</p>
         </div>
+        <button type="button" onClick={imprimirCodigos} className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+          <Printer size={15} /> Imprimir códigos
+        </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, margin: '20px 0 12px' }}>
@@ -150,7 +232,15 @@ export default function Productos() {
         resultado={`${filtrados.length} producto${filtrados.length === 1 ? '' : 's'}`}
       >
         <FilterItem label="Buscar" span={2}>
-          <input style={filterInputStyle} placeholder="Nombre, código, modelo, color o grupo" value={buscarProd} onChange={event => setBuscarProd(event.target.value)} />
+          <input
+            style={filterInputStyle}
+            placeholder="Nombre, código, código de barras, modelo, color o grupo"
+            value={buscarProd}
+            onChange={event => {
+              setBuscarProd(event.target.value);
+              setProductoEscaneadoId(null);
+            }}
+          />
         </FilterItem>
         <FilterItem label="Grupo">
           <select value={filtroGrupo} onChange={event => setFiltroGrupo(event.target.value)} style={filterInputStyle}>
@@ -203,7 +293,12 @@ export default function Productos() {
             {pagina.map(producto => {
               const stock = numberValue(producto.stock);
               return (
-                <tr key={producto.id}>
+                <tr
+                  key={producto.id}
+                  aria-selected={productoEscaneadoId === producto.id}
+                  onClick={() => setProductoEscaneadoId(producto.id)}
+                  style={productoEscaneadoId === producto.id ? { background: '#eef6ff' } : undefined}
+                >
                   <td><code style={{ background: '#f0f4ff', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>{producto.codigo || '—'}</code></td>
                   <td><strong>{producto.nombre}</strong>{producto.modelo && <><br /><small style={{ color: 'var(--text-secondary)' }}>{producto.modelo}{producto.color ? ` · ${producto.color}` : ''}</small></>}</td>
                   <td style={{ color: 'var(--text-secondary)' }}>{producto.grupo || '—'}</td>

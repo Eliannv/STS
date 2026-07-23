@@ -33,6 +33,16 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
     return res.status(respuesta.estado === 'ok' ? 200 : 404).json({ ...respuesta, traceId: req.traceId });
   }
 
+  async buscarPorCodigoBarras(req, res) {
+    const respuesta = await this.queryUC.buscarPorCodigoBarras(req.params.codigo);
+    return res.status(respuesta.estado === 'ok' ? 200 : 404).json({ ...respuesta, traceId: req.traceId });
+  }
+
+  async siguienteCodigoBarras(req, res) {
+    const respuesta = await this.queryUC.siguienteCodigoBarras();
+    return res.status(respuesta.estado === 'ok' ? 200 : 500).json({ ...respuesta, traceId: req.traceId });
+  }
+
   async editar(req, res) {
     const respuesta = await this.commandUC.editar(new ProductoDTO({
       ...req.body,

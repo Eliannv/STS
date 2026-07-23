@@ -2,9 +2,17 @@ import ProductoSalidaCommandPuerto from '../../aplicacion/puertos/salida/Product
 import { Producto as ProductoModel } from '../modelos/Modelos.js';
 import sequelize from '../base-dato/Postgresql.js';
 
+const mensajePersistencia = (error) => {
+  if (error.name === 'SequelizeUniqueConstraintError' && error.fields?.codigo_barras) {
+    return 'El código de barras ya está asignado a otro producto';
+  }
+  return error.message;
+};
+
 const aPersistencia = (producto, incluirInventario = true) => ({
   id_interno: producto.idInterno,
   codigo: producto.codigo,
+  codigo_barras: producto.codigoBarras || null,
   nombre: producto.nombre,
   modelo: producto.modelo,
   color: producto.color,
@@ -31,7 +39,9 @@ export default class ProductoPgsCommandAdaptador extends ProductoSalidaCommandPu
     const transaction = await sequelize.transaction();
     try {
       const stockInicial = Number(producto.stock || 0);
-      const creado = await ProductoModel.create({ ...aPersistencia(producto), stock: 0, costo: stockInicial > 0 ? 0 : producto.costo, created_at: new Date() }, { transaction });
+      const datosProducto = aPersistencia(producto);
+      if (!producto.codigoBarras) delete datosProducto.codigo_barras;
+      const creado = await ProductoModel.create({ ...datosProducto, stock: 0, costo: stockInicial > 0 ? 0 : producto.costo, created_at: new Date() }, { transaction });
       if (stockInicial > 0) {
         const movimiento = await this.movimientoStockServicio.aplicar({
           naturaleza: 'ENTRADA',
@@ -57,7 +67,7 @@ export default class ProductoPgsCommandAdaptador extends ProductoSalidaCommandPu
       return { estado: 'ok', resultado: creado };
     } catch (error) {
       await transaction.rollback();
-      return { estado: 'error', resultado: error.message };
+      return { estado: 'error', resultado: mensajePersistencia(error) };
     }
   }
 
@@ -122,7 +132,7 @@ export default class ProductoPgsCommandAdaptador extends ProductoSalidaCommandPu
       return { estado: 'ok', resultado: 'Producto actualizado correctamente' };
     } catch (error) {
       await transaction.rollback();
-      return { estado: 'error', resultado: error.message };
+      return { estado: 'error', resultado: mensajePersistencia(error) };
     }
   }
 

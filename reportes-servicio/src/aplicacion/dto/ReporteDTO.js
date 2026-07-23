@@ -67,6 +67,7 @@ export default class ReporteDTO {
         columns,
         rows: this.rows,
         pagination: this.pagination,
+        ...(this.datos ? { data: this.datos } : {}),
       },
     };
   }

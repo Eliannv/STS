@@ -1,6 +1,7 @@
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 import ProductoSalidaQueryPuerto from '../../aplicacion/puertos/salida/ProductoSalidaQueryPuerto.js';
 import { Producto as ProductoModel, Proveedor } from '../modelos/Modelos.js';
+import sequelize from '../base-dato/Postgresql.js';
 
 const conProveedor = async (productos) => {
   const ids = [...new Set(productos.map((producto) => producto.proveedor_id).filter(Boolean))];
@@ -20,15 +21,39 @@ export default class ProductoPgsQueryAdaptador extends ProductoSalidaQueryPuerto
     if (estado === 'activos') where.activo = true;
     if (estado === 'inactivos') where.activo = false;
     if (buscar) {
-      where[Op.or] = ['nombre', 'codigo', 'modelo', 'color', 'grupo'].map((campo) => ({ [campo]: { [Op.iLike]: `%${buscar}%` } }));
+      where[Op.or] = ['nombre', 'codigo', 'modelo', 'color', 'grupo'].map((campo) => ({
+        [campo]: { [Op.iLike]: `%${buscar}%` }
+      }));
     }
-    const productos = await ProductoModel.findAll({ where, order: [['id', 'DESC']], limit: Math.min(Number(limit) || 20, 5000), offset: Math.max(Number(offset) || 0, 0) });
+    const productos = await ProductoModel.findAll({
+      where,
+      order: [['id', 'DESC']],
+      limit: Math.min(Number(limit) || 20, 5000),
+      offset: Math.max(Number(offset) || 0, 0)
+    });
     return { estado: 'ok', resultado: await conProveedor(productos) };
   }
 
   async buscarPorId(id) {
     const resultado = await ProductoModel.findOne({ where: { id, activo: true } });
     return resultado ? { estado: 'ok', resultado } : { estado: 'error', resultado: null };
+  }
+
+  async buscarPorCodigoBarras(codigo) {
+    const resultados = await sequelize.query(
+      'SELECT * FROM productos WHERE codigo_barras = $1 AND activo = TRUE LIMIT 1',
+      { bind: [codigo], type: QueryTypes.SELECT }
+    );
+    const resultado = resultados[0] || null;
+    return resultado ? { estado: 'ok', resultado } : { estado: 'error', resultado: null };
+  }
+
+  async siguienteCodigoBarras() {
+    const [resultado] = await sequelize.query(
+      'SELECT gen_codigo_barras_producto() AS codigo_barras',
+      { type: QueryTypes.SELECT }
+    );
+    return { estado: 'ok', resultado };
   }
 
   async buscarPorModeloColorGrupo(modelo, color, grupo) {

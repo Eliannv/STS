@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
+import { generarReporte } from '../../api/reportesApi';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
 import StatCard from '../../components/common/StatCard';
@@ -37,13 +38,14 @@ export default function Ventas() {
   const [tipo,       setTipo]       = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  const [cartera, setCartera] = useState({ facturas: 0, saldo_total: 0 });
 
   // Stats derivados
   const totalVentas   = lista.length;
   const totalPagadas  = lista.filter(v => v.estado_pago === 'PAGADA').length;
-  const totalPendientes = lista.filter(v => v.estado_pago === 'PENDIENTE').length;
+  const totalPendientes = Number(cartera.facturas || 0);
   const totalFacturado = lista.reduce((s, v) => s + parseFloat(v.total || 0), 0);
-  const totalDeuda     = lista.reduce((s, v) => s + parseFloat(v.saldo_pendiente || 0), 0);
+  const totalDeuda     = Number(cartera.saldo_total || 0);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -55,16 +57,27 @@ export default function Ventas() {
     if (fechaHasta) params.set('fechaHasta', fechaHasta);
     params.set('limit',  '16');
     params.set('offset', String(page * 15));
-    const res = await api.get(`/factura/lista?${params}`);
+    const [res, reporteCartera] = await Promise.all([
+      api.get(`/factura/lista?${params}`),
+      generarReporte({
+        endpoint: 'cuentas-cobrar/estado',
+        filtros: { fechaDesde, fechaHasta, buscar },
+        paginacion: { page: 1, pageSize: 1 },
+      }).catch(() => null),
+    ]);
     if (res.ok) {
       const data = Array.isArray(res.data.resultado) ? res.data.resultado : [];
       setHasNext(data.length > 15);
       setLista(data.slice(0, 15));
     }
+    if (reporteCartera?.report?.summary) setCartera(reporteCartera.report.summary);
     setLoading(false);
   }, [buscar, estado, tipo, fechaDesde, fechaHasta, page]);
 
-  useEffect(() => { setPage(0); }, [buscar, estado, tipo, fechaDesde, fechaHasta]);
+  useEffect(() => {
+    const timeout = setTimeout(() => setPage(0), 0);
+    return () => clearTimeout(timeout);
+  }, [buscar, estado, tipo, fechaDesde, fechaHasta]);
   useEffect(() => { const t = setTimeout(cargar, 300); return () => clearTimeout(t); }, [cargar]);
 
   async function handleEliminar(id) {

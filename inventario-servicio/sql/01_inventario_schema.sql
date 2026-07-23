@@ -9,6 +9,7 @@ CREATE TYPE naturaleza_movimiento_stock AS ENUM ('ENTRADA','SALIDA','NEUTRO');
 CREATE TYPE tipo_kardex_stock AS ENUM ('INVENTARIO_INICIAL','COMPRA','VENTA','DEVOLUCION_CLIENTE','DEVOLUCION_PROVEEDOR','EGRESO','AJUSTE','TRANSFERENCIA_ENTRADA','TRANSFERENCIA_SALIDA','ANULACION_VENTA','ANULACION_COMPRA','ANULACION_EGRESO','REVALORIZACION','COMPENSACION');
 
 CREATE SEQUENCE seq_id_ingresos START 1 INCREMENT 1 NO CYCLE;
+CREATE SEQUENCE seq_codigo_barras_productos START 1 INCREMENT 1 NO CYCLE;
 CREATE OR REPLACE FUNCTION gen_id_ingreso() RETURNS CHAR(10) LANGUAGE SQL AS $$ SELECT LPAD(nextval('seq_id_ingresos')::TEXT, 10, '0') $$;
 
 CREATE TABLE proveedores (
@@ -18,12 +19,29 @@ CREATE TABLE proveedores (
 );
 
 CREATE TABLE productos (
-  id SERIAL PRIMARY KEY, id_interno INTEGER UNIQUE, codigo VARCHAR(50) NOT NULL, nombre VARCHAR(150) NOT NULL, modelo VARCHAR(100), color VARCHAR(60), grupo VARCHAR(60),
+  id SERIAL PRIMARY KEY, id_interno INTEGER UNIQUE, codigo VARCHAR(50) NOT NULL, codigo_barras VARCHAR(100), nombre VARCHAR(150) NOT NULL, modelo VARCHAR(100), color VARCHAR(60), grupo VARCHAR(60),
   stock INTEGER NOT NULL DEFAULT 0, tipo_control_stock tipo_control_stock NOT NULL DEFAULT 'NORMAL', costo NUMERIC(14,2) DEFAULT 0,
   pvp1 NUMERIC(14,2) DEFAULT 0, iva NUMERIC(5,2) DEFAULT 0, precio_con_iva NUMERIC(14,2) DEFAULT 0,
   proveedor_id INTEGER REFERENCES proveedores(id) ON DELETE SET NULL, ingreso_id INTEGER, observacion TEXT,
   activo BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE OR REPLACE FUNCTION gen_codigo_barras_producto() RETURNS VARCHAR(100) AS $$
+DECLARE
+  nuevo_codigo VARCHAR(100);
+BEGIN
+  LOOP
+    nuevo_codigo := 'PRO' || LPAD(nextval('seq_codigo_barras_productos')::TEXT, 9, '0');
+    EXIT WHEN NOT EXISTS (
+      SELECT 1 FROM productos WHERE codigo_barras = nuevo_codigo
+    );
+  END LOOP;
+  RETURN nuevo_codigo;
+END;
+$$ LANGUAGE plpgsql;
+
+ALTER TABLE productos
+ALTER COLUMN codigo_barras SET DEFAULT gen_codigo_barras_producto();
 
 CREATE TABLE catalogo_items (
   id SERIAL PRIMARY KEY, nombre VARCHAR(150) NOT NULL, categoria categoria_catalogo NOT NULL, precio NUMERIC(14,2) DEFAULT 0,
@@ -93,6 +111,7 @@ CREATE TABLE movimientos_stock (
 );
 
 CREATE INDEX idx_productos_busqueda ON productos (nombre, codigo, modelo, color);
+CREATE UNIQUE INDEX idx_productos_codigo_barras ON productos (codigo_barras);
 CREATE INDEX idx_productos_proveedor ON productos (proveedor_id);
 CREATE INDEX idx_ingresos_fecha ON ingresos (fecha DESC);
 CREATE INDEX idx_movimientos_producto ON movimientos_stock (producto_id, created_at DESC);

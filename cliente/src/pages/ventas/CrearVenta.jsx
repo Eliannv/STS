@@ -8,6 +8,7 @@ import HistorialFormModal from '../../components/historial/HistorialFormModal';
 import FilterCard, { FilterItem } from '../../components/common/FilterCard';
 import ProductTable from '../../components/common/ProductTable';
 import { imprimirTicketVenta } from '../../utils/ticketVenta';
+import useBarcodeScanner from '../../hooks/useBarcodeScanner';
 import { ShoppingCart, FileText, X, Eye } from 'lucide-react';
 
 /* ─────────────── helpers ─────────────── */
@@ -79,6 +80,7 @@ export default function CrearVenta() {
   const [hasNext, setHasNext] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const searchProdRef = useRef(null);
+  const barcodeScanLockRef = useRef(false);
 
   /* ── carrito ── */
   const [carrito, setCarrito] = useState([]);
@@ -294,6 +296,30 @@ export default function CrearVenta() {
       return [...prev, { id: prod.id, nombre: prod.nombre, codigo: prod.codigo || prod.idInterno || '', precio: parseFloat(prod.pvp1 || prod.costo || 0), cantidad: 1, esServicio: false, stock: maxStock }];
     });
   }
+
+  async function agregarPorCodigoBarras(codigoBarras) {
+    if (barcodeScanLockRef.current) return;
+    barcodeScanLockRef.current = true;
+    try {
+      const respuesta = await api.get(`/producto/por-codigo-barras/${encodeURIComponent(codigoBarras)}`);
+      if (respuesta.ok && respuesta.data.resultado) {
+        agregarAlCarrito(respuesta.data.resultado);
+        setBuscarProd('');
+        setError('');
+      } else {
+        setError(`No se encontró un producto con el código de barras ${codigoBarras}.`);
+      }
+    } catch {
+      setError('No fue posible consultar el código de barras.');
+    } finally {
+      barcodeScanLockRef.current = false;
+    }
+  }
+
+  useBarcodeScanner({
+    enabled: !saving && !modalCliente && !modalTipo && !modalHistorial && !ventaCreada,
+    onScan: agregarPorCodigoBarras,
+  });
 
   function cambiarCantidad(id, delta) {
     setCarrito(prev => prev.map(i => {

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../../api/api';
 import Swal from 'sweetalert2';
+import Barcode from 'react-barcode';
 import FormModal from '../common/FormModal';
 
 const VACIO = {
-  codigo: '', nombre: '', modelo: '', color: '', grupo: '',
+  codigo: '', codigoBarras: '', nombre: '', modelo: '', color: '', grupo: '',
   tipoControlStock: 'NORMAL', costo: '', pvp1: '', iva: '0',
   precioConIva: '', proveedorId: '', observacion: '', activo: true,
 };
@@ -14,6 +15,7 @@ export default function ProductoFormModal({ abierto, editando, productoInicial, 
   const [proveedores, setProveedores] = useState([]);
   const [error, setError]   = useState('');
   const [saving, setSaving] = useState(false);
+  const barcodeRef = useRef(null);
 
   useEffect(() => {
     api.get('/proveedor/lista').then(r => {
@@ -23,10 +25,14 @@ export default function ProductoFormModal({ abierto, editando, productoInicial, 
 
   useEffect(() => {
     if (!abierto) return;
+    let activo = true;
+    setError('');
+
     if (editando && productoInicial) {
       const p = productoInicial;
       setForm({
         codigo:           p.codigo           ?? '',
+        codigoBarras:     p.codigo_barras    ?? p.codigoBarras ?? '',
         nombre:           p.nombre           ?? '',
         modelo:           p.modelo           ?? '',
         color:            p.color            ?? '',
@@ -42,8 +48,17 @@ export default function ProductoFormModal({ abierto, editando, productoInicial, 
       });
     } else {
       setForm(VACIO);
+      api.get('/producto/siguiente-codigo-barras').then(respuesta => {
+        if (!activo) return;
+        if (respuesta.ok) {
+          const codigoBarras = respuesta.data.resultado?.codigo_barras || respuesta.data.resultado || '';
+          setForm(actual => ({ ...actual, codigoBarras }));
+        } else {
+          setError('No se pudo generar el código de barras. Puedes ingresarlo manualmente.');
+        }
+      });
     }
-    setError('');
+    return () => { activo = false; };
   }, [abierto, editando, productoInicial]);
 
   function handleChange(e) {
@@ -57,6 +72,43 @@ export default function ProductoFormModal({ abierto, editando, productoInicial, 
     }
 
     setForm(nuevo);
+  }
+
+  function imprimirEtiqueta() {
+    const codigoBarras = form.codigoBarras || form.codigo || '';
+    if (!codigoBarras) { Swal.fire('Sin código', 'El producto no tiene código de barras', 'warning'); return; }
+
+    let svgHtml = '';
+    const el = barcodeRef.current;
+    if (el) {
+      const svg = el.querySelector('svg');
+      if (svg) svgHtml = svg.outerHTML;
+    }
+    if (!svgHtml) {
+      svgHtml = `<div style="font-family:monospace;font-size:18px;padding:8px;border:1px dashed #999;display:inline-block">${codigoBarras}</div>`;
+    }
+
+    const pw = window.open('', '_blank');
+    pw.document.write(`<!DOCTYPE html>
+<html><head><style>
+  @page { margin: 0; size: 80mm 50mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; text-align: center; padding: 6mm; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .label { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+  .nombre { font-size: 11px; font-weight: 600; max-width: 70mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .precio { font-size: 22px; font-weight: 700; margin-top: 2px; }
+  .codigo-texto { font-size: 10px; color: #555; letter-spacing: 0.5px; }
+  svg { max-width: 68mm; }
+</style></head><body>
+  <div class="label">
+    <div class="nombre">${String(form.nombre || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</div>
+    ${svgHtml}
+    <div class="codigo-texto">${codigoBarras}</div>
+    <div class="precio">$${parseFloat(form.pvp1 || 0).toFixed(2)}</div>
+  </div>
+  <script>window.onload=function(){setTimeout(function(){window.print();window.close()},300)}<\/script>
+</body></html>`);
+    pw.document.close();
   }
 
   async function guardar(e) {
@@ -106,7 +158,7 @@ export default function ProductoFormModal({ abierto, editando, productoInicial, 
         onGuardado(res.data.resultado);
         onCerrar();
       } else {
-        setError(res.data.mensaje || 'Error al guardar');
+        setError(res.data.resultado || res.data.mensaje || 'Error al guardar');
       }
     } catch {
       setError('Error de conexión');
@@ -151,6 +203,19 @@ export default function ProductoFormModal({ abierto, editando, productoInicial, 
           </div>
         </div>
       </div>
+
+      {form.codigoBarras && (
+        <div style={{ background: '#fff', border: '1px solid var(--border-color)', borderRadius: 10, padding: 16, overflow: 'hidden' }}>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12 }}>Código de barras</div>
+          <div ref={barcodeRef} style={{ display: 'flex', justifyContent: 'center', overflowX: 'auto' }}>
+            <Barcode value={form.codigoBarras} format="CODE128" width={1.35} height={52} fontSize={13} margin={0} />
+          </div>
+          <button type="button" onClick={imprimirEtiqueta} style={{ marginTop: 10, padding: '5px 14px', fontSize: 12, borderRadius: 6, border: '1px solid #ccc', background: '#f8f9fa', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, width: '100%', justifyContent: 'center' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Imprimir etiqueta
+          </button>
+        </div>
+      )}
 
       <div style={{ background: '#fff', border: '1px solid var(--border-color)', borderRadius: 10, padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
@@ -220,9 +285,14 @@ export default function ProductoFormModal({ abierto, editando, productoInicial, 
         </div>
         <div className="form-grid">
           <div className="form-group">
-            <label className="form-label">Código</label>
+            <label className="form-label">Código del producto</label>
             <input className="form-control" name="codigo" value={form.codigo}
               onChange={handleChange} placeholder="COD-001" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Código de barras</label>
+            <input className="form-control" name="codigoBarras" value={form.codigoBarras}
+              onChange={handleChange} placeholder="PRO000000001" maxLength={100} />
           </div>
           <div className="form-group">
             <label className="form-label">Grupo / Categoría</label>

@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
+import { generarReporte } from '../../api/reportesApi';
 import { useAuth } from '../../context/AuthContext';
-import { FilePen, File } from 'lucide-react';
+import { FilePen, File, FileSpreadsheet } from 'lucide-react';
 import FilterCard, { FilterItem, filterInputStyle } from '../../components/common/FilterCard';
+import StatCard from '../../components/common/StatCard';
 import TableCard from '../../components/common/TableCard';
+import { exportarIngresosExcel } from '../../utils/exportarExcel';
 
+const PAGE_SIZE = 10;
 const FMT = v => `$${parseFloat(v || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`;
 const FMT_FECHA = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-EC') : '—';
 
@@ -14,13 +18,14 @@ export default function Ingresos() {
   const { isAdmin } = useAuth();
 
   const [lista, setLista]         = useState([]);
-  const [hasNext, setHasNext]     = useState(false);
   const [page, setPage]           = useState(0);
   const [loading, setLoading]     = useState(true);
   const [buscar, setBuscar]       = useState('');
   const [estado, setEstado]       = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  const [proveedorId, setProveedorId] = useState('');
+  const [proveedores, setProveedores] = useState([]);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const menuRef = useRef(null);
 
@@ -33,6 +38,14 @@ export default function Ingresos() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => {
+    let activo = true;
+    api.get('/proveedores?limit=100&offset=0').then(response => {
+      if (activo && response.ok) setProveedores(response.data.resultado || []);
+    });
+    return () => { activo = false; };
+  }, []);
+
   // Stats derivados
   const totalFacturas   = lista.length;
   const totalBorradores = lista.filter(i => i.estado === 'BORRADOR').length;
@@ -40,26 +53,24 @@ export default function Ingresos() {
     .filter(i => i.estado === 'FINALIZADO')
     .reduce((sum, i) => sum + parseFloat(i.total || 0), 0);
   const totalItems      = lista.reduce((sum, i) => sum + parseInt(i.total_items || 0), 0);
+  const pagina = lista.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const hasNext = (page + 1) * PAGE_SIZE < lista.length;
 
   const cargar = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (buscar)     params.set('buscar',     buscar);
-    if (estado)     params.set('estado',     estado);
-    if (fechaDesde) params.set('fechaDesde', fechaDesde);
-    if (fechaHasta) params.set('fechaHasta', fechaHasta);
-    params.set('limit',  '11');
-    params.set('offset', String(page * 10));
-    const res = await api.get(`/ingreso/lista?${params}`);
-    if (res.ok) {
-      const data = res.data.resultado || [];
-      setHasNext(data.length > 10);
-      setLista(data.slice(0, 10));
-    }
+    const response = await generarReporte({
+      endpoint: 'ingresos/mercaderia',
+      filtros: { buscar, estado, fechaDesde, fechaHasta, proveedorId },
+      paginacion: { page: 1, pageSize: 5000 },
+    }).catch(() => null);
+    setLista(response?.report?.rows || []);
     setLoading(false);
-  }, [buscar, estado, fechaDesde, fechaHasta, page]);
+  }, [buscar, estado, fechaDesde, fechaHasta, proveedorId]);
 
-  useEffect(() => { setPage(0); }, [buscar, estado, fechaDesde, fechaHasta]);
+  useEffect(() => {
+    const timeout = setTimeout(() => setPage(0), 0);
+    return () => clearTimeout(timeout);
+  }, [buscar, estado, fechaDesde, fechaHasta, proveedorId]);
   useEffect(() => {
     const t = setTimeout(cargar, 300);
     return () => clearTimeout(t);
@@ -154,9 +165,10 @@ export default function Ingresos() {
       </div>
 
       <FilterCard
-        onLimpiar={() => { setBuscar(''); setEstado(''); setFechaDesde(''); setFechaHasta(''); }}
+        resultado={`${lista.length} ingreso${lista.length === 1 ? '' : 's'}`}
+        onLimpiar={() => { setBuscar(''); setEstado(''); setFechaDesde(''); setFechaHasta(''); setProveedorId(''); }}
       >
-        <FilterItem label="Buscar" span={3}>
+        <FilterItem label="Buscar" span={2}>
           <div style={{ position: 'relative' }}>
             <svg style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }}
               width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -173,11 +185,28 @@ export default function Ingresos() {
             <option value="FINALIZADO">Finalizado</option>
           </select>
         </FilterItem>
+        <FilterItem label="Proveedor">
+          <select value={proveedorId} onChange={e => setProveedorId(e.target.value)} style={filterInputStyle}>
+            <option value="">Todos</option>
+            {proveedores.map(proveedor => <option key={proveedor.id} value={proveedor.id}>{proveedor.nombre}</option>)}
+          </select>
+        </FilterItem>
         <FilterItem label="Desde">
           <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} style={filterInputStyle} />
         </FilterItem>
         <FilterItem label="Hasta">
           <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} style={filterInputStyle} />
+        </FilterItem>
+        <FilterItem label="Exportar">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => exportarIngresosExcel(lista, { fechaDesde, fechaHasta })}
+            disabled={lista.length === 0}
+            style={{ justifyContent: 'center' }}
+          >
+            <FileSpreadsheet size={15} /> Excel
+          </button>
         </FilterItem>
       </FilterCard>
 
@@ -190,6 +219,7 @@ export default function Ingresos() {
         hasNext={hasNext}
         onPrevPage={() => setPage(p => p - 1)}
         onNextPage={() => setPage(p => p + 1)}
+        hidePagination={lista.length <= PAGE_SIZE}
       >
         <table>
           <thead>
@@ -201,7 +231,7 @@ export default function Ingresos() {
             </tr>
           </thead>
           <tbody>
-            {lista.map(ing => {
+            {pagina.map(ing => {
                 const chip = chipEstado(ing.estado);
                 return (
                   <tr key={ing.id}>
@@ -268,28 +298,6 @@ export default function Ingresos() {
           </tbody>
         </table>
       </TableCard>
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, color }) {
-  return (
-    <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-      <div style={{
-        width: 44, height: 44, borderRadius: 'var(--radius-md)',
-        background: color + '18', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', color, flexShrink: 0,
-      }}>
-        {icon}
-      </div>
-      <div>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          {label}
-        </p>
-        <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>
-          {value}
-        </p>
-      </div>
     </div>
   );
 }

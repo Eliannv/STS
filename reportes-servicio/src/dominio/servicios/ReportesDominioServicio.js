@@ -2,6 +2,7 @@ import ReporteDTO from '../../aplicacion/dto/ReporteDTO.js';
 
 const numero = (valor) => Number(valor || 0);
 const lista = (respuesta) => Array.isArray(respuesta?.resultado) ? respuesta.resultado : [];
+const resultado = (respuesta) => respuesta?.resultado ?? null;
 const fechaRegistro = (registro) => registro.created_at || registro.fecha || registro.fecha_pago || registro.fecha_venta || registro.fecha_emision;
 const dentroDeRango = (valor, desde, hasta) => {
   if (!desde && !hasta) return true;
@@ -12,6 +13,37 @@ const dentroDeRango = (valor, desde, hasta) => {
   return true;
 };
 const filtrarRango = (registros, filtros = {}) => registros.filter((registro) => dentroDeRango(fechaRegistro(registro), filtros.fechaDesde, filtros.fechaHasta));
+const texto = (valor) => String(valor || '').trim().toLocaleLowerCase('es');
+const coincideTexto = (valor, filtro) => !filtro || texto(valor).includes(texto(filtro));
+const normalizarMetodoPago = (valor, esCredito = false) => {
+  if (esCredito) return 'CREDITO';
+  return String(valor || 'EFECTIVO').trim().toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+};
+const resumirTransacciones = (filas) => {
+  const ventas = filas.filter(item => item.tipoTransaccion === 'VENTA' && item.estado !== 'ANULADA');
+  const cobros = filas.filter(item => item.tipoTransaccion === 'COBRO' && item.estado !== 'ANULADA');
+  const montoVentas = ventas.reduce((suma, item) => suma + numero(item.total), 0);
+  return {
+    transacciones: filas.length,
+    ventas: ventas.length,
+    cobros: cobros.length,
+    montoVentas: Number(montoVentas.toFixed(2)),
+    montoCobrado: Number(filas.reduce((suma, item) => suma + numero(item.montoCobrado), 0).toFixed(2)),
+    saldoPendiente: Number(ventas.reduce((suma, item) => suma + numero(item.saldoPendiente), 0).toFixed(2)),
+    costo: Number(ventas.reduce((suma, item) => suma + numero(item.costo), 0).toFixed(2)),
+    utilidad: Number(ventas.reduce((suma, item) => suma + numero(item.utilidad), 0).toFixed(2)),
+  };
+};
+const periodoMes = (filtros = {}) => {
+  const ahora = new Date();
+  const anio = ahora.getFullYear();
+  const mes = ahora.getMonth();
+  const fechaDesde = filtros.fechaDesde || `${anio}-${String(mes + 1).padStart(2, '0')}-01`;
+  const fechaHasta = filtros.fechaHasta || `${anio}-${String(mes + 1).padStart(2, '0')}-${String(new Date(anio, mes + 1, 0).getDate()).padStart(2, '0')}`;
+  return { fechaDesde, fechaHasta };
+};
 const columnas = (...nombres) => nombres.map(([clave, etiqueta]) => ({ clave, etiqueta }));
 const columna = (key, label, type = 'text') => ({ key, label, type });
 const columnasPorReporte = {
@@ -62,6 +94,33 @@ export default class ReportesDominioServicio {
   async movimientos(contexto, query = {}) { return this.salida.listarTodos('inventario', 'movimientos', query, contexto); }
   async facturas(contexto) { return this.salida.listarTodos('facturacion', 'facturas', {}, contexto); }
   async detallesFacturas(contexto) { return this.salida.listarTodos('facturacion', 'detalle-facturas', {}, contexto); }
+  async abonos(contexto) { return this.salida.listarTodos('facturacion', 'deudas', {}, contexto); }
+
+  async catalogoSeguro(servicio, ruta, contexto, query = {}) {
+    try {
+      return await this.salida.listarTodos(servicio, ruta, query, contexto);
+    } catch (error) {
+      if ([401, 403, 404].includes(error.status)) return [];
+      throw error;
+    }
+  }
+
+  async catalogosVentas(contexto) {
+    const [usuarios, sucursales, clientes] = await Promise.all([
+      this.catalogoSeguro('usuario', 'usuarios', contexto, { incluirInactivos: true }),
+      this.catalogoSeguro('usuario', 'sucursales', contexto),
+      this.catalogoSeguro('cliente', 'clientes', contexto),
+    ]);
+    const nombrePersona = item => item.nombre_completo
+      || [item.nombres || item.nombre, item.apellidos || item.apellido].filter(Boolean).join(' ')
+      || item.razon_social
+      || null;
+    return {
+      usuarios: new Map(usuarios.map(item => [Number(item.id), nombrePersona(item)])),
+      sucursales: new Map(sucursales.map(item => [Number(item.id), item.nombre || item.nombre_comercial || item.codigo])),
+      clientes: new Map(clientes.map(item => [Number(item.id), nombrePersona(item)])),
+    };
+  }
 
   async kardexProducto(filtros, contexto) {
     return this.kardexFecha(filtros, contexto);
@@ -190,19 +249,30 @@ export default class ReportesDominioServicio {
   productosMasVendidos(filtros, contexto) { return this.productosVendidos(filtros, contexto, false); }
   productosMenosVendidos(filtros, contexto) { return this.productosVendidos(filtros, contexto, true); }
 
-  async ingresosBase(filtros, contexto) { return filtrarRango(await this.salida.listarTodos('inventario', 'ingresos', {}, contexto), filtros); }
+  async ingresosBase(filtros, contexto) {
+    return filtrarRango(await this.salida.listarTodos('inventario', 'ingresos', {}, contexto), filtros)
+      .filter(ingreso => !filtros.proveedorId || Number(ingreso.proveedor_id) === Number(filtros.proveedorId))
+      .filter(ingreso => !filtros.estado || ingreso.estado === filtros.estado)
+      .filter(ingreso => !filtros.buscar
+        || coincideTexto(ingreso.id_personalizado, filtros.buscar)
+        || coincideTexto(ingreso.numero_factura, filtros.buscar)
+        || coincideTexto(ingreso.proveedor_nombre, filtros.buscar));
+  }
 
   async comprasPorProveedor(filtros, contexto) {
     const ingresos = await this.ingresosBase(filtros, contexto);
     const acumulado = new Map();
-    ingresos.filter((ingreso) => !filtros.proveedorId || Number(ingreso.proveedor_id) === Number(filtros.proveedorId)).forEach((ingreso) => {
+    ingresos.forEach((ingreso) => {
       const id = ingreso.proveedor_id || 'sin-proveedor';
       const actual = acumulado.get(id) || { proveedor_id: ingreso.proveedor_id || null, proveedor_nombre: ingreso.proveedor_nombre || 'Sin proveedor', compras: 0, total_comprado: 0 };
       actual.compras += 1;
       actual.total_comprado += numero(ingreso.total);
       acumulado.set(id, actual);
     });
-    return reporte('compras-proveedor', 'Compras por proveedor', filtros, ordenar([...acumulado.values()], 'total_comprado'), { compras: ingresos.length });
+    return reporte('compras-proveedor', 'Compras por proveedor', filtros, ordenar([...acumulado.values()], 'total_comprado'), {
+      compras: ingresos.length,
+      total_comprado: ingresos.reduce((suma, ingreso) => suma + numero(ingreso.total), 0),
+    });
   }
 
   async ingresosMercaderia(filtros, contexto) {
@@ -216,54 +286,158 @@ export default class ReportesDominioServicio {
   }
 
   async ventasGenerales(filtros, contexto, configuracion = {}) {
-    const { facturas } = await this.contextoVentas(filtros, contexto);
-    const filasCompletas = facturas.map((factura) => ({
-      numeroFactura: factura.id_personalizado || `#${factura.id}`,
-      cliente: factura.cliente_nombre || (factura.cliente_id ? `Cliente #${factura.cliente_id}` : 'Consumidor final'),
-      sucursal: factura.sucursal_id ? `Sucursal #${factura.sucursal_id}` : 'Sin sucursal',
-      usuario: factura.usuario_id ? `Usuario #${factura.usuario_id}` : 'Sin usuario',
-      fecha: fechaRegistro(factura),
-      subtotal: numero(factura.subtotal),
-      iva: numero(factura.iva),
-      total: numero(factura.total),
-      abonado: numero(factura.abonado),
-      saldoPendiente: numero(factura.saldo_pendiente),
-      estado: factura.estado_pago,
-    }));
+    const [facturas, detalles, productos, abonos, catalogos] = await Promise.all([
+      this.facturas(contexto),
+      this.detallesFacturas(contexto),
+      this.productos(contexto),
+      this.abonos(contexto),
+      this.catalogosVentas(contexto),
+    ]);
+    const costos = new Map(productos.map(producto => [Number(producto.id), numero(producto.costo)]));
+    const detallesPorFactura = new Map();
+    detalles.forEach(detalle => {
+      const id = Number(detalle.factura_id);
+      const actuales = detallesPorFactura.get(id) || [];
+      actuales.push(detalle);
+      detallesPorFactura.set(id, actuales);
+    });
+    const facturasPorId = new Map(facturas.map(factura => [Number(factura.id), factura]));
+    const nombreUsuario = id => catalogos.usuarios.get(Number(id)) || (id ? `Usuario #${id}` : 'Sin usuario');
+    const nombreSucursal = id => catalogos.sucursales.get(Number(id)) || (id ? `Sucursal #${id}` : 'Sin sucursal');
+    const nombreCliente = registro => registro.cliente_nombre
+      || catalogos.clientes.get(Number(registro.cliente_id))
+      || (registro.cliente_id ? `Cliente #${registro.cliente_id}` : 'Consumidor final');
+    const coincide = (valor, filtro) => !filtro || String(valor) === String(filtro);
+    const filtrarComun = registro => dentroDeRango(fechaRegistro(registro), filtros.fechaDesde, filtros.fechaHasta)
+      && coincide(registro.cliente_id, filtros.clienteId)
+      && coincide(registro.usuario_id, filtros.usuarioId)
+      && coincideTexto(registro.id_personalizado || registro.factura_id_personalizado, filtros.buscarFactura)
+      && coincideTexto(nombreCliente(registro), filtros.buscarCliente || filtros.buscar);
+
+    const filasVentas = facturas
+      .filter(factura => filtrarComun(factura))
+      .filter(factura => coincide(factura.sucursal_id, filtros.sucursalId))
+      .filter(factura => coincide(factura.estado_pago, filtros.estado))
+      .filter(factura => !filtros.metodoPago || normalizarMetodoPago(factura.metodo_pago, factura.es_credito) === filtros.metodoPago)
+      .map(factura => {
+        const costo = (detallesPorFactura.get(Number(factura.id)) || []).reduce(
+          (suma, detalle) => suma + (costos.get(Number(detalle.producto_id)) || 0) * numero(detalle.cantidad),
+          0,
+        );
+        const total = numero(factura.total);
+        return {
+          id: `VENTA-${factura.id}`,
+          referenciaId: factura.id,
+          tipoTransaccion: 'VENTA',
+          tipoTransaccionLabel: 'Venta',
+          numeroFactura: factura.id_personalizado || `#${factura.id}`,
+          clienteId: factura.cliente_id,
+          cliente: nombreCliente(factura),
+          sucursalId: factura.sucursal_id,
+          sucursal: nombreSucursal(factura.sucursal_id),
+          usuarioId: factura.usuario_id,
+          usuario: nombreUsuario(factura.usuario_id),
+          fecha: fechaRegistro(factura),
+          metodoPago: normalizarMetodoPago(factura.metodo_pago, factura.es_credito),
+          metodoPagoOriginal: normalizarMetodoPago(factura.metodo_pago),
+          tipoVenta: factura.tipo_venta || (factura.es_credito ? 'CREDITO' : 'CONTADO'),
+          estado: factura.estado_pago,
+          subtotal: numero(factura.subtotal),
+          iva: numero(factura.iva),
+          total,
+          monto: total,
+          montoCobrado: factura.es_credito ? 0 : numero(factura.abonado),
+          abonado: numero(factura.abonado),
+          saldoPendiente: numero(factura.saldo_pendiente),
+          costo: Number(costo.toFixed(2)),
+          utilidad: Number((total - costo).toFixed(2)),
+        };
+      });
+
+    const filasCobros = abonos
+      .filter(abono => numero(abono.monto_pagado) > 0)
+      .filter(abono => filtrarComun(abono))
+      .filter(abono => !filtros.metodoPago || normalizarMetodoPago(abono.metodo_pago) === filtros.metodoPago)
+      .map(abono => {
+        const factura = facturasPorId.get(Number(abono.factura_id)) || {};
+        const sucursalId = factura.sucursal_id || null;
+        if (!coincide(sucursalId, filtros.sucursalId)) return null;
+        const monto = numero(abono.monto_pagado);
+        return {
+          id: `COBRO-${abono.id}`,
+          referenciaId: abono.id,
+          tipoTransaccion: 'COBRO',
+          tipoTransaccionLabel: 'Pago de deuda',
+          numeroFactura: abono.factura_id_personalizado || factura.id_personalizado || `#${abono.factura_id}`,
+          clienteId: abono.cliente_id,
+          cliente: nombreCliente(abono),
+          sucursalId,
+          sucursal: nombreSucursal(sucursalId),
+          usuarioId: abono.usuario_id,
+          usuario: nombreUsuario(abono.usuario_id),
+          fecha: fechaRegistro(abono),
+          metodoPago: normalizarMetodoPago(abono.metodo_pago),
+          estado: abono.estado_pago,
+          subtotal: 0,
+          iva: 0,
+          total: monto,
+          monto,
+          montoCobrado: monto,
+          abonado: monto,
+          saldoPendiente: numero(abono.saldo_restante),
+          costo: 0,
+          utilidad: 0,
+        };
+      })
+      .filter(Boolean);
+
+    const tipoTransaccion = filtros.tipoTransaccion || 'TODAS';
+    const incluirVentas = ['TODAS', 'VENTAS', 'VENTAS_COBROS'].includes(tipoTransaccion);
+    const incluirCobros = ['TODAS', 'COBROS', 'VENTAS_COBROS'].includes(tipoTransaccion);
+    const filasCompletas = [
+      ...(incluirVentas ? filasVentas : []),
+      ...(incluirCobros ? filasCobros : []),
+    ].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
     const totalRows = filasCompletas.length;
-    const pageSize = Math.min(Math.max(Number(filtros.pageSize) || 20, 1), 100);
+    const pageSize = Math.min(Math.max(Number(filtros.pageSize) || 20, 1), configuracion.pageSizeMax || 5000);
     const totalPages = Math.ceil(totalRows / pageSize);
     const page = totalPages ? Math.min(Math.max(Number(filtros.page) || 1, 1), totalPages) : 1;
     const filas = filasCompletas.slice((page - 1) * pageSize, page * pageSize);
-    const montoTotal = filasCompletas.reduce((suma, item) => suma + item.total, 0);
+    const resumen = resumirTransacciones(filasCompletas);
     const filtrosUsados = {
       fechaDesde: filtros.fechaDesde || '',
       fechaHasta: filtros.fechaHasta || '',
-      sucursal: filtros.sucursalId || '',
-      usuario: filtros.usuarioId || '',
-      cliente: filtros.clienteId || '',
+      sucursalId: filtros.sucursalId || '',
+      usuarioId: filtros.usuarioId || '',
+      clienteId: filtros.clienteId || '',
       estado: filtros.estado || '',
+      metodoPago: filtros.metodoPago || '',
+      tipoTransaccion,
+      buscarFactura: filtros.buscarFactura || '',
+      buscarCliente: filtros.buscarCliente || filtros.buscar || '',
     };
-    return reporte(configuracion.id || 'ventas-generales', configuracion.title || 'Ventas generales', filtrosUsados, filas, {
-      totalVentas: totalRows,
-      montoTotal: Number(montoTotal.toFixed(2)),
-      promedioVenta: totalRows ? Number((montoTotal / totalRows).toFixed(2)) : 0,
-      abonado: Number(filasCompletas.reduce((suma, item) => suma + item.abonado, 0).toFixed(2)),
-      saldoPendiente: Number(filasCompletas.reduce((suma, item) => suma + item.saldoPendiente, 0).toFixed(2)),
+    return reporte(configuracion.id || 'analisis-ventas', configuracion.title || 'Análisis de Ventas', filtrosUsados, filas, {
+      ...resumen,
+      totalVentas: resumen.ventas,
+      total: resumen.montoVentas,
+      montoTotal: resumen.montoVentas,
     }, null, [], {
-      shortTitle: configuracion.shortTitle || 'Ventas',
+      shortTitle: configuracion.shortTitle || 'Análisis',
       pagination: { page, pageSize, totalRows, totalPages },
       columnas: [
+        { key: 'tipoTransaccionLabel', label: 'Movimiento', type: 'text' },
         { key: 'numeroFactura', label: 'Factura', type: 'text' },
         { key: 'cliente', label: 'Cliente', type: 'text' },
         { key: 'sucursal', label: 'Sucursal', type: 'text' },
         { key: 'usuario', label: 'Usuario', type: 'text' },
-        { key: 'fecha', label: 'Fecha', type: 'date' },
+        { key: 'fecha', label: 'Fecha', type: 'datetime' },
+        { key: 'metodoPago', label: 'Método de pago', type: 'text' },
         { key: 'subtotal', label: 'Subtotal', type: 'currency' },
         { key: 'iva', label: 'IVA', type: 'currency' },
         { key: 'total', label: 'Total', type: 'currency' },
-        { key: 'abonado', label: 'Abonado', type: 'currency' },
         { key: 'saldoPendiente', label: 'Saldo pendiente', type: 'currency' },
+        { key: 'costo', label: 'Costo', type: 'currency' },
+        { key: 'utilidad', label: 'Utilidad', type: 'currency' },
         { key: 'estado', label: 'Estado', type: 'text' },
       ],
     });
@@ -335,21 +509,156 @@ export default class ReportesDominioServicio {
 
   async estadoCuentasCobrar(filtros, contexto) {
     const { facturas } = await this.contextoVentas(filtros, contexto);
-    const filas = facturas.filter((factura) => numero(factura.saldo_pendiente) > 0).map((factura) => ({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: factura.cliente_id, cliente_nombre: factura.cliente_nombre, total: numero(factura.total), abonado: numero(factura.abonado), saldo_pendiente: numero(factura.saldo_pendiente), fecha: fechaRegistro(factura) }));
+    const filas = facturas
+      .filter((factura) => numero(factura.saldo_pendiente) > 0)
+      .filter((factura) => !filtros.buscar
+        || coincideTexto(factura.id_personalizado, filtros.buscar)
+        || coincideTexto(factura.cliente_nombre, filtros.buscar))
+      .map((factura) => ({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: factura.cliente_id, cliente_nombre: factura.cliente_nombre, total: numero(factura.total), abonado: numero(factura.abonado), saldo_pendiente: numero(factura.saldo_pendiente), fecha: fechaRegistro(factura) }));
     return reporte('estado-cuentas-cobrar', 'Estado de cuentas por cobrar', filtros, filas, { facturas: filas.length, saldo_total: filas.reduce((suma, item) => suma + item.saldo_pendiente, 0) });
   }
 
+  async cajaDashboard(tipo, contexto, periodo) {
+    const esChica = tipo === 'CHICA';
+    const ruta = esChica ? 'cajas-chicas' : 'cajas-banco';
+    const caja = resultado(await this.salida.leer('caja', `${ruta}/abierta`, {}, contexto));
+    if (!caja) {
+      return {
+        caja: null,
+        stats: { totalIngresos: 0, totalEgresos: 0, flujoNeto: 0, totalMovimientos: 0 },
+      };
+    }
+    const movimientos = filtrarRango(
+      lista(await this.salida.leer('caja', `${ruta}/${caja.id}/movimientos`, {}, contexto)),
+      periodo,
+    );
+    const totalIngresos = movimientos
+      .filter(movimiento => movimiento.tipo === 'INGRESO')
+      .reduce((suma, movimiento) => suma + numero(movimiento.monto), 0);
+    const totalEgresos = movimientos
+      .filter(movimiento => movimiento.tipo === 'EGRESO')
+      .reduce((suma, movimiento) => suma + numero(movimiento.monto), 0);
+    return {
+      caja: {
+        id: caja.id,
+        fecha: caja.fecha,
+        estado: caja.estado || 'ABIERTA',
+        abierta: caja.estado === 'ABIERTA',
+        ...(esChica
+          ? { montoInicial: numero(caja.monto_inicial), montoActual: numero(caja.monto_actual) }
+          : { saldoInicial: numero(caja.saldo_inicial), saldoActual: numero(caja.saldo_actual) }),
+      },
+      stats: {
+        totalIngresos: Number(totalIngresos.toFixed(2)),
+        totalEgresos: Number(totalEgresos.toFixed(2)),
+        flujoNeto: Number((totalIngresos - totalEgresos).toFixed(2)),
+        totalMovimientos: movimientos.length,
+      },
+    };
+  }
+
   async dashboardIndicadores(filtros, contexto) {
-    const [inventario, ventas, cuentas, caja] = await Promise.all([
-      this.inventarioActual(filtros, contexto), this.ventasGenerales(filtros, contexto), this.estadoCuentasCobrar(filtros, contexto), this.flujoCaja(filtros, contexto),
+    const periodo = periodoMes(filtros);
+    const [analisisVentas, inventario, ingresos, clientes, cajaChica, cajaBanco] = await Promise.all([
+      this.ventasGenerales(
+        { tipoTransaccion: 'VENTAS_COBROS', page: 1, pageSize: Number.MAX_SAFE_INTEGER },
+        contexto,
+        { pageSizeMax: Number.MAX_SAFE_INTEGER },
+      ),
+      this.inventarioActual({}, contexto),
+      this.ingresosBase({}, contexto),
+      this.catalogoSeguro('cliente', 'clientes', contexto, { estado: 'todos' }),
+      this.cajaDashboard('CHICA', contexto, periodo),
+      this.cajaDashboard('BANCO', contexto, periodo),
     ]);
-    return reporte('dashboard-indicadores', 'Dashboard de indicadores', filtros, [], {
-      productos: inventario.resumen.productos,
-      unidades_stock: inventario.resumen.unidades,
-      ventas: ventas.resumen.ventas,
-      total_ventas: ventas.resumen.total,
-      cuentas_por_cobrar: cuentas.resumen.saldo_total,
-      flujo_neto: caja.resumen.ingresos - caja.resumen.egresos,
-    }, { inventario, ventas, cuentas_por_cobrar: cuentas, flujo_caja: caja });
+
+    const transacciones = analisisVentas.filas;
+    const resumenVentas = resumirTransacciones(transacciones);
+    const transaccionesMes = filtrarRango(transacciones, periodo);
+    const resumenVentasMes = resumirTransacciones(transaccionesMes);
+    const ventasVigentes = transacciones.filter(item => item.tipoTransaccion === 'VENTA' && item.estado !== 'ANULADA');
+    const facturasPendientes = ventasVigentes.filter(item => numero(item.saldoPendiente) > 0);
+    const productos = inventario.filas;
+    const productosControlados = productos.filter(producto => producto.tipo_control_stock !== 'ILIMITADO');
+    const ingresosMes = filtrarRango(ingresos, periodo).filter(ingreso => ingreso.estado !== 'ANULADO');
+    const clientesActivos = clientes.filter(cliente => cliente.activo !== false);
+    const clientesNuevosMes = filtrarRango(clientes, periodo).length;
+
+    const datos = {
+      periodo,
+      ventas: {
+        totalVentas: resumenVentas.ventas,
+        totalVentasMes: resumenVentasMes.ventas,
+        montoTotal: resumenVentas.montoVentas,
+        montoTotalMes: resumenVentasMes.montoVentas,
+        montoCobrado: resumenVentas.montoCobrado,
+        montoAbonadoMes: resumenVentasMes.montoCobrado,
+        ventasPendientes: transaccionesMes.filter(item => item.tipoTransaccion === 'VENTA' && item.estado === 'PENDIENTE').length,
+      },
+      deudas: {
+        facturasConDeuda: facturasPendientes.length,
+        totalDeuda: Number(facturasPendientes.reduce((suma, factura) => suma + numero(factura.saldoPendiente), 0).toFixed(2)),
+      },
+      clientes: {
+        totalClientes: clientes.length,
+        totalActivos: clientesActivos.length,
+        nuevosMes: clientesNuevosMes,
+      },
+      productos: {
+        totalActivos: productos.length,
+        conStock: productosControlados.filter(producto => numero(producto.stock) > 0).length,
+        sinStock: productosControlados.filter(producto => numero(producto.stock) <= 0).length,
+        unidadesStock: productosControlados.reduce((suma, producto) => suma + numero(producto.stock), 0),
+        valorInventario: Number(productosControlados.reduce((suma, producto) => suma + numero(producto.stock) * numero(producto.costo), 0).toFixed(2)),
+      },
+      ingresos: {
+        totalIngresosMes: ingresosMes.length,
+        montoIngresosMes: Number(ingresosMes.reduce((suma, ingreso) => suma + numero(ingreso.total), 0).toFixed(2)),
+        borradores: ingresosMes.filter(ingreso => ingreso.estado === 'BORRADOR').length,
+        pendientes: ingresosMes.filter(ingreso => ingreso.estado === 'BORRADOR').length,
+      },
+      cajaChica: cajaChica.caja,
+      cajaChicaStats: cajaChica.stats,
+      cajaBanco: cajaBanco.caja,
+      cajaBancoStats: cajaBanco.stats,
+    };
+
+    const ultimasVentas = transacciones
+      .filter(item => item.tipoTransaccion === 'VENTA')
+      .slice(0, 5)
+      .map(item => ({
+        id: item.referenciaId,
+        id_personalizado: item.numeroFactura,
+        cliente_nombre: item.cliente,
+        total: item.total,
+        estado_pago: item.estado,
+        created_at: item.fecha,
+        tipo_venta: item.tipoVenta,
+        metodo_pago: item.metodoPagoOriginal,
+      }));
+    const flujoNeto = cajaChica.stats.flujoNeto + cajaBanco.stats.flujoNeto;
+
+    return reporte('dashboard-indicadores', 'Dashboard de indicadores', periodo, ultimasVentas, {
+      productos: datos.productos.totalActivos,
+      unidades_stock: datos.productos.unidadesStock,
+      ventas: datos.ventas.totalVentasMes,
+      total_ventas: datos.ventas.montoTotalMes,
+      total_cobrado: datos.ventas.montoAbonadoMes,
+      cuentas_por_cobrar: datos.deudas.totalDeuda,
+      clientes_activos: datos.clientes.totalActivos,
+      ingresos_mes: datos.ingresos.totalIngresosMes,
+      valor_inventario: datos.productos.valorInventario,
+      flujo_neto: Number(flujoNeto.toFixed(2)),
+    }, datos, [], {
+      columnas: [
+        { key: 'id_personalizado', label: 'Factura', type: 'text' },
+        { key: 'cliente_nombre', label: 'Cliente', type: 'text' },
+        { key: 'total', label: 'Total', type: 'currency' },
+        { key: 'estado_pago', label: 'Estado', type: 'text' },
+        { key: 'created_at', label: 'Fecha', type: 'datetime' },
+        { key: 'tipo_venta', label: 'Tipo de venta', type: 'text' },
+        { key: 'metodo_pago', label: 'Método de pago', type: 'text' },
+      ],
+    });
   }
 }

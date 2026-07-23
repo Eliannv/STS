@@ -4,6 +4,20 @@ import pool from '../base-dato/Postgresql.js';
 
 export default class ProductoPgsQueryAdaptador extends ProductoSalidaQueryPuerto {
 
+    async siguienteCodigo() {
+        try {
+            const { rows } = await pool.query(
+                `SELECT MAX(CAST(SUBSTRING(codigo FROM 3) AS INTEGER)) as max_num
+                 FROM productos WHERE codigo ~ '^PR[0-9]+$'`
+            );
+            const maxNum = rows[0]?.max_num || 0;
+            return { estado: 'ok', resultado: 'PR' + String(maxNum + 1).padStart(6, '0') };
+        } catch (error) {
+            console.error('Error siguienteCodigo:', error.message);
+            return { estado: 'error', resultado: null };
+        }
+    }
+
     async lista(buscar, sucursalId, { limit = 20, offset = 0 } = {}) {
         const params = [];
         const filtros = ['p.activo = true'];

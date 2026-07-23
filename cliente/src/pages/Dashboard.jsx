@@ -24,6 +24,7 @@ const BADGE_ESTADO = {
   PAGADA:    { bg: '#d4edda', color: '#155724' },
   PENDIENTE: { bg: '#fff3cd', color: '#856404' },
   PARCIAL:   { bg: '#cce5ff', color: '#004085' },
+  ANULADA:   { bg: '#f8d7da', color: '#721c24' },
 };
 
 function Section({ titulo, children, style }) {
@@ -41,7 +42,7 @@ function CajaCard({ label, caja, stats, icon, colorOpen, route, navigate }) {
   const abierta = !!caja;
   const ingresos = stats?.totalIngresos  ?? 0;
   const egresos  = stats?.totalEgresos   ?? 0;
-  const neto     = ingresos - egresos;
+  const neto     = stats?.flujoNeto ?? 0;
   const movs     = stats?.totalMovimientos ?? 0;
 
   return (
@@ -177,12 +178,14 @@ export default function Dashboard() {
       {/* ── KPIs del mes ── */}
       <Section titulo={`Resumen de ${mesActual}`}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
-          <StatCard icon={<ShoppingCart size={20} />} label="Ventas del mes"     value={loading ? '…' : kpis?.ventas.totalVentasMes  ?? 0} subtext={loading ? '' : `${kpis?.ventas.ventasPendientes ?? 0} pendientes de cobro`} color="#3498db" />
-          <StatCard icon={<DollarSign   size={20} />} label="Monto vendido"      value={loading ? '…' : fmt(kpis?.ventas.montoTotalMes)}   subtext={loading ? '' : `Cobrado: ${fmt(kpis?.ventas.montoAbonadoMes)}`}         color="#27ae60" />
-          <StatCard icon={<Users        size={20} />} label="Clientes activos"   value={loading ? '…' : kpis?.clientes.totalActivos   ?? 0} subtext={loading ? '' : `+${kpis?.clientes.nuevosMes ?? 0} nuevos este mes`}      color="#9b59b6" />
+          <StatCard icon={<ShoppingCart size={20} />} label="Ventas del mes"     value={loading ? '…' : kpis?.ventas.totalVentasMes  ?? 0} subtext={loading ? '' : `${kpis?.ventas.totalVentas ?? 0} acumuladas · ${kpis?.ventas.ventasPendientes ?? 0} pendientes`} color="#3498db" />
+          <StatCard icon={<DollarSign   size={20} />} label="Monto vendido"      value={loading ? '…' : fmt(kpis?.ventas.montoTotalMes)}   subtext={loading ? '' : `${kpis?.ventas.totalVentas ?? 0} ventas registradas`} color="#27ae60" />
+          <StatCard icon={<Handshake    size={20} />} label="Total cobrado"      value={loading ? '…' : fmt(kpis?.ventas.montoAbonadoMes)} subtext={loading ? '' : `Acumulado: ${fmt(kpis?.ventas.montoCobrado)}`} color="#16a085" />
+          <StatCard icon={<Users        size={20} />} label="Clientes activos"   value={loading ? '…' : kpis?.clientes.totalActivos   ?? 0} subtext={loading ? '' : `${kpis?.clientes.totalClientes ?? 0} registrados · +${kpis?.clientes.nuevosMes ?? 0} este mes`} color="#9b59b6" />
           <StatCard icon={<AlertTriangle size={20}/>} label="Deudas pendientes"  value={loading ? '…' : fmt(kpis?.deudas.totalDeuda)}       subtext={loading ? '' : `${kpis?.deudas.facturasConDeuda ?? 0} facturas con saldo`} color="#e74c3c" />
-          <StatCard icon={<PackageOpen  size={20} />} label="Ingresos del mes"   value={loading ? '…' : kpis?.ingresos.totalIngresosMes ?? 0} subtext={loading ? '' : `${kpis?.ingresos.borradores ?? 0} en borrador`}        color="#e67e22" />
-          <StatCard icon={<Package      size={20} />} label="Productos activos"  value={loading ? '…' : kpis?.productos.totalActivos   ?? 0} subtext={loading ? '' : `${kpis?.productos.sinStock ?? 0} sin stock`}            color="#1abc9c" />
+          <StatCard icon={<PackageOpen  size={20} />} label="Ingresos del mes"   value={loading ? '…' : kpis?.ingresos.totalIngresosMes ?? 0} subtext={loading ? '' : `${kpis?.ingresos.pendientes ?? 0} pendientes · ${fmt(kpis?.ingresos.montoIngresosMes)}`} color="#e67e22" />
+          <StatCard icon={<Package      size={20} />} label="Productos activos"  value={loading ? '…' : kpis?.productos.totalActivos   ?? 0} subtext={loading ? '' : `${kpis?.productos.unidadesStock ?? 0} unidades · ${kpis?.productos.sinStock ?? 0} sin stock`} color="#1abc9c" />
+          <StatCard icon={<BarChart2    size={20} />} label="Valor del inventario" value={loading ? '…' : fmt(kpis?.productos.valorInventario)} subtext={loading ? '' : `${kpis?.productos.conStock ?? 0} productos con stock`} color="#8e44ad" />
         </div>
       </Section>
 
@@ -224,7 +227,7 @@ export default function Dashboard() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead style={{ background: '#f8f9fa' }}>
                 <tr>
-                  {['Factura','Cliente','Total','Estado','Fecha',''].map(h => (
+                  {['Factura','Cliente','Total','Estado','Tipo','Método','Fecha',''].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: '#6c757d', borderBottom: '2px solid #dee2e6', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -245,6 +248,8 @@ export default function Dashboard() {
                       <td style={{ padding: '10px 14px' }}>
                         <span style={{ ...badge, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{v.estado_pago}</span>
                       </td>
+                      <td style={{ padding: '10px 14px', fontSize: 12 }}>{v.tipo_venta || '—'}</td>
+                      <td style={{ padding: '10px 14px', fontSize: 12 }}>{v.metodo_pago || '—'}</td>
                       <td style={{ padding: '10px 14px', color: '#6c757d', fontSize: 12 }}>{fmtFecha(v.created_at)}</td>
                       <td style={{ padding: '10px 14px' }}><ArrowRight size={14} color="#adb5bd" /></td>
                     </tr>

@@ -4,6 +4,10 @@ export default class ProductoQueryUsesCase {
         this.adaptadorBDSalida = adaptadorBDSalidaQuery;
     }
 
+    async siguienteCodigo() {
+        return await this.adaptadorBDSalida.siguienteCodigo();
+    }
+
     async lista(dtoProducto, pag = {}) {
         return await this.adaptadorBDSalida.lista(
             dtoProducto.getBuscar(),

@@ -21,7 +21,7 @@ import EstadoBadge from '../../components/shared/EstadoBadge';
 import '../../components/shared/FinanceModule.css';
 import { useAuth } from '../../context/AuthContext';
 import { notificarError } from '../../utils/confirmaciones';
-import { imprimirCaja } from '../../utils/imprimirReporte';
+import { imprimirCaja } from '../../utils/imprimirCaja';
 import { CAMPO, FECHA, FECHAHORA, FMT, NUMERO, RESULTADO_LISTA } from '../../utils/formato';
 import { CajaChicaCierreModal, CajaChicaReposicionModal } from './CajaChicaModal';
 

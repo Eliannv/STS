@@ -21,7 +21,7 @@ import '../../components/shared/FinanceModule.css';
 import ResumenFinanciero from '../../components/shared/ResumenFinanciero';
 import { useAuth } from '../../context/AuthContext';
 import { notificarError } from '../../utils/confirmaciones';
-import { imprimirCaja } from '../../utils/imprimirReporte';
+import { imprimirCaja } from '../../utils/imprimirCaja';
 import {
   CAMPO,
   FECHA,

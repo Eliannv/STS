@@ -21,6 +21,7 @@ import EstadoBadge from '../../components/shared/EstadoBadge';
 import '../../components/shared/FinanceModule.css';
 import { useAuth } from '../../context/AuthContext';
 import { notificarError } from '../../utils/confirmaciones';
+import { imprimirCaja } from '../../utils/imprimirReporte';
 import { CAMPO, FECHA, FECHAHORA, FMT, NUMERO, RESULTADO_LISTA } from '../../utils/formato';
 import { CajaChicaCierreModal, CajaChicaReposicionModal } from './CajaChicaModal';
 
@@ -112,7 +113,12 @@ export default function CajaChicaDetalle() {
           </p>
         </div>
         <div className="finance-actions no-print">
-          <button className="btn btn-ghost" onClick={() => window.print()}><Printer size={16} /> Imprimir</button>
+          <button className="btn btn-ghost" onClick={() => imprimirCaja({
+            caja,
+            movimientos,
+            tipoCaja: 'CHICA',
+            resumen,
+          })}><Printer size={16} /> Imprimir</button>
           {abierta && isAdmin && (
             <button className="btn btn-ghost" onClick={() => setModalReposicion(true)}><RefreshCw size={16} /> Reponer Caja</button>
           )}

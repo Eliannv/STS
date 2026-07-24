@@ -21,6 +21,7 @@ import '../../components/shared/FinanceModule.css';
 import ResumenFinanciero from '../../components/shared/ResumenFinanciero';
 import { useAuth } from '../../context/AuthContext';
 import { notificarError } from '../../utils/confirmaciones';
+import { imprimirCaja } from '../../utils/imprimirReporte';
 import {
   CAMPO,
   FECHA,
@@ -165,7 +166,13 @@ export default function CajaBancoDetalle() {
           </p>
         </div>
         <div className="finance-actions no-print">
-          <button className="btn btn-ghost" onClick={() => window.print()}><Printer size={16} /> Imprimir</button>
+          <button className="btn btn-ghost" onClick={() => imprimirCaja({
+            caja,
+            movimientos,
+            tipoCaja: 'BANCO',
+            cajasChicas,
+            resumen,
+          })}><Printer size={16} /> Imprimir</button>
           {abierta && isAdmin && (
             <button className="btn btn-primary" onClick={() => setModalMovimiento(true)}>
               <Plus size={16} /> Movimiento

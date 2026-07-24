@@ -1,15 +1,121 @@
-import { Op } from 'sequelize';
-import sequelize from '../base-dato/Postgresql.js';
-import { CajaBanco, CajaChica, MovimientoChica, MovimientoBanco, Cuenta } from '../modelos/Modelos.js';
-const modelos = { 'cajas-banco': CajaBanco, 'cajas-chicas': CajaChica, 'movimientos-banco': MovimientoBanco, 'movimientos-chicas': MovimientoChica, cuentas: Cuenta };
-const cajas = { banco: { caja: CajaBanco, movimiento: MovimientoBanco, saldo: 'saldo_actual', inicial: 'saldo_inicial', fk: 'caja_banco_id' }, chica: { caja: CajaChica, movimiento: MovimientoChica, saldo: 'monto_actual', inicial: 'monto_inicial', fk: 'caja_chica_id' } };
+// caja-servicio/src/infraestructura/adaptador-salida/CajaAdaptador.js
+import {
+  CajaBanco,
+  CajaChica,
+  MovimientoChica,
+  MovimientoBanco,
+  Cuenta,
+} from '../modelos/Modelos.js';
+import CajaBancoEntidad from '../../dominio/entidades/CajaBanco.js';
+import CajaChicaEntidad from '../../dominio/entidades/CajaChica.js';
+import MovimientoFinanciero from '../../dominio/entidades/MovimientoFinanciero.js';
+import CuentaEntidad from '../../dominio/entidades/Cuenta.js';
+
+const modelos = {
+  'cajas-banco': CajaBanco,
+  'cajas-chicas': CajaChica,
+  'movimientos-banco': MovimientoBanco,
+  'movimientos-chicas': MovimientoChica,
+  cuentas: Cuenta,
+};
+
+const esMovimiento = (recurso) => (
+  recurso === 'movimientos-banco' || recurso === 'movimientos-chicas'
+);
+
+const mapearEntidad = (recurso, modelo) => {
+  const datos = modelo.get({ plain: true });
+  if (recurso === 'cajas-banco') return new CajaBancoEntidad(datos);
+  if (recurso === 'cajas-chicas') return new CajaChicaEntidad(datos);
+  if (esMovimiento(recurso)) return new MovimientoFinanciero(datos);
+  return new CuentaEntidad(datos.id, datos);
+};
+
 export default class CajaAdaptador {
-  async listar(recurso, { estado = null, cajaId = null, limit = 20, offset = 0 } = {}) { const Model = modelos[recurso]; if (!Model) return { estado: 'error', resultado: 'Recurso inválido' }; const where = {}; if (estado && Model.rawAttributes.estado) where.estado = estado; if (cajaId && Model.rawAttributes.caja_banco_id) where.caja_banco_id = cajaId; if (cajaId && Model.rawAttributes.caja_chica_id) where.caja_chica_id = cajaId; return { estado: 'ok', resultado: await Model.findAll({ where, order: [['id','DESC']], limit: Math.min(Number(limit)||20,100), offset: Math.max(Number(offset)||0,0) }) }; }
-  async obtener(recurso, id) { const Model = modelos[recurso]; if (!Model) return { estado: 'error', resultado: 'Recurso inválido' }; const item = await Model.findByPk(id); return item ? { estado: 'ok', resultado: item } : { estado: 'error', resultado: 'No encontrado' }; }
-  async crear(recurso, datos) { const Model = modelos[recurso]; if (!Model) return { estado: 'error', resultado: 'Recurso inválido' }; try { const ahora = new Date(); return { estado: 'ok', resultado: await Model.create({ ...datos, created_at: datos.created_at || ahora, updated_at: datos.updated_at || ahora }) }; } catch (error) { return { estado: 'error', resultado: error.message }; } }
-  async actualizar(recurso, id, datos) { const Model = modelos[recurso]; if (!Model) return { estado: 'error', resultado: 'Recurso inválido' }; const [count] = await Model.update({ ...datos, updated_at: new Date() }, { where: { id } }); return count ? { estado: 'ok', resultado: 'Actualizado correctamente' } : { estado: 'error', resultado: 'No encontrado' }; }
-  async eliminar(recurso, id) { const Model = modelos[recurso]; if (!Model) return { estado: 'error', resultado: 'Recurso inválido' }; const count = await Model.destroy({ where: { id } }); return count ? { estado: 'ok', resultado: 'Eliminado correctamente' } : { estado: 'error', resultado: 'No encontrado' }; }
-  async abrir(tipo, datos) { const config = cajas[tipo]; const where = { estado: 'ABIERTA', activo: true }; const abierta = await config.caja.findOne({ where }); if (abierta) return { estado: 'error', resultado: 'Ya existe una caja abierta' }; const ahora = new Date(); const inicial = Number(datos.saldoInicial ?? datos.montoInicial ?? 0); return { estado: 'ok', resultado: await config.caja.create({ fecha: datos.fecha || ahora, [config.inicial]: inicial, [config.saldo]: inicial, estado: 'ABIERTA', activo: true, usuario_id: datos.usuarioId, usuario_nombre: datos.usuarioNombre, observacion: datos.observacion, created_at: ahora, updated_at: ahora }) }; }
-  async cerrar(tipo, id, datos) { const config = cajas[tipo]; const [count] = await config.caja.update({ estado: 'CERRADA', cerrado_en: new Date(), cerrado_por_id: datos.usuarioId, cerrado_por_nombre: datos.usuarioNombre, updated_at: new Date() }, { where: { id, estado: 'ABIERTA' } }); return count ? { estado: 'ok', resultado: 'Caja cerrada correctamente' } : { estado: 'error', resultado: 'Caja no encontrada o ya cerrada' }; }
-  async movimiento(tipo, datos) { const config = cajas[tipo]; const transaction = await sequelize.transaction(); try { const caja = await config.caja.findOne({ where: { id: datos.cajaId, estado: 'ABIERTA', activo: true }, transaction, lock: transaction.LOCK.UPDATE }); if (!caja) { await transaction.rollback(); return { estado: 'error', resultado: 'Caja no encontrada o cerrada' }; } const anterior = Number(caja[config.saldo]); const monto = Number(datos.monto); const nuevo = datos.tipo === 'EGRESO' ? anterior - monto : anterior + monto; if (nuevo < 0) { await transaction.rollback(); return { estado: 'error', resultado: 'Saldo insuficiente' }; } await caja.update({ [config.saldo]: nuevo, updated_at: new Date() }, { transaction }); const movimiento = await config.movimiento.create({ ...datos, [config.fk]: datos.cajaId, fecha: datos.fecha || new Date(), saldo_anterior: anterior, saldo_nuevo: nuevo, created_at: new Date() }, { transaction }); await transaction.commit(); return { estado: 'ok', resultado: movimiento }; } catch (error) { await transaction.rollback(); return { estado: 'error', resultado: error.message }; } }
+  async listar(recurso, {
+    estado = null,
+    cajaId = null,
+    limit = 20,
+    offset = 0,
+  } = {}) {
+    const Model = modelos[recurso];
+    if (!Model) {
+      return { estado: 'error', resultado: 'Recurso inválido' };
+    }
+
+    const where = {};
+    if (estado && Model.rawAttributes.estado) where.estado = estado;
+    if (cajaId && Model.rawAttributes.caja_banco_id) where.caja_banco_id = cajaId;
+    if (cajaId && Model.rawAttributes.caja_chica_id) where.caja_chica_id = cajaId;
+    return {
+      estado: 'ok',
+      resultado: (await Model.findAll({
+        where,
+        order: [['id', 'DESC']],
+        limit: Math.min(Number(limit) || 20, 100),
+        offset: Math.max(Number(offset) || 0, 0),
+      })).map((modelo) => mapearEntidad(recurso, modelo)),
+    };
+  }
+
+  async obtener(recurso, id) {
+    const Model = modelos[recurso];
+    if (!Model) {
+      return { estado: 'error', resultado: 'Recurso inválido' };
+    }
+
+    const modelo = await Model.findByPk(id);
+    return modelo
+      ? { estado: 'ok', resultado: mapearEntidad(recurso, modelo) }
+      : { estado: 'error', resultado: 'No encontrado' };
+  }
+
+  async crear(recurso, datos) {
+    if (esMovimiento(recurso)) {
+      throw new Error('Los movimientos solo pueden crearse mediante el ledger financiero');
+    }
+
+    const Model = modelos[recurso];
+    if (!Model) {
+      return { estado: 'error', resultado: 'Recurso inválido' };
+    }
+
+    const ahora = new Date();
+    const modelo = await Model.create({
+      ...datos,
+      created_at: datos.created_at || ahora,
+      updated_at: datos.updated_at || ahora,
+    });
+    return {
+      estado: 'ok',
+      resultado: mapearEntidad(recurso, modelo),
+    };
+  }
+
+  async actualizar(recurso, id, datos) {
+    if (esMovimiento(recurso)) {
+      throw new Error('Los movimientos son inmutables');
+    }
+
+    const Model = modelos[recurso];
+    if (!Model) {
+      return { estado: 'error', resultado: 'Recurso inválido' };
+    }
+
+    const [cantidad] = await Model.update(
+      { ...datos, updated_at: new Date() },
+      { where: { id } },
+    );
+    return cantidad
+      ? { estado: 'ok', resultado: 'Actualizado correctamente' }
+      : { estado: 'error', resultado: 'No encontrado' };
+  }
+
+  eliminar() {
+    throw new Error('La eliminación física está deshabilitada');
+  }
+
+  movimiento() {
+    throw new Error('Utilice los casos de uso del ledger financiero');
+  }
 }

@@ -1,3 +1,4 @@
+// cliente/src/components/cajas/RegistrarMovimientoChicaModal.jsx
 import { useState, useEffect } from 'react';
 import { api } from '../../api/api';
 import FormModal from '../common/FormModal';
@@ -31,19 +32,25 @@ export default function RegistrarMovimientoChicaModal({ abierto, cajaChicaId, sa
 
     setSaving(true); setError('');
     try {
-      const res = await api.post('/caja-chica/movimiento', {
-        cajaChicaId,
+      const operacionId = crypto.randomUUID();
+      const res = await api.post('/operaciones/ajustes', {
+        caja_tipo: 'CHICA',
+        caja_id: cajaChicaId,
         tipo:        form.tipo,
+        categoria:   form.tipo === 'INGRESO' ? 'OTRO_INGRESO' : 'OTRO_EGRESO',
         descripcion: form.descripcion.trim(),
         monto:       parseFloat(form.monto),
-        fecha:       form.fecha || null,
-        referencia:  form.referencia.trim() || null,
+        motivo:      form.descripcion.trim(),
+        observacion: form.referencia.trim() || null,
+        fecha_operacion: form.fecha || null,
+        operacion_id: operacionId,
+        idempotency_key: `MOVIMIENTO_CAJA_CHICA:${operacionId}`,
       });
       if (res.ok) {
-        onRegistrado(res.data.resultado);
+        onRegistrado(res.data.data);
         onCerrar();
       } else {
-        setError(res.data?.resultado || 'Error al registrar');
+        setError(res.data?.mensaje || 'Error al registrar');
       }
     } catch {
       setError('Error de conexión');

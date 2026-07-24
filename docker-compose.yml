@@ -95,6 +95,7 @@ services:
       - ./inventario-servicio/sql/01_inventario_schema.sql:/docker-entrypoint-initdb.d/01_inventario_schema.sql:ro
       - ./inventario-servicio/sql/02_movimientos_stock_ledger.sql:/docker-entrypoint-initdb.d/02_movimientos_stock_ledger.sql:ro
       - ./inventario-servicio/sql/03_producto_codigo_barras.sql:/docker-entrypoint-initdb.d/03_producto_codigo_barras.sql:ro
+      - ./inventario-servicio/sql/04_operaciones_financieras_compras.sql:/docker-entrypoint-initdb.d/04_operaciones_financieras_compras.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d inventario_db"]
       interval: 5s
@@ -118,9 +119,12 @@ services:
       DB_SSL: "false"
       PORT: 3003
       NODE_ENV: development
+      CAJA_SERVICIO_URL: http://caja-servicio:3005
     depends_on:
       inventario-postgres:
         condition: service_healthy
+      caja-servicio:
+        condition: service_started
 
   facturacion-postgres:
     image: postgres:17
@@ -136,6 +140,8 @@ services:
       - facturacion_postgres_data:/var/lib/postgresql/data
       - ./facturacion-servicio/sql/01_facturacion_schema.sql:/docker-entrypoint-initdb.d/01_facturacion_schema.sql:ro
       - ./facturacion-servicio/sql/02_factura_estado_inventario.sql:/docker-entrypoint-initdb.d/02_factura_estado_inventario.sql:ro
+      - ./facturacion-servicio/sql/02_operaciones_financieras.sql:/docker-entrypoint-initdb.d/03_operaciones_financieras.sql:ro
+      - ./facturacion-servicio/sql/03_tarjetas_acreditaciones.sql:/docker-entrypoint-initdb.d/04_tarjetas_acreditaciones.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d facturacion_db"]
       interval: 5s
@@ -160,6 +166,7 @@ services:
       PORT: 3004
       NODE_ENV: development
       INVENTARIO_SERVICIO_URL: http://inventario-servicio:3003
+      CAJA_SERVICIO_URL: http://caja-servicio:3005
     depends_on:
       facturacion-postgres:
         condition: service_healthy
@@ -177,6 +184,10 @@ services:
     volumes:
       - caja_postgres_data:/var/lib/postgresql/data
       - ./caja-servicio/sql/01_caja_schema.sql:/docker-entrypoint-initdb.d/01_caja_schema.sql:ro
+      - ./caja-servicio/sql/02_caja_upgrade.sql:/docker-entrypoint-initdb.d/02_caja_upgrade.sql:ro
+      - ./caja-servicio/sql/03_cuentas_cobrar.sql:/docker-entrypoint-initdb.d/03_cuentas_cobrar.sql:ro
+      - ./caja-servicio/sql/04_tarjetas_acreditaciones.sql:/docker-entrypoint-initdb.d/04_tarjetas_acreditaciones.sql:ro
+      - ./caja-servicio/sql/05_cuentas_pagar_compras.sql:/docker-entrypoint-initdb.d/05_cuentas_pagar_compras.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d caja_db"]
       interval: 5s

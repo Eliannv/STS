@@ -1,8 +1,11 @@
+// cliente/src/components/common/TableCard.jsx
 export default function TableCard({
   children,
   loading,
   empty,
   emptyText = 'Sin resultados',
+  emptyIcon,
+  emptyAction,
   loadingText,
   header,
   page,
@@ -36,7 +39,9 @@ export default function TableCard({
           </div>
         ) : empty ? (
           <div className="empty-state">
-            {emptyText}
+            {emptyIcon && <div style={{ marginBottom: 10 }}>{emptyIcon}</div>}
+            <div>{emptyText}</div>
+            {emptyAction && <div style={{ marginTop: 14 }}>{emptyAction}</div>}
           </div>
         ) : (
           children

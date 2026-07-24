@@ -1,3 +1,4 @@
+// facturacion-servicio/src/infraestructura/adaptador-salida/FacturaPgsCommandAdaptador.js
 import { Op } from 'sequelize';
 import FacturaSalidaCommandPuerto from '../../aplicacion/puertos/salida/FacturaSalidaCommandPuerto.js';
 import sequelize from '../base-dato/Postgresql.js';
@@ -37,7 +38,12 @@ const detalleDb = (item, facturaId) => ({
 });
 
 export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuerto {
-  async guardar(venta) {
+  constructor(operacionFinancieraCommand = null) {
+    super();
+    this.operacionFinancieraCommand = operacionFinancieraCommand;
+  }
+
+  async guardar(venta, construirOperacion = null) {
     const transaction = await sequelize.transaction();
     try {
       const factura = await Factura.create({ ...facturaDb(venta), estado_inventario: 'PENDIENTE', fecha: venta.fechaPago || new Date(), created_at: new Date() }, { transaction });
@@ -46,12 +52,29 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
         await Deuda.create({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: venta.clienteId, cliente_nombre: venta.nombreCliente || 'Cliente', metodo_pago: venta.metodoPago, fecha_pago: venta.fechaPago || new Date(), monto_pagado: factura.abonado, total_factura: venta.total, saldo_restante: venta.saldoPendiente, estado_pago: venta.estado, es_credito: venta.tipo === 'CREDITO', usuario_id: venta.usuarioId, created_at: new Date() }, { transaction });
       }
       if (venta.metodoPago?.toUpperCase() === 'TARJETA') {
-        const montoRecibido = Math.max(0, Number(venta.total || 0) - Number(venta.saldoPendiente || 0));
-        const saldoPendiente = Math.max(0, Number(venta.saldoPendiente || 0));
-        await VentaTarjeta.create({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: venta.clienteId, cliente_nombre: venta.nombreCliente, monto_total: venta.total, monto_recibido: montoRecibido, saldo_pendiente: saldoPendiente, estado: saldoPendiente <= 0.01 ? 'LIQUIDADA' : 'PENDIENTE', observacion: venta.observacion, created_at: new Date(), updated_at: new Date() }, { transaction });
+        const montoTarjeta = Math.max(
+          0,
+          Number(venta.total || 0) - Number(venta.saldoPendiente || 0),
+        );
+        if (montoTarjeta > 0) {
+          await VentaTarjeta.create({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: venta.clienteId, cliente_nombre: venta.nombreCliente, monto_total: montoTarjeta, monto_recibido: 0, saldo_pendiente: montoTarjeta, estado: 'PENDIENTE', observacion: venta.observacion, comision_acumulada: 0, retencion_acumulada: 0, monto_bruto_acreditado: 0, monto_neto_acreditado: 0, created_at: new Date(), updated_at: new Date() }, { transaction });
+        }
+      }
+      let operacionFinanciera = null;
+      if (construirOperacion) {
+        operacionFinanciera = construirOperacion(factura);
+        if (operacionFinanciera) {
+          if (!this.operacionFinancieraCommand) {
+            throw new Error('El adaptador de operaciones financieras no está configurado');
+          }
+          operacionFinanciera = await this.operacionFinancieraCommand.save(
+            operacionFinanciera,
+            transaction,
+          );
+        }
       }
       await transaction.commit();
-      return { estado: 'ok', resultado: factura };
+      return { estado: 'ok', resultado: factura, operacionFinanciera };
     } catch (error) {
       await transaction.rollback();
       return { estado: 'error', resultado: error.message };

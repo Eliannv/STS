@@ -1,6 +1,8 @@
+// inventario-servicio/src/infraestructura/adaptador-salida/IngresoPgsCommandAdaptador.js
 import sequelize from '../base-dato/Postgresql.js';
 import IngresoSalidaCommandPuerto from '../../aplicacion/puertos/salida/IngresoSalidaCommandPuerto.js';
 import { Ingreso as IngresoModel, DetalleIngreso as DetalleIngresoModel, Producto as ProductoModel } from '../modelos/Modelos.js';
+import ModeloOperacionFinancieraInventario from '../modelos/ModeloOperacionFinancieraInventario.js';
 
 const ingresoDb = (ingreso) => ({
   proveedor_id: ingreso.proveedorId,
@@ -8,6 +10,10 @@ const ingresoDb = (ingreso) => ({
   numero_factura: ingreso.numeroFactura,
   fecha: ingreso.fecha,
   tipo_compra: ingreso.tipoCompra,
+  metodo_pago: ingreso.metodoPago,
+  caja_tipo: ingreso.cajaTipo,
+  caja_id: ingreso.cajaId,
+  fecha_vencimiento: ingreso.fechaVencimiento,
   observacion: ingreso.observacion,
   descuento: ingreso.descuento,
   flete: ingreso.flete,
@@ -37,9 +43,15 @@ const numero = (valor) => Number(valor || 0);
 const normalizar = (valor) => String(valor || '').trim().toLowerCase();
 
 export default class IngresoPgsCommandAdaptador extends IngresoSalidaCommandPuerto {
-  constructor(movimientoStockServicio) {
+  constructor(
+    movimientoStockServicio,
+    compraDominioServicio = null,
+    operacionFinancieraCommand = null,
+  ) {
     super();
     this.movimientoStockServicio = movimientoStockServicio;
+    this.compraDominioServicio = compraDominioServicio;
+    this.operacionFinancieraCommand = operacionFinancieraCommand;
   }
 
   async guardar(ingreso, detalles = []) {
@@ -151,9 +163,43 @@ export default class IngresoPgsCommandAdaptador extends IngresoSalidaCommandPuer
       }
 
       const total = Number((detalles.reduce((suma, detalle) => suma + numero(detalle.subtotal), 0) + numero(ingreso.flete) - numero(ingreso.descuento) + numero(ingreso.iva)).toFixed(2));
-      const finalizado = await ingreso.update({ estado: 'FINALIZADO', total, updated_at: new Date() }, { transaction });
+      let operacionFinanciera = null;
+      if (this.compraDominioServicio && this.operacionFinancieraCommand) {
+        contexto.metodoPago ??= ingreso.metodo_pago;
+        contexto.cajaTipo ??= ingreso.caja_tipo;
+        contexto.cajaId ??= ingreso.caja_id;
+        contexto.fechaVencimiento ??= ingreso.fecha_vencimiento;
+        operacionFinanciera = this.compraDominioServicio.construirOperacionCompra(
+          ingreso,
+          total,
+          contexto,
+        );
+        operacionFinanciera = await this.operacionFinancieraCommand.save(
+          operacionFinanciera,
+          { transaction },
+        );
+      }
+      const finalizado = await ingreso.update({
+        estado: 'FINALIZADO',
+        total,
+        metodo_pago: contexto.metodoPago,
+        caja_tipo: contexto.cajaTipo,
+        caja_id: contexto.cajaId,
+        fecha_vencimiento: contexto.fechaVencimiento,
+        estado_financiero: operacionFinanciera ? 'PENDIENTE' : 'NO_APLICA',
+        updated_at: new Date(),
+      }, { transaction });
       await transaction.commit();
-      return { estado: 'ok', resultado: finalizado, reporte: { productosCreados, productosActualizados, totalProcesados: detalles.length } };
+      return {
+        estado: 'ok',
+        resultado: finalizado,
+        operacionFinanciera,
+        reporte: {
+          productosCreados,
+          productosActualizados,
+          totalProcesados: detalles.length,
+        },
+      };
     } catch (error) {
       await transaction.rollback();
       return { estado: 'error', resultado: `Error al finalizar el ingreso: ${error.message}` };
@@ -187,9 +233,41 @@ export default class IngresoPgsCommandAdaptador extends IngresoSalidaCommandPuer
         traceId: contexto.traceId,
       }, { transaction });
       if (reversa.estado !== 'ok') throw new Error(reversa.resultado);
-      await ingreso.update({ estado: 'ANULADO', updated_at: new Date() }, { transaction });
+      let operacionFinanciera = null;
+      if (this.compraDominioServicio && this.operacionFinancieraCommand) {
+        if (contexto.conReembolso && !contexto.operacionIdOriginal) {
+          const original = await ModeloOperacionFinancieraInventario.findOne({
+            where: { ingreso_id: ingreso.id },
+            order: [['created_at', 'ASC'], ['id', 'ASC']],
+            transaction,
+          });
+          contexto.operacionIdOriginal = original?.operacion_id ?? null;
+        }
+        operacionFinanciera =
+          this.compraDominioServicio.construirOperacionAnulacion(
+            ingreso,
+            contexto,
+          );
+        if (operacionFinanciera) {
+          operacionFinanciera = await this.operacionFinancieraCommand.save(
+            operacionFinanciera,
+            { transaction },
+          );
+        }
+      }
+      await ingreso.update({
+        estado: 'ANULADO',
+        estado_financiero: operacionFinanciera
+          ? 'PENDIENTE'
+          : ingreso.estado_financiero,
+        updated_at: new Date(),
+      }, { transaction });
       await transaction.commit();
-      return { estado: 'ok', resultado: 'Ingreso anulado y stock compensado correctamente' };
+      return {
+        estado: 'ok',
+        resultado: 'Ingreso anulado y stock compensado correctamente',
+        operacionFinanciera,
+      };
     } catch (error) {
       await transaction.rollback();
       return { estado: 'error', resultado: error.message };

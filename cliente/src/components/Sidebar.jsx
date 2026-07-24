@@ -1,3 +1,4 @@
+// cliente/src/components/Sidebar.jsx
 import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -91,6 +92,8 @@ const allMenuItems = [
     children: [
       { label: 'Caja Chica', route: '/caja-chica' },
       { label: 'Caja Banco', route: '/caja-banco', adminOnly: true },
+      { label: 'Cuentas por pagar', route: '/cuentas-pagar', adminOnly: true },
+      { label: 'Cuentas por cobrar', route: '/cuentas-cobrar', adminOnly: true },
     ],
   },
   // REPORTES

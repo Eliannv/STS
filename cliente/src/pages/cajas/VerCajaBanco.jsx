@@ -1,3 +1,4 @@
+// cliente/src/pages/cajas/VerCajaBanco.jsx
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
@@ -72,17 +73,30 @@ export default function VerCajaBanco() {
   async function cerrarCaja() {
     if (!window.confirm('¿Cerrar esta caja banco? Esta acción no se puede deshacer.')) return;
     setCerrando(true);
-    const res = await api.put('/caja-banco/cerrar', { cajaBancoId: parseInt(id) });
+    const operacionId = crypto.randomUUID();
+    const res = await api.put('/caja-banco/cerrar', {
+      cajaBancoId: parseInt(id),
+      saldoContado: Number(caja.saldo_actual || 0),
+      operacion_id: operacionId,
+      idempotency_key: `CIERRE_CAJA_BANCO:${id}:${operacionId}`,
+    });
     if (res.ok) cargar();
     else setError(res.data?.resultado || 'Error al cerrar');
     setCerrando(false);
   }
 
   async function eliminarMovimiento(movId) {
-    if (!window.confirm('¿Eliminar este movimiento? El saldo será revertido.')) return;
-    const res = await api.delete(`/caja-banco/movimiento/${movId}`);
+    const motivo = window.prompt('Motivo de la reversión:');
+    if (!motivo?.trim()) return;
+    const operacionId = crypto.randomUUID();
+    const res = await api.post(`/operaciones/movimientos/${movId}/revertir`, {
+      cajaTipo: 'BANCO',
+      motivo: motivo.trim(),
+      operacion_id: operacionId,
+      idempotency_key: `REVERSO_CAJA_BANCO:${movId}:${operacionId}`,
+    });
     if (res.ok) cargar();
-    else setError(res.data?.resultado || 'Error al eliminar movimiento');
+    else setError(res.data?.mensaje || res.data?.resultado || 'Error al revertir movimiento');
   }
 
   if (loading) return (

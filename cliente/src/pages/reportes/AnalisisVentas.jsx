@@ -1,11 +1,12 @@
 import { createElement, useEffect, useMemo, useState } from 'react';
-import { BarChart3, CircleDollarSign, Landmark, ReceiptText, Users } from 'lucide-react';
+import { BarChart3, CircleDollarSign, Landmark, Printer, ReceiptText, Users } from 'lucide-react';
 import { api } from '../../api/api';
 import { generarReporte } from '../../api/reportesApi';
 import FilterCard, { FilterItem, filterInputStyle } from '../../components/common/FilterCard';
 import StatCard from '../../components/common/StatCard';
 import TableCard from '../../components/common/TableCard';
 import reportsConfig from '../../config/reportes/reports.config';
+import { imprimirAnalisisVentas } from '../../utils/imprimirReporte';
 
 const PAGE_SIZE = 20;
 const definition = reportsConfig.ventas['analisis-ventas'];
@@ -245,6 +246,20 @@ export default function AnalisisVentas() {
           <h1 className="page-title">{definition.title}</h1>
           <p className="page-subtitle">{definition.description}</p>
         </div>
+        <button
+          className="btn btn-primary"
+          disabled={loading || view.rows.length === 0}
+          onClick={() => imprimirAnalisisVentas({
+            rows: view.rows,
+            columns: view.columns,
+            summaryItems: summary.map(s => ({ label: s.label, value: s.value, isMoney: typeof s.value === 'string' && s.value.startsWith('$'), color: s.color })),
+            filters: queryFilters,
+            titulo: `${definition.title} — ${definition.views.find(v => v.value === filters.vista)?.label || 'Detalle'}`,
+          })}
+          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <Printer size={16} /> Imprimir
+        </button>
       </div>
 
       {error && <div style={{ background: '#fdecea', color: '#b42318', border: '1px solid #f5c2c0', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>{error}</div>}

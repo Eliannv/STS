@@ -1,3 +1,4 @@
+// inventario-servicio/src/dominio/entidades/Ingreso.js
 export default class Ingreso {
   constructor(id, datos = {}) {
     this.id = id;
@@ -7,6 +8,21 @@ export default class Ingreso {
     this.numeroFactura = datos.numeroFactura;
     this.fecha = datos.fecha;
     this.tipoCompra = datos.tipoCompra ?? 'CONTADO';
+    this.metodoPago = datos.metodoPago ?? datos.metodo_pago ?? null;
+    this.cajaTipo = datos.cajaTipo ?? datos.caja_tipo ?? null;
+    this.cajaId = datos.cajaId ?? datos.caja_id ?? null;
+    this.fechaVencimiento =
+      datos.fechaVencimiento
+      ?? datos.fecha_vencimiento
+      ?? null;
+    this.estadoFinanciero =
+      datos.estadoFinanciero
+      ?? datos.estado_financiero
+      ?? 'NO_APLICA';
+    this.cuentaPagarId =
+      datos.cuentaPagarId
+      ?? datos.cuenta_pagar_id
+      ?? null;
     this.observacion = datos.observacion ?? null;
     this.descuento = datos.descuento ?? 0;
     this.flete = datos.flete ?? 0;

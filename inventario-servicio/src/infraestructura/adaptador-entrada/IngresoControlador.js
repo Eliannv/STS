@@ -1,3 +1,4 @@
+// inventario-servicio/src/infraestructura/adaptador-entrada/IngresoControlador.js
 import IngresoEntradaPuerto from '../../aplicacion/puertos/entrada/IngresoEntradaPuerto.js';
 import { IngresoDTO, DetalleIngresoDTO } from '../../aplicacion/dto/IngresoDTO.js';
 
@@ -35,8 +36,14 @@ export default class IngresoControlador extends IngresoEntradaPuerto {
       usuarioId: req.usuario?.id,
       usuarioNombre: req.usuario ? `${req.usuario.nombre || ''} ${req.usuario.apellido || ''}`.trim() : null,
       sucursalId: req.usuario?.sucursalId ?? req.body.sucursalId,
-      operacionId: req.body.operacionId || `INGRESO-${req.params.id ?? req.body.id}`,
-      idempotencyKey: req.body.idempotencyKey || `INGRESO-${req.params.id ?? req.body.id}`,
+      operacionId: req.body.operacionId ?? req.body.operacion_id,
+      idempotencyKey: req.body.idempotencyKey ?? req.body.idempotency_key,
+      metodoPago: req.body.metodoPago ?? req.body.metodo_pago,
+      cajaTipo: req.body.cajaTipo ?? req.body.caja_tipo,
+      cajaId: req.body.cajaId ?? req.body.caja_id,
+      fechaVencimiento:
+        req.body.fechaVencimiento
+        ?? req.body.fecha_vencimiento,
       traceId: req.traceId,
     }));
     return res.status(respuesta.estado === 'ok' ? 200 : 400).json({ ...respuesta, traceId: req.traceId });
@@ -49,6 +56,17 @@ export default class IngresoControlador extends IngresoEntradaPuerto {
       usuarioNombre: req.usuario ? `${req.usuario.nombre || ''} ${req.usuario.apellido || ''}`.trim() : null,
       sucursalId: req.usuario?.sucursalId,
       motivo: req.body.motivo,
+      operacionId: req.body.operacionId ?? req.body.operacion_id,
+      idempotencyKey: req.body.idempotencyKey ?? req.body.idempotency_key,
+      operacionIdOriginal:
+        req.body.operacionIdOriginal
+        ?? req.body.operacion_id_original,
+      conReembolso:
+        req.body.conReembolso
+        ?? req.body.con_reembolso
+        ?? false,
+      cajaTipo: req.body.cajaTipo ?? req.body.caja_tipo,
+      cajaId: req.body.cajaId ?? req.body.caja_id,
       traceId: req.traceId,
     }));
     return res.status(respuesta.estado === 'ok' ? 200 : 400).json({ ...respuesta, traceId: req.traceId });

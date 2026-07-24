@@ -1,3 +1,4 @@
+// inventario-servicio/src/aplicacion/dto/IngresoDTO.js
 export class IngresoDTO {
   constructor(datos = {}) {
     this.id = datos.id ?? null;
@@ -7,6 +8,21 @@ export class IngresoDTO {
     this.numeroFactura = datos.numeroFactura ?? null;
     this.fecha = datos.fecha ?? null;
     this.tipoCompra = datos.tipoCompra ?? 'CONTADO';
+    this.metodoPago = datos.metodoPago ?? datos.metodo_pago ?? null;
+    this.cajaTipo = datos.cajaTipo ?? datos.caja_tipo ?? null;
+    this.cajaId = datos.cajaId ?? datos.caja_id ?? null;
+    this.fechaVencimiento =
+      datos.fechaVencimiento
+      ?? datos.fecha_vencimiento
+      ?? null;
+    this.estadoFinanciero =
+      datos.estadoFinanciero
+      ?? datos.estado_financiero
+      ?? null;
+    this.cuentaPagarId =
+      datos.cuentaPagarId
+      ?? datos.cuenta_pagar_id
+      ?? null;
     this.observacion = datos.observacion ?? null;
     this.descuento = Number(datos.descuento) || 0;
     this.flete = Number(datos.flete) || 0;
@@ -21,6 +37,14 @@ export class IngresoDTO {
     this.operacionId = datos.operacionId ?? null;
     this.idempotencyKey = datos.idempotencyKey ?? null;
     this.motivo = datos.motivo ?? null;
+    this.conReembolso =
+      datos.conReembolso
+      ?? datos.con_reembolso
+      ?? false;
+    this.operacionIdOriginal =
+      datos.operacionIdOriginal
+      ?? datos.operacion_id_original
+      ?? null;
     this.traceId = datos.traceId ?? null;
     this.buscar = datos.buscar ?? null;
     this.fechaDesde = datos.fechaDesde ?? null;

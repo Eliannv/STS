@@ -1,3 +1,4 @@
+// cliente/src/components/cajas/RegistrarMovimientoBancoModal.jsx
 import { useState, useEffect } from 'react';
 import { api } from '../../api/api';
 import FormModal from '../common/FormModal';
@@ -6,12 +7,11 @@ const HOY_HORA = () => new Date().toISOString().slice(0, 16);
 
 const CATEGORIAS = {
   INGRESO: [
-    { value: 'CIERRE_CAJA_CHICA', label: 'Cierre caja chica' },
-    { value: 'TRANSFERENCIA_CLIENTE', label: 'Transferencia de cliente' },
+    { value: 'AJUSTE', label: 'Ajuste contable' },
     { value: 'OTRO_INGRESO', label: 'Otros ingresos' },
   ],
   EGRESO: [
-    { value: 'PAGO_PROVEEDORES', label: 'Pago a proveedores' },
+    { value: 'AJUSTE', label: 'Ajuste contable' },
     { value: 'PAGO_TRABAJADOR', label: 'Pago a trabajador' },
     { value: 'OTRO_EGRESO', label: 'Otros egresos' },
   ],
@@ -50,20 +50,25 @@ export default function RegistrarMovimientoBancoModal({ abierto, cajaBancoId, sa
 
     setSaving(true); setError('');
     try {
-      const res = await api.post('/caja-banco/movimiento', {
-        cajaBancoId,
+      const operacionId = crypto.randomUUID();
+      const res = await api.post('/operaciones/ajustes', {
+        caja_tipo: 'BANCO',
+        caja_id: cajaBancoId,
         tipo:        form.tipo,
         categoria:   form.categoria,
         descripcion: form.descripcion.trim(),
         monto:       parseFloat(form.monto),
-        fecha:       form.fecha || null,
-        referencia:  form.referencia.trim() || null,
+        motivo:      form.descripcion.trim(),
+        observacion: form.referencia.trim() || null,
+        fecha_operacion: form.fecha || null,
+        operacion_id: operacionId,
+        idempotency_key: `AJUSTE_CAJA_BANCO:${operacionId}`,
       });
       if (res.ok) {
-        onRegistrado(res.data.resultado);
+        onRegistrado(res.data.data);
         onCerrar();
       } else {
-        setError(res.data?.resultado || 'Error al registrar');
+        setError(res.data?.mensaje || 'Error al registrar');
       }
     } catch {
       setError('Error de conexión');

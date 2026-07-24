@@ -1,10 +1,13 @@
+// facturacion-servicio/src/infraestructura/rutas/Rutas.js
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/AuthMiddleware.js';
 import { facturacionControlador } from '../contenedor/FacturacionContenedor.js';
 import moduloFacturaRutas from './moduloFacturaRutas.js';
 import moduloCobroDeudaRutas from './moduloCobroDeudaRutas.js';
 import moduloVentaTarjetaRutas from './moduloVentaTarjetaRutas.js';
+import moduloReporteInternoRutas from './moduloReporteInternoRutas.js';
 const router = Router();
+router.use('/facturacion/reportes', moduloReporteInternoRutas);
 router.use('/facturas', moduloFacturaRutas);
 router.use('/cobro-deuda', moduloCobroDeudaRutas);
 router.use('/ventas-tarjeta', moduloVentaTarjetaRutas);

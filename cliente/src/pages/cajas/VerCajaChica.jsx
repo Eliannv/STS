@@ -1,3 +1,4 @@
+// cliente/src/pages/cajas/VerCajaChica.jsx
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
@@ -74,7 +75,18 @@ export default function VerCajaChica() {
     });
     if (!result.isConfirmed) return;
     setCerrando(true);
-    const res = await api.put('/caja-chica/cerrar', { id: parseInt(id) });
+    const operacionId = crypto.randomUUID();
+    const res = await api.put('/caja-chica/cerrar', {
+      id: parseInt(id),
+      saldoContado: Number(caja.monto_actual || 0),
+      transferirABanco: true,
+      operacion_id: operacionId,
+      idempotency_keys: {
+        ajuste: `CIERRE_CAJA_CHICA:${id}:${operacionId}:AJUSTE`,
+        salida: `CIERRE_CAJA_CHICA:${id}:${operacionId}:SALIDA`,
+        entrada: `CIERRE_CAJA_CHICA:${id}:${operacionId}:ENTRADA`,
+      },
+    });
     if (res.ok) {
       cargar();
       Swal.fire({ title: 'Cerrado', text: 'La caja fue cerrada correctamente', icon: 'success', timer: 3000, toast: true, position: 'top-end', showConfirmButton: false });
@@ -86,10 +98,17 @@ export default function VerCajaChica() {
   }
 
   async function eliminarMovimiento(movId) {
-    if (!window.confirm('¿Eliminar este movimiento? El saldo será revertido.')) return;
-    const res = await api.delete(`/caja-chica/movimiento/${movId}`);
+    const motivo = window.prompt('Motivo de la reversión:');
+    if (!motivo?.trim()) return;
+    const operacionId = crypto.randomUUID();
+    const res = await api.post(`/operaciones/movimientos/${movId}/revertir`, {
+      cajaTipo: 'CHICA',
+      motivo: motivo.trim(),
+      operacion_id: operacionId,
+      idempotency_key: `REVERSO_CAJA_CHICA:${movId}:${operacionId}`,
+    });
     if (res.ok) cargar();
-    else setError(res.data?.resultado || 'Error al eliminar movimiento');
+    else setError(res.data?.mensaje || res.data?.resultado || 'Error al revertir movimiento');
   }
 
   if (loading) return (

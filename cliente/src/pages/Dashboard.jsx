@@ -5,7 +5,7 @@ import { cargarDashboardResumen } from '../api/dashboardApi';
 import StatCard from '../components/common/StatCard';
 import {
   ShoppingCart, DollarSign, Users, PackageOpen, Handshake,
-  AlertTriangle, Package, BarChart2,
+  AlertTriangle, Package, BarChart2, 
   PlusCircle, FileText, Wallet, Landmark, Truck, Notebook,
   ArrowRight, User, House, TrendingUp, TrendingDown, Activity,
 } from 'lucide-react';
@@ -186,6 +186,7 @@ export default function Dashboard() {
           <StatCard icon={<PackageOpen  size={20} />} label="Ingresos del mes"   value={loading ? '…' : kpis?.ingresos.totalIngresosMes ?? 0} subtext={loading ? '' : `${kpis?.ingresos.pendientes ?? 0} pendientes · ${fmt(kpis?.ingresos.montoIngresosMes)}`} color="#e67e22" />
           <StatCard icon={<Package      size={20} />} label="Productos activos"  value={loading ? '…' : kpis?.productos.totalActivos   ?? 0} subtext={loading ? '' : `${kpis?.productos.unidadesStock ?? 0} unidades · ${kpis?.productos.sinStock ?? 0} sin stock`} color="#1abc9c" />
           <StatCard icon={<BarChart2    size={20} />} label="Valor del inventario" value={loading ? '…' : fmt(kpis?.productos.valorInventario)} subtext={loading ? '' : `${kpis?.productos.conStock ?? 0} productos con stock`} color="#8e44ad" />
+          
         </div>
       </Section>
 

@@ -1,3 +1,4 @@
+// reportes-servicio/src/infraestructura/adaptador-salida/MicroserviciosHttpAdaptador.js
 import ReportesSalidaPuerto from '../../aplicacion/puertos/salida/ReportesSalidaPuerto.js';
 
 const servicios = {
@@ -52,7 +53,7 @@ export default class MicroserviciosHttpAdaptador extends ReportesSalidaPuerto {
 
   async salud() {
     const resultado = {};
-    await Promise.all(Object.entries(this.servicios).map(async ([nombre, base]) => {
+    await Promise.allSettled(Object.entries(this.servicios).map(async ([nombre, base]) => {
       try {
         const response = await fetch(`${base.replace(/\/$/, '')}/health`, { signal: AbortSignal.timeout(3000) });
         resultado[nombre] = response.ok ? 'ok' : 'error';

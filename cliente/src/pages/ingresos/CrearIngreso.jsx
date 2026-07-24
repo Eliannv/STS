@@ -1,3 +1,4 @@
+// cliente/src/pages/ingresos/CrearIngreso.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
@@ -10,6 +11,10 @@ const FORM_VACIO = {
   numeroFactura: '',
   fecha:         HOY,
   tipoCompra:    'CONTADO',
+  metodoPago:    'EFECTIVO',
+  cajaTipo:      'CHICA',
+  cajaId:        '',
+  fechaVencimiento: '',
   descuento:     '0',
   flete:         '0',
   iva:           '0',
@@ -25,6 +30,8 @@ export default function CrearIngreso() {
   const [provOpen, setProvOpen]       = useState(false);
   const [error, setError]         = useState('');
   const [saving, setSaving]       = useState(false);
+  const [cajasBanco, setCajasBanco] = useState([]);
+  const [cajasChicas, setCajasChicas] = useState([]);
   const provRef = useRef(null);
 
   // Cargar proveedores
@@ -33,6 +40,29 @@ export default function CrearIngreso() {
       if (r.ok) setProveedores(r.data.resultado || []);
     });
   }, []);
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/caja-banco/lista?estado=ABIERTA&limit=100'),
+      api.get('/caja-chica/lista?estado=ABIERTA&limit=100'),
+    ]).then(([banco, chica]) => {
+      if (banco.ok) setCajasBanco(banco.data.resultado || []);
+      if (chica.ok) setCajasChicas(chica.data.resultado || []);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (form.tipoCompra !== 'CONTADO') return;
+    const cajaTipo = form.metodoPago === 'EFECTIVO' ? 'CHICA' : 'BANCO';
+    const cajas = cajaTipo === 'CHICA' ? cajasChicas : cajasBanco;
+    setForm(prev => ({
+      ...prev,
+      cajaTipo,
+      cajaId: cajas.some(caja => String(caja.id) === String(prev.cajaId))
+        ? prev.cajaId
+        : cajas[0]?.id ?? '',
+    }));
+  }, [form.tipoCompra, form.metodoPago, cajasBanco, cajasChicas]);
 
   // Cerrar dropdown al clic fuera
   useEffect(() => {
@@ -65,6 +95,10 @@ export default function CrearIngreso() {
     e.preventDefault();
     if (!form.numeroFactura.trim()) { setError('El número de factura es obligatorio'); return; }
     if (!form.fecha)                { setError('La fecha es obligatoria'); return; }
+    if (form.tipoCompra === 'CONTADO' && !form.cajaId) {
+      setError('Debe existir y seleccionarse una caja abierta para registrar el pago');
+      return;
+    }
     setSaving(true); setError('');
     try {
       const res = await api.post('/ingreso/crear', {
@@ -73,6 +107,13 @@ export default function CrearIngreso() {
         numeroFactura:   form.numeroFactura.trim(),
         fecha:           form.fecha,
         tipoCompra:      form.tipoCompra,
+        metodoPago:      form.tipoCompra === 'CONTADO' ? form.metodoPago : null,
+        cajaTipo:        form.tipoCompra === 'CONTADO' ? form.cajaTipo : null,
+        cajaId:          form.tipoCompra === 'CONTADO' ? Number(form.cajaId) : null,
+        fechaVencimiento:
+          form.tipoCompra === 'CREDITO'
+            ? form.fechaVencimiento || null
+            : null,
         descuento:       parseFloat(form.descuento) || 0,
         flete:           parseFloat(form.flete)     || 0,
         iva:             parseFloat(form.iva)       || 0,
@@ -238,6 +279,55 @@ export default function CrearIngreso() {
                   </button>
                 ))}
               </div>
+              {form.tipoCompra === 'CONTADO' ? (
+                <div className="form-grid" style={{ marginTop: 14 }}>
+                  <div className="form-group">
+                    <label className="form-label">Método de pago</label>
+                    <select
+                      className="form-control"
+                      name="metodoPago"
+                      value={form.metodoPago}
+                      onChange={handleChange}
+                    >
+                      <option value="EFECTIVO">Efectivo</option>
+                      <option value="TRANSFERENCIA">Transferencia</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">
+                      {form.cajaTipo === 'CHICA' ? 'Caja chica' : 'Caja banco'}
+                    </label>
+                    <select
+                      className="form-control"
+                      name="cajaId"
+                      value={form.cajaId}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Seleccione una caja abierta</option>
+                      {(form.cajaTipo === 'CHICA' ? cajasChicas : cajasBanco).map(caja => (
+                        <option key={caja.id} value={caja.id}>
+                          #{caja.id} — saldo ${Number(
+                            caja.monto_actual ?? caja.saldo_actual ?? 0,
+                          ).toFixed(2)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="form-group" style={{ marginTop: 14, maxWidth: 360 }}>
+                  <label className="form-label">Fecha de vencimiento</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    name="fechaVencimiento"
+                    value={form.fechaVencimiento}
+                    onChange={handleChange}
+                    min={form.fecha}
+                  />
+                </div>
+              )}
             </section>
 
             {/* Sección 4: Ajustes financieros */}

@@ -1,4 +1,27 @@
+// caja-servicio/src/aplicacion/puertos/salida/CuentaSalidaQueryPuerto.js
+// caja-servicio/src/aplicacion/puertos/salida/CuentaSalidaQueryPuerto.js
 export default class CuentaSalidaQueryPuerto {
-  lista(filtros) { throw new Error('lista no implementado'); }
-  buscarPorId(id) { throw new Error('buscarPorId no implementado'); }
+  findById(id) {
+    throw new Error('Not implemented');
+  }
+
+  findAll(filtro) {
+    throw new Error('Not implemented');
+  }
+
+  findByOperacionId(operacionId) {
+    throw new Error('Not implemented');
+  }
+
+  findByIdempotencyKey(key) {
+    throw new Error('Not implemented');
+  }
+
+  findMovimientoByIdempotencyKey(key) {
+    throw new Error('Not implemented');
+  }
+
+  findMovimientosByCuentaId(cuentaId) {
+    throw new Error('Not implemented');
+  }
 }

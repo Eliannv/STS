@@ -1,3 +1,4 @@
+// cliente/src/components/cajas/AbrirCajaChicaModal.jsx
 import { useState, useEffect } from 'react';
 import { api } from '../../api/api';
 import FormModal from '../common/FormModal';
@@ -5,14 +6,26 @@ import FormModal from '../common/FormModal';
 const HOY = new Date().toISOString().split('T')[0];
 
 export default function AbrirCajaChicaModal({ abierto, onCerrar, onAbierta }) {
-  const [form, setForm]     = useState({ fecha: HOY, montoInicial: '', observacion: '' });
+  const [form, setForm]     = useState({ fecha: HOY, montoInicial: '', observacion: '', cajaBancoId: '' });
+  const [cajasBanco, setCajasBanco] = useState([]);
   const [error, setError]   = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (abierto) {
-      setForm({ fecha: HOY, montoInicial: '', observacion: '' });
+      setForm({ fecha: HOY, montoInicial: '', observacion: '', cajaBancoId: '' });
       setError('');
+      api.get('/caja-banco/lista?estado=ABIERTA&limit=100').then(respuesta => {
+        if (!respuesta.ok) return;
+        const cajas = (respuesta.data.resultado || []).filter(
+          caja => caja.estado === 'ABIERTA',
+        );
+        setCajasBanco(cajas);
+        setForm(actual => ({
+          ...actual,
+          cajaBancoId: cajas[0]?.id ?? '',
+        }));
+      });
     }
   }, [abierto]);
 
@@ -25,18 +38,26 @@ export default function AbrirCajaChicaModal({ abierto, onCerrar, onAbierta }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.fecha)              return setError('La fecha es requerida');
+    if (!form.cajaBancoId)        return setError('La Caja Banco es requerida');
     if (form.montoInicial === '') return setError('El monto inicial es requerido');
     if (parseFloat(form.montoInicial) < 0) return setError('El monto debe ser ≥ 0');
 
     setSaving(true); setError('');
     try {
+      const operacionId = crypto.randomUUID();
       const res = await api.post('/caja-chica/abrir', {
         fecha:         form.fecha,
         montoInicial:  parseFloat(form.montoInicial),
         observacion:   form.observacion || null,
+        cajaBancoId: Number(form.cajaBancoId),
+        operacion_id: operacionId,
+        idempotency_keys: {
+          salida: `APERTURA_CAJA_CHICA:${operacionId}:SALIDA`,
+          entrada: `APERTURA_CAJA_CHICA:${operacionId}:ENTRADA`,
+        },
       });
       if (res.ok) {
-        onAbierta(res.data.resultado);
+        onAbierta(res.data.resultado?.caja ?? res.data.resultado);
         onCerrar();
       } else {
         setError(res.data?.resultado || 'Error al abrir la caja');
@@ -99,6 +120,23 @@ export default function AbrirCajaChicaModal({ abierto, onCerrar, onAbierta }) {
       maxWidth={900}
       rightPanel={rightPanel}
     >
+      <div className="form-group">
+        <label className="form-label">Caja Banco de origen</label>
+        <select
+          className="form-control"
+          name="cajaBancoId"
+          value={form.cajaBancoId}
+          onChange={handleChange}
+          required
+        >
+          <option value="">Seleccione una caja abierta</option>
+          {cajasBanco.map(caja => (
+            <option key={caja.id} value={caja.id}>
+              #{caja.id} — ${Number(caja.saldo_actual || 0).toFixed(2)}
+            </option>
+          ))}
+        </select>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label style={{ fontSize: 13, fontWeight: 600 }}>Fecha de Apertura *</label>

@@ -1,3 +1,4 @@
+// cliente/src/components/cajas/AbrirCajaBancoModal.jsx
 import { useState, useEffect } from 'react';
 import { api } from '../../api/api';
 import FormModal from '../common/FormModal';
@@ -30,13 +31,16 @@ export default function AbrirCajaBancoModal({ abierto, onCerrar, onAbierta }) {
 
     setSaving(true); setError('');
     try {
+      const operacionId = crypto.randomUUID();
       const res = await api.post('/caja-banco/abrir', {
         fecha:        form.fecha,
         saldoInicial: parseFloat(form.saldoInicial),
         observacion:  form.observacion || null,
+        operacion_id: operacionId,
+        idempotency_key: `APERTURA_CAJA_BANCO:${operacionId}`,
       });
       if (res.ok) {
-        onAbierta(res.data.resultado);
+        onAbierta(res.data.resultado?.caja ?? res.data.resultado);
         onCerrar();
       } else {
         setError(res.data?.resultado || 'Error al abrir la caja banco');

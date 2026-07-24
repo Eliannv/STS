@@ -1,3 +1,4 @@
+// cliente/src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Layout from './components/Layout';
@@ -18,13 +19,15 @@ import FichaCliente from './pages/clientes/FichaCliente';
 import Ventas from './pages/ventas/Ventas';
 import CrearVenta from './pages/ventas/CrearVenta';
 import CobrarDeuda from './pages/ventas/CobrarDeuda';
-import VentaTarjeta from './pages/ventas/VentaTarjeta';
-import VerVentaTarjeta from './pages/ventas/VerVentaTarjeta';
 import VerFactura from './pages/facturas/VerFactura';
-import CajaChica from './pages/cajas/CajaChica';
-import VerCajaChica from './pages/cajas/VerCajaChica';
-import CajaBanco from './pages/cajas/CajaBanco';
-import VerCajaBanco from './pages/cajas/VerCajaBanco';
+import CajaBancoPage from './pages/CajaBanco/CajaBancoPage';
+import CajaBancoDetalle from './pages/CajaBanco/CajaBancoDetalle';
+import CajaChicaPage from './pages/CajaChica/CajaChicaPage';
+import CajaChicaDetalle from './pages/CajaChica/CajaChicaDetalle';
+import VentasTarjetaPage from './pages/VentasTarjeta/VentasTarjetaPage';
+import VentaTarjetaDetalle from './pages/VentasTarjeta/VentaTarjetaDetalle';
+import CuentasPagarPage from './pages/CuentasPagar/CuentasPagarPage';
+import CuentasCobrarPage from './pages/CuentasCobrar/CuentasCobrarPage';
 import ReportCategory from './pages/reportes/ReportCategory';
 import ReportPage from './pages/reportes/ReportPage';
 import KardexPage from './pages/reportes/KardexPage';
@@ -53,13 +56,17 @@ export default function App() {
             <Route path="/facturas" element={<Ventas />} />
             <Route path="/facturas/nueva" element={<CrearVenta />} />
             <Route path="/facturas/cobrar" element={<CobrarDeuda />} />
-            <Route path="/ventas/venta-tarjeta" element={<VentaTarjeta />} />
-            <Route path="/ventas/venta-tarjeta/:id" element={<VerVentaTarjeta />} />
+            <Route path="/ventas/venta-tarjeta" element={<VentasTarjetaPage />} />
+            <Route path="/ventas/venta-tarjeta/:id" element={<VentaTarjetaDetalle />} />
+            <Route path="/ventas-tarjeta" element={<Navigate to="/ventas/venta-tarjeta" replace />} />
+            <Route path="/ventas-tarjeta/:id" element={<VentaTarjetaDetalle />} />
             <Route path="/facturas/:id" element={<VerFactura />} />
-            <Route path="/caja-chica" element={<CajaChica />} />
-            <Route path="/caja-chica/:id" element={<VerCajaChica />} />
-            <Route path="/caja-banco" element={<CajaBanco />} />
-            <Route path="/caja-banco/:id" element={<VerCajaBanco />} />
+            <Route path="/caja-chica" element={<CajaChicaPage />} />
+            <Route path="/caja-chica/:id" element={<CajaChicaDetalle />} />
+            <Route path="/caja-banco" element={<CajaBancoPage />} />
+            <Route path="/caja-banco/:id" element={<CajaBancoDetalle />} />
+            <Route path="/cuentas-pagar" element={<CuentasPagarPage />} />
+            <Route path="/cuentas-cobrar" element={<CuentasCobrarPage />} />
             <Route path="/reportes/inventario/kardex" element={<KardexPage />} />
             <Route path="/reportes/inventario/kardex-producto" element={<Navigate to="/reportes/inventario/kardex" replace />} />
             <Route path="/reportes/inventario/kardex-fecha" element={<Navigate to="/reportes/inventario/kardex" replace />} />
@@ -78,7 +85,7 @@ export default function App() {
             <Route path="/reportes/ventas/ventas-usuario" element={<Navigate to="/reportes/ventas/analisis-ventas" replace />} />
             <Route path="/reportes/ventas/ventas-cliente" element={<Navigate to="/reportes/ventas/analisis-ventas" replace />} />
             <Route path="/reportes/ventas/utilidad-ventas" element={<Navigate to="/reportes/ventas/analisis-ventas" replace />} />
-            <Route path="/reportes/ventas/cuentas-cobrar" element={<Navigate to="/facturas" replace />} />
+            <Route path="/reportes/ventas/cuentas-cobrar" element={<Navigate to="/cuentas-cobrar" replace />} />
             <Route path="/reportes/compras/compras-proveedor" element={<Navigate to="/proveedores" replace />} />
             <Route path="/reportes/compras/ingresos-mercaderia" element={<Navigate to="/ingresos" replace />} />
             <Route path="/reportes/:categoria/:reporte" element={<ReportPage />} />

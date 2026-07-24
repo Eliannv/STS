@@ -1,8 +1,15 @@
+// reportes-servicio/src/dominio/servicios/ReportesDominioServicio.js
 import ReporteDTO from '../../aplicacion/dto/ReporteDTO.js';
 
 const numero = (valor) => Number(valor || 0);
 const lista = (respuesta) => Array.isArray(respuesta?.resultado) ? respuesta.resultado : [];
 const resultado = (respuesta) => respuesta?.resultado ?? null;
+const resolverParalelo = async (promesas) => {
+  const resultados = await Promise.allSettled(promesas);
+  const fallido = resultados.find((item) => item.status === 'rejected');
+  if (fallido) throw fallido.reason;
+  return resultados.map((item) => item.value);
+};
 const fechaRegistro = (registro) => registro.created_at || registro.fecha || registro.fecha_pago || registro.fecha_venta || registro.fecha_emision;
 const dentroDeRango = (valor, desde, hasta) => {
   if (!desde && !hasta) return true;
@@ -96,6 +103,28 @@ export default class ReportesDominioServicio {
   async detallesFacturas(contexto) { return this.salida.listarTodos('facturacion', 'detalle-facturas', {}, contexto); }
   async abonos(contexto) { return this.salida.listarTodos('facturacion', 'deudas', {}, contexto); }
 
+  async reporteInterno(servicio, ruta, query = {}, contexto = {}) {
+    const registros = [];
+    const limit = 500;
+    let page = 0;
+    let totalRows = 0;
+    do {
+      const respuesta = await this.salida.leer(
+        servicio,
+        ruta,
+        { ...query, page, limit },
+        contexto,
+      );
+      const pagina = resultado(respuesta) || {};
+      const items = Array.isArray(pagina.items) ? pagina.items : [];
+      registros.push(...items);
+      totalRows = Number(pagina.totalRows ?? items.length);
+      page += 1;
+      if (!items.length) break;
+    } while (registros.length < totalRows);
+    return registros;
+  }
+
   async catalogoSeguro(servicio, ruta, contexto, query = {}) {
     try {
       return await this.salida.listarTodos(servicio, ruta, query, contexto);
@@ -106,7 +135,7 @@ export default class ReportesDominioServicio {
   }
 
   async catalogosVentas(contexto) {
-    const [usuarios, sucursales, clientes] = await Promise.all([
+    const [usuarios, sucursales, clientes] = await resolverParalelo([
       this.catalogoSeguro('usuario', 'usuarios', contexto, { incluirInactivos: true }),
       this.catalogoSeguro('usuario', 'sucursales', contexto),
       this.catalogoSeguro('cliente', 'clientes', contexto),
@@ -220,7 +249,7 @@ export default class ReportesDominioServicio {
   async contextoVentas(filtros, contexto, incluirProductos = false) {
     const consultas = [this.facturas(contexto), this.detallesFacturas(contexto)];
     if (incluirProductos) consultas.push(this.productos(contexto));
-    const [facturas, detalles, productos = []] = await Promise.all(consultas);
+    const [facturas, detalles, productos = []] = await resolverParalelo(consultas);
     const coincide = (valor, filtro) => !filtro || String(valor) === String(filtro);
     const vigentes = filtrarRango(facturas.filter((factura) => factura.estado_pago !== 'ANULADA'), filtros)
       .filter((factura) => coincide(factura.sucursal_id, filtros.sucursalId))
@@ -286,13 +315,43 @@ export default class ReportesDominioServicio {
   }
 
   async ventasGenerales(filtros, contexto, configuracion = {}) {
-    const [facturas, detalles, productos, abonos, catalogos] = await Promise.all([
+    const [facturas, detalles, productos, abonos, catalogos] = await resolverParalelo([
       this.facturas(contexto),
       this.detallesFacturas(contexto),
       this.productos(contexto),
       this.abonos(contexto),
       this.catalogosVentas(contexto),
     ]);
+    const [ventasFinancierasResultado, cuentasCobrarResultado] = await Promise.allSettled([
+      this.reporteInterno('facturacion', 'facturacion/reportes/ventas', filtros, contexto),
+      this.reporteInterno(
+        'caja',
+        'caja/reportes/cuentas-cobrar',
+        { ...filtros, estado: filtros.estadoCuenta || undefined },
+        contexto,
+      ),
+    ]);
+    const ventasFinancieras = ventasFinancierasResultado.status === 'fulfilled'
+      ? ventasFinancierasResultado.value
+      : [];
+    const cuentasCobrar = cuentasCobrarResultado.status === 'fulfilled'
+      ? cuentasCobrarResultado.value
+      : [];
+    const ventaFinancieraPorFactura = new Map(
+      ventasFinancieras.map((venta) => [Number(venta.id), venta]),
+    );
+    const cuentaPorFactura = new Map();
+    cuentasCobrar.forEach((cuenta) => {
+      const facturaId = Number(cuenta.referencia_id);
+      if (!facturaId) return;
+      const actual = cuentaPorFactura.get(facturaId) || {
+        saldo: 0,
+        monto_abonado: 0,
+      };
+      actual.saldo += numero(cuenta.saldo);
+      actual.monto_abonado += numero(cuenta.monto_abonado);
+      cuentaPorFactura.set(facturaId, actual);
+    });
     const costos = new Map(productos.map(producto => [Number(producto.id), numero(producto.costo)]));
     const detallesPorFactura = new Map();
     detalles.forEach(detalle => {
@@ -320,11 +379,19 @@ export default class ReportesDominioServicio {
       .filter(factura => coincide(factura.estado_pago, filtros.estado))
       .filter(factura => !filtros.metodoPago || normalizarMetodoPago(factura.metodo_pago, factura.es_credito) === filtros.metodoPago)
       .map(factura => {
+        const ventaFinanciera = ventaFinancieraPorFactura.get(Number(factura.id));
+        const cuenta = cuentaPorFactura.get(Number(factura.id));
         const costo = (detallesPorFactura.get(Number(factura.id)) || []).reduce(
           (suma, detalle) => suma + (costos.get(Number(detalle.producto_id)) || 0) * numero(detalle.cantidad),
           0,
         );
         const total = numero(factura.total);
+        const montoCobrado = numero(
+          ventaFinanciera?.total_cobrado ?? cuenta?.monto_abonado,
+        );
+        const saldoPendiente = numero(
+          cuenta?.saldo ?? ventaFinanciera?.saldo_credito,
+        );
         return {
           id: `VENTA-${factura.id}`,
           referenciaId: factura.id,
@@ -346,9 +413,9 @@ export default class ReportesDominioServicio {
           iva: numero(factura.iva),
           total,
           monto: total,
-          montoCobrado: factura.es_credito ? 0 : numero(factura.abonado),
-          abonado: numero(factura.abonado),
-          saldoPendiente: numero(factura.saldo_pendiente),
+          montoCobrado,
+          abonado: montoCobrado,
+          saldoPendiente,
           costo: Number(costo.toFixed(2)),
           utilidad: Number((total - costo).toFixed(2)),
         };
@@ -448,30 +515,28 @@ export default class ReportesDominioServicio {
   }
 
   async ventasAgrupadas(filtros, contexto, campoId, campoNombre, codigo, titulo) {
-    const { facturas } = await this.contextoVentas(filtros, contexto);
-    let catalogo = [];
-    try {
-      catalogo = campoId === 'sucursal_id'
-        ? await this.salida.listarTodos('usuario', 'sucursales', {}, contexto)
-        : campoId === 'usuario_id'
-          ? await this.salida.listarTodos('usuario', 'usuarios', { incluirInactivos: true }, contexto)
-          : [];
-    } catch (error) {
-      if (![401, 403].includes(error.status)) throw error;
-    }
-    const nombres = new Map(catalogo.map((item) => [Number(item.id), item.nombre_completo || [item.nombre, item.apellido].filter(Boolean).join(' ') || 'Sin asignar']));
+    const base = await this.ventasGenerales(
+      { ...filtros, page: 1, pageSize: 5000, tipoTransaccion: 'VENTAS' },
+      contexto,
+    );
+    const campos = {
+      sucursal_id: ['sucursalId', 'sucursal'],
+      usuario_id: ['usuarioId', 'usuario'],
+      cliente_id: ['clienteId', 'cliente'],
+    };
+    const [idFila, nombreFila] = campos[campoId];
     const acumulado = new Map();
-    facturas.forEach((factura) => {
-      const id = factura[campoId] || 'sin-asignar';
-      const nombre = factura[campoNombre] || nombres.get(Number(factura[campoId])) || (factura[campoId] ? `#${factura[campoId]}` : 'Sin asignar');
-      const actual = acumulado.get(id) || { [campoId]: factura[campoId] || null, [campoNombre]: nombre, ventas: 0, total: 0, abonado: 0, saldo_pendiente: 0 };
+    base.rows.forEach((venta) => {
+      const id = venta[idFila] || 'sin-asignar';
+      const nombre = venta[nombreFila] || (venta[idFila] ? `#${venta[idFila]}` : 'Sin asignar');
+      const actual = acumulado.get(id) || { [campoId]: venta[idFila] || null, [campoNombre]: nombre, ventas: 0, total: 0, abonado: 0, saldo_pendiente: 0 };
       actual.ventas += 1;
-      actual.total += numero(factura.total);
-      actual.abonado += numero(factura.abonado);
-      actual.saldo_pendiente += numero(factura.saldo_pendiente);
+      actual.total += numero(venta.total);
+      actual.abonado += numero(venta.abonado);
+      actual.saldo_pendiente += numero(venta.saldoPendiente);
       acumulado.set(id, actual);
     });
-    return reporte(codigo, titulo, filtros, ordenar([...acumulado.values()], 'total'), { ventas: facturas.length });
+    return reporte(codigo, titulo, filtros, ordenar([...acumulado.values()], 'total'), { ventas: base.rows.length });
   }
 
   ventasPorSucursal(filtros, contexto) { return this.ventasAgrupadas(filtros, contexto, 'sucursal_id', 'sucursal_nombre', 'ventas-sucursal', 'Ventas por sucursal'); }
@@ -491,11 +556,11 @@ export default class ReportesDominioServicio {
   }
 
   async movimientosCajas(contexto) {
-    const [banco, chica] = await Promise.all([
+    const [banco, chica] = await resolverParalelo([
       this.salida.listarTodos('caja', 'cajas-banco', {}, contexto),
       this.salida.listarTodos('caja', 'cajas-chicas', {}, contexto),
     ]);
-    const cargar = async (cajas, ruta, tipo) => (await Promise.all(cajas.map(async (caja) => {
+    const cargar = async (cajas, ruta, tipo) => (await resolverParalelo(cajas.map(async (caja) => {
       const respuesta = await this.salida.leer('caja', `${ruta}/${caja.id}/movimientos`, {}, contexto);
       return lista(respuesta).map((movimiento) => ({ ...movimiento, tipo_caja: tipo, caja_id: caja.id }));
     }))).flat();
@@ -508,13 +573,27 @@ export default class ReportesDominioServicio {
   }
 
   async estadoCuentasCobrar(filtros, contexto) {
-    const { facturas } = await this.contextoVentas(filtros, contexto);
-    const filas = facturas
-      .filter((factura) => numero(factura.saldo_pendiente) > 0)
-      .filter((factura) => !filtros.buscar
-        || coincideTexto(factura.id_personalizado, filtros.buscar)
-        || coincideTexto(factura.cliente_nombre, filtros.buscar))
-      .map((factura) => ({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: factura.cliente_id, cliente_nombre: factura.cliente_nombre, total: numero(factura.total), abonado: numero(factura.abonado), saldo_pendiente: numero(factura.saldo_pendiente), fecha: fechaRegistro(factura) }));
+    const cuentas = await this.reporteInterno(
+      'caja',
+      'caja/reportes/cuentas-cobrar',
+      filtros,
+      contexto,
+    );
+    const filas = cuentas
+      .filter((cuenta) => numero(cuenta.saldo) > 0)
+      .filter((cuenta) => !filtros.buscar
+        || coincideTexto(cuenta.referencia_codigo, filtros.buscar)
+        || coincideTexto(cuenta.tercero_nombre, filtros.buscar))
+      .map((cuenta) => ({
+        factura_id: cuenta.referencia_id,
+        factura_id_personalizado: cuenta.referencia_codigo,
+        cliente_id: cuenta.tercero_id,
+        cliente_nombre: cuenta.tercero_nombre,
+        total: numero(cuenta.monto_total),
+        abonado: numero(cuenta.monto_abonado),
+        saldo_pendiente: numero(cuenta.saldo),
+        fecha: cuenta.fecha_emision || cuenta.fecha,
+      }));
     return reporte('estado-cuentas-cobrar', 'Estado de cuentas por cobrar', filtros, filas, { facturas: filas.length, saldo_total: filas.reduce((suma, item) => suma + item.saldo_pendiente, 0) });
   }
 
@@ -559,7 +638,7 @@ export default class ReportesDominioServicio {
 
   async dashboardIndicadores(filtros, contexto) {
     const periodo = periodoMes(filtros);
-    const [analisisVentas, inventario, ingresos, clientes, cajaChica, cajaBanco] = await Promise.all([
+    const [analisisVentas, inventario, ingresos, clientes, cajaChica, cajaBanco] = await resolverParalelo([
       this.ventasGenerales(
         { tipoTransaccion: 'VENTAS_COBROS', page: 1, pageSize: Number.MAX_SAFE_INTEGER },
         contexto,

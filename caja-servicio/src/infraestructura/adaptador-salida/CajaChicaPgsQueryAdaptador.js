@@ -1,23 +1,108 @@
+// caja-servicio/src/infraestructura/adaptador-salida/CajaChicaPgsQueryAdaptador.js
 import { Op } from 'sequelize';
 import CajaChicaSalidaQueryPuerto from '../../aplicacion/puertos/salida/CajaChicaSalidaQueryPuerto.js';
-import { CajaChica, MovimientoChica } from '../modelos/Modelos.js';
+import CajaChica from '../../dominio/entidades/CajaChica.js';
+import MovimientoFinanciero from '../../dominio/entidades/MovimientoFinanciero.js';
+import ModeloCajaChica from '../modelos/ModeloCajaChica.js';
+import ModeloMovimientoChica from '../modelos/ModeloMovimientoChica.js';
+
+const mapearCaja = (modelo) => (
+  modelo ? new CajaChica(modelo.get({ plain: true })) : null
+);
+
+const mapearMovimiento = (modelo) => (
+  modelo ? new MovimientoFinanciero(modelo.get({ plain: true })) : null
+);
 
 export default class CajaChicaPgsQueryAdaptador extends CajaChicaSalidaQueryPuerto {
-  async lista({ estado, fechaDesde, fechaHasta, limit = 20, offset = 0 } = {}) {
+  async lista({
+    estado,
+    fechaDesde,
+    fechaHasta,
+    cajaBancoId,
+    limit = 20,
+    offset = 0,
+  } = {}) {
     const where = { activo: true };
     if (estado) where.estado = estado;
-    if (fechaDesde || fechaHasta) where.fecha = { ...(fechaDesde ? { [Op.gte]: fechaDesde } : {}), ...(fechaHasta ? { [Op.lte]: fechaHasta } : {}) };
-    return { estado: 'ok', resultado: await CajaChica.findAll({ where, order: [['created_at', 'DESC']], limit: Math.min(Number(limit) || 20, 100), offset: Math.max(Number(offset) || 0, 0) }) };
+    if (cajaBancoId) where.caja_banco_id = cajaBancoId;
+    if (fechaDesde || fechaHasta) {
+      where.fecha = {
+        ...(fechaDesde ? { [Op.gte]: fechaDesde } : {}),
+        ...(fechaHasta ? { [Op.lte]: fechaHasta } : {}),
+      };
+    }
+
+    const cajas = await ModeloCajaChica.findAll({
+      where,
+      order: [['created_at', 'DESC'], ['id', 'DESC']],
+      limit: Math.min(Number(limit) || 20, 100),
+      offset: Math.max(Number(offset) || 0, 0),
+    });
+    return { estado: 'ok', resultado: cajas.map(mapearCaja) };
   }
 
   async buscarPorId(id) {
-    const caja = await CajaChica.findOne({ where: { id, activo: true } });
-    if (!caja) return { estado: 'error', resultado: 'Caja chica no encontrada' };
-    const movimientos = await MovimientoChica.findAll({ where: { caja_chica_id: id } });
-    return { estado: 'ok', resultado: { ...caja.toJSON(), resumen: { total_ingresos: movimientos.filter((m) => m.tipo === 'INGRESO').reduce((s, m) => s + Number(m.monto || 0), 0), total_egresos: movimientos.filter((m) => m.tipo === 'EGRESO').reduce((s, m) => s + Number(m.monto || 0), 0), cantidad_movimientos: movimientos.length } } };
+    const caja = mapearCaja(
+      await ModeloCajaChica.findOne({
+        where: { id, activo: true },
+      }),
+    );
+    if (caja) {
+      caja.resumen = {
+        total_ingresos: Number(caja.getIngresosAcumulados()),
+        total_egresos: Number(caja.getEgresosAcumulados()),
+        cantidad_movimientos: Number(caja.getTotalMovimientos()),
+      };
+    }
+    return caja
+      ? { estado: 'ok', resultado: caja }
+      : { estado: 'error', resultado: 'Caja Chica no encontrada' };
   }
 
-  async cajaAbierta() { return { estado: 'ok', resultado: await CajaChica.findOne({ where: { estado: 'ABIERTA', activo: true }, order: [['created_at', 'DESC']] }) }; }
-  async buscarPorFecha(fecha) { return CajaChica.findAll({ where: { fecha, activo: true }, order: [['created_at', 'DESC']] }); }
-  async listarMovimientos(cajaId) { return { estado: 'ok', resultado: await MovimientoChica.findAll({ where: { caja_chica_id: cajaId }, order: [['fecha', 'DESC'], ['id', 'DESC']] }) }; }
+  async cajaAbierta() {
+    return {
+      estado: 'ok',
+      resultado: mapearCaja(
+        await ModeloCajaChica.findOne({
+          where: { estado: 'ABIERTA', activo: true },
+          order: [['created_at', 'DESC']],
+        }),
+      ),
+    };
+  }
+
+  async buscarAbiertaPorCajaBanco(cajaBancoId) {
+    return {
+      estado: 'ok',
+      resultado: mapearCaja(
+        await ModeloCajaChica.findOne({
+          where: {
+            caja_banco_id: cajaBancoId,
+            estado: 'ABIERTA',
+            activo: true,
+          },
+        }),
+      ),
+    };
+  }
+
+  async buscarPorFecha(fecha) {
+    const cajas = await ModeloCajaChica.findAll({
+      where: { fecha, activo: true },
+      order: [['created_at', 'DESC']],
+    });
+    return { estado: 'ok', resultado: cajas.map(mapearCaja) };
+  }
+
+  async listarMovimientos(cajaId) {
+    const movimientos = await ModeloMovimientoChica.findAll({
+      where: { caja_chica_id: cajaId },
+      order: [['fecha_operacion', 'DESC'], ['id', 'DESC']],
+    });
+    return {
+      estado: 'ok',
+      resultado: movimientos.map(mapearMovimiento),
+    };
+  }
 }

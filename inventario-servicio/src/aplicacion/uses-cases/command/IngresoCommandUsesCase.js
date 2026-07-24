@@ -1,9 +1,17 @@
+// inventario-servicio/src/aplicacion/uses-cases/command/IngresoCommandUsesCase.js
 import Ingreso from '../../../dominio/entidades/Ingreso.js';
 import DetalleIngreso from '../../../dominio/entidades/DetalleIngreso.js';
+import { randomUUID } from 'node:crypto';
 
 export default class IngresoCommandUsesCase {
-  constructor(adaptadorBDSalidaCommand) {
+  constructor(
+    adaptadorBDSalidaCommand,
+    operacionFinancieraCommand = null,
+    cajaSalida = null,
+  ) {
     this.adaptadorBDSalida = adaptadorBDSalidaCommand;
+    this.operacionFinancieraCommand = operacionFinancieraCommand;
+    this.cajaSalida = cajaSalida;
   }
 
   crear(dto) {
@@ -17,8 +25,25 @@ export default class IngresoCommandUsesCase {
     return this.adaptadorBDSalida.actualizar(new Ingreso(dto.id, dto));
   }
 
-  finalizar(dto) { return dto.id ? this.adaptadorBDSalida.finalizar(dto) : Promise.resolve({ estado: 'error', resultado: 'El ID es requerido para finalizar' }); }
-  eliminar(dto) { return dto.id ? this.adaptadorBDSalida.eliminar(dto) : Promise.resolve({ estado: 'error', resultado: 'El ID es requerido para eliminar' }); }
+  async finalizar(dto) {
+    if (!dto.id) {
+      return { estado: 'error', resultado: 'El ID es requerido para finalizar' };
+    }
+    dto.operacionId ??= randomUUID();
+    dto.idempotencyKey ??= `COMPRA:${dto.id}`;
+    const respuesta = await this.adaptadorBDSalida.finalizar(dto);
+    return this.procesarOperacionPendiente(respuesta);
+  }
+
+  async eliminar(dto) {
+    if (!dto.id) {
+      return { estado: 'error', resultado: 'El ID es requerido para eliminar' };
+    }
+    dto.operacionId ??= randomUUID();
+    dto.idempotencyKey ??= `ANULACION_COMPRA:${dto.id}`;
+    const respuesta = await this.adaptadorBDSalida.eliminar(dto);
+    return this.procesarOperacionPendiente(respuesta);
+  }
 
   agregarDetalle(dto) {
     if (!dto.ingresoId) return Promise.resolve({ estado: 'error', resultado: 'El ID del ingreso es requerido' });
@@ -36,4 +61,53 @@ export default class IngresoCommandUsesCase {
   }
 
   eliminarDetalle(dto) { return dto.id ? this.adaptadorBDSalida.eliminarDetalle(dto.id) : Promise.resolve({ estado: 'error', resultado: 'El ID del detalle es requerido' }); }
+
+  async procesarOperacionPendiente(respuesta) {
+    const operacion = respuesta?.operacionFinanciera;
+    if (
+      respuesta?.estado !== 'ok'
+      || !operacion
+      || !this.operacionFinancieraCommand
+      || !this.cajaSalida
+    ) {
+      return respuesta;
+    }
+
+    const envio = operacion.getTipo() === 'COMPRA_CONTADO'
+      || operacion.getTipo() === 'COMPRA_CREDITO'
+      ? await this.cajaSalida.postCompra(
+        operacion.getPayload(),
+        operacion.getTraceId(),
+      )
+      : await this.cajaSalida.postAnulacionCompra(
+        operacion.getPayload(),
+        operacion.getTraceId(),
+      );
+
+    if (envio.ok) {
+      await this.operacionFinancieraCommand.marcarAplicada(
+        operacion.getId(),
+        envio.data,
+      );
+      const cuentaPagarId = envio.data?.cuenta_pagar_id ?? null;
+      if (cuentaPagarId) {
+        await this.operacionFinancieraCommand.vincularCuentaPagar(
+          operacion.getId(),
+          cuentaPagarId,
+        );
+      }
+      return {
+        ...respuesta,
+        estadoFinanciero: 'APLICADO',
+        cuentaPagarId,
+      };
+    }
+
+    return {
+      ...respuesta,
+      estadoFinanciero: 'PENDIENTE',
+      advertenciaFinanciera:
+        'El inventario fue confirmado; la operación financiera será reintentada.',
+    };
+  }
 }

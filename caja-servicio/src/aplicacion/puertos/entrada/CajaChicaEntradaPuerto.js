@@ -1,8 +1,42 @@
+// caja-servicio/src/aplicacion/puertos/entrada/CajaChicaEntradaPuerto.js
 export default class CajaChicaEntradaPuerto {
-  abrir(req, res) { throw new Error('abrir no implementado'); }
-  cerrar(req, res) { throw new Error('cerrar no implementado'); }
-  lista(req, res) { throw new Error('lista no implementado'); }
-  buscarPorId(req, res) { throw new Error('buscarPorId no implementado'); }
-  movimiento(req, res) { throw new Error('movimiento no implementado'); }
-  listarMovimientos(req, res) { throw new Error('listarMovimientos no implementado'); }
+  abrirCajaChica(datos) {
+    throw new Error('Not implemented');
+  }
+
+  cerrarCajaChica(datos) {
+    throw new Error('Not implemented');
+  }
+
+  reponerCajaChica(datos) {
+    throw new Error('Not implemented');
+  }
+
+  devolverCajaChica(datos) {
+    throw new Error('Not implemented');
+  }
+
+  abrir(req, res) {
+    throw new Error('Not implemented');
+  }
+
+  cerrar(req, res) {
+    throw new Error('Not implemented');
+  }
+
+  lista(req, res) {
+    throw new Error('Not implemented');
+  }
+
+  buscarPorId(req, res) {
+    throw new Error('Not implemented');
+  }
+
+  movimiento(req, res) {
+    throw new Error('Not implemented');
+  }
+
+  listarMovimientos(req, res) {
+    throw new Error('Not implemented');
+  }
 }

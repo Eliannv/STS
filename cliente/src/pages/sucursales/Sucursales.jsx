@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import FormModal from '../../components/common/FormModal';
 
 const VACIO = { codigo: '', nombre: '', direccion: '', telefono: '', email: '', activo: true };
 
@@ -139,63 +140,100 @@ export default function Sucursales() {
         </div>
       </div>
 
-      {modal && (
-        <div className="modal-overlay" onClick={cerrar}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <span className="modal-title">{editando ? 'Editar sucursal' : 'Nueva sucursal'}</span>
-              <button className="btn-icon" onClick={cerrar}>✕</button>
-            </div>
-            <form onSubmit={guardar}>
-              <div className="modal-body">
-                {error && <div className="alert alert-error">{error}</div>}
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label">Código *</label>
-                    <input className="form-control" name="codigo" value={form.codigo} onChange={handleChange} required placeholder="S001" maxLength={20} />
-                    <small style={{ fontSize: 11, color: '#64748b' }}>Se guarda en mayúsculas y debe ser único.</small>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Nombre *</label>
-                    <input className="form-control" name="nombre" value={form.nombre} onChange={handleChange} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Teléfono</label>
-                    <input className="form-control" name="telefono" value={form.telefono} onChange={handleChange} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Email</label>
-                    <input className="form-control" type="email" name="email" value={form.email} onChange={handleChange} />
-                  </div>
-                  <div className="form-group full">
-                    <label className="form-label">Dirección</label>
-                    <input className="form-control" name="direccion" value={form.direccion} onChange={handleChange} />
-                  </div>
-                  {editando && !editando.es_matriz && (
-                    <div className="form-group full">
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                        <input type="checkbox" name="activo" checked={form.activo} onChange={handleChange} />
-                        Sucursal activa
-                      </label>
-                    </div>
-                  )}
-                  {editando?.es_matriz && (
-                    <div className="form-group full">
-                      <small style={{ fontSize: 12, color: '#64748b' }}>
-                        Esta es la sucursal matriz: no puede desactivarse.
-                      </small>
-                    </div>
-                  )}
+      {modal && (() => {
+        const rightPanel = (
+          <>
+            <div style={{ background: '#fff', border: '1px solid var(--border-color)', borderRadius: 10, padding: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span style={{ fontWeight: 700, fontSize: 13 }}>Información</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Tipo:</span>
+                  <span style={{ fontWeight: 600 }}>Sucursal</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Estado:</span>
+                  <span style={{ fontWeight: 600, color: form.activo ? 'var(--success-color)' : '#b91c1c' }}>
+                    {form.activo ? 'Activa' : 'Inactiva'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>¿Es matriz?:</span>
+                  <span style={{ fontWeight: 600 }}>{editando?.es_matriz ? 'Sí' : 'No'}</span>
                 </div>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={cerrar}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
+            </div>
+
+            <div style={{ background: '#fff', border: '1px solid var(--border-color)', borderRadius: 10, padding: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span style={{ fontWeight: 700, fontSize: 13 }}>Datos Requeridos</span>
               </div>
-            </form>
+              {['Código único (guardado en mayúsculas)', 'Nombre descriptivo', 'Datos de contacto', 'Dirección opcional'].map(txt => (
+                <div key={txt} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" strokeWidth="2.5" style={{ marginTop: 1, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                  {txt}
+                </div>
+              ))}
+            </div>
+          </>
+        );
+
+        return (
+        <FormModal
+          abierto={modal}
+          titulo={editando ? 'Editar sucursal' : 'Nueva sucursal'}
+          subtitulo={editando ? 'Modifique los datos de la sucursal' : 'Cree una nueva sucursal operativa'}
+          onCerrar={cerrar}
+          onSubmit={guardar}
+          saving={saving}
+          saveLabel="Guardar"
+          error={error}
+          rightPanel={rightPanel}
+        >
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Código *</label>
+              <input className="form-control" name="codigo" value={form.codigo} onChange={handleChange} required placeholder="S001" maxLength={20} />
+              <small style={{ fontSize: 11, color: '#64748b' }}>Se guarda en mayúsculas y debe ser único.</small>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Nombre *</label>
+              <input className="form-control" name="nombre" value={form.nombre} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Teléfono</label>
+              <input className="form-control" name="telefono" value={form.telefono} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input className="form-control" type="email" name="email" value={form.email} onChange={handleChange} />
+            </div>
+            <div className="form-group full">
+              <label className="form-label">Dirección</label>
+              <input className="form-control" name="direccion" value={form.direccion} onChange={handleChange} />
+            </div>
+            {editando && !editando.es_matriz && (
+              <div className="form-group full">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" name="activo" checked={form.activo} onChange={handleChange} />
+                  Sucursal activa
+                </label>
+              </div>
+            )}
+            {editando?.es_matriz && (
+              <div className="form-group full">
+                <small style={{ fontSize: 12, color: '#64748b' }}>
+                  Esta es la sucursal matriz: no puede desactivarse.
+                </small>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        </FormModal>
+        );
+      })()}
     </div>
   );
 }

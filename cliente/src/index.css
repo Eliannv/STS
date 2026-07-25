@@ -561,3 +561,129 @@ tbody tr:hover td {
         grid-template-columns: 1fr;
     }
 }
+
+/* ═══ Componente reutilizable EntityAutocomplete ═══ */
+.entity-autocomplete {
+  position: relative;
+  width: 100%;
+}
+
+.entity-autocomplete__input {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: var(--text-muted);
+}
+
+.entity-autocomplete__input:focus-within {
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, .12);
+}
+
+.entity-autocomplete__input.is-selected {
+  border-color: #8fd0ad;
+  background: #fbfffc;
+}
+
+.entity-autocomplete__input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.entity-autocomplete__input button {
+  display: inline-flex;
+  border: 0;
+  padding: 2px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.entity-autocomplete__spinner {
+  width: 15px;
+  height: 15px;
+  border-width: 2px;
+}
+
+.entity-autocomplete__check {
+  color: var(--success-color);
+}
+
+.entity-autocomplete__results {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #fff;
+  box-shadow: var(--shadow-lg);
+}
+
+.entity-autocomplete__results > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border-light);
+  background: #fff;
+  text-align: left;
+}
+
+.entity-autocomplete__results > button:hover {
+  background: #f4f9fd;
+}
+
+.entity-autocomplete__icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #eaf4fb;
+  color: var(--primary-color);
+}
+
+.entity-autocomplete__content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.entity-autocomplete__content strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entity-autocomplete__content small {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.entity-autocomplete__empty {
+  padding: 18px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}

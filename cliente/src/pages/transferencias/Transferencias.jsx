@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import { useSucursal } from '../../context/SucursalContext';
+import FormModal from '../../components/common/FormModal';
+import ProductoAutocomplete from '../../components/common/ProductoAutocomplete';
+import TableCard from '../../components/common/TableCard';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fecha = (valor) => (valor ? new Date(valor).toLocaleString() : '—');
@@ -20,8 +23,6 @@ export default function Transferencias() {
   const [destino, setDestino] = useState('');
   const [motivo, setMotivo] = useState('');
   const [observacion, setObservacion] = useState('');
-  const [buscar, setBuscar] = useState('');
-  const [encontrados, setEncontrados] = useState([]);
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -37,18 +38,10 @@ export default function Transferencias() {
 
   // Los productos llegan ya filtrados por la sucursal en curso: el stock mostrado
   // es el disponible en el origen, que es lo único que se puede transferir.
-  useEffect(() => {
-    if (!modal || buscar.trim().length < 2) { setEncontrados([]); return; }
-    const t = setTimeout(async () => {
-      const res = await api.get(`/productos?buscar=${encodeURIComponent(buscar)}&limit=10`);
-      if (res.ok) setEncontrados(res.data.resultado || []);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [buscar, modal]);
 
   function abrirNueva() {
     setDestino(''); setMotivo(''); setObservacion('');
-    setBuscar(''); setEncontrados([]); setItems([]); setError('');
+    setItems([]); setError('');
     setModal(true);
   }
 
@@ -62,7 +55,7 @@ export default function Transferencias() {
       disponible: Number(producto.stock),
       cantidad: 1,
     }]);
-    setBuscar(''); setEncontrados([]); setError('');
+    setError('');
   }
 
   function cambiarCantidad(productoId, cantidad) {
@@ -160,81 +153,131 @@ export default function Transferencias() {
         </div>
       </div>
 
-      {modal && (
-        <div className="modal-overlay" onClick={() => setModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 720 }}>
-            <div className="modal-header">
-              <span className="modal-title">Nueva transferencia</span>
-              <button className="btn-icon" onClick={() => setModal(false)}>✕</button>
-            </div>
-            <form onSubmit={enviar}>
-              <div className="modal-body">
-                {error && <div className="alert alert-error">{error}</div>}
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label">Origen</label>
-                    <input className="form-control" value={nombreSucursalOperativa} disabled />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Destino *</label>
-                    <select className="form-control" value={destino} onChange={e => setDestino(e.target.value)} required>
-                      <option value="">Seleccione...</option>
-                      {destinos.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Motivo</label>
-                    <input className="form-control" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Reposición de stock" maxLength={150} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Observación</label>
-                    <input className="form-control" value={observacion} onChange={e => setObservacion(e.target.value)} />
-                  </div>
-                  <div className="form-group full">
-                    <label className="form-label">Buscar producto</label>
-                    <input className="form-control" value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Nombre, código o modelo (mín. 2 caracteres)" />
-                    {encontrados.length > 0 && (
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 6, marginTop: 4, maxHeight: 180, overflowY: 'auto' }}>
-                        {encontrados.map(p => (
-                          <button key={p.id} type="button" onClick={() => agregar(p)}
-                            style={{ display: 'flex', justifyContent: 'space-between', width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}>
-                            <span>{p.nombre} <small style={{ color: '#64748b' }}>{p.codigo}</small></span>
-                            <strong style={{ color: Number(p.stock) > 0 ? '#15803d' : '#b91c1c' }}>stock: {p.stock}</strong>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+      {modal && (() => {
+        const destinoNombre = destinos.find(s => Number(s.id) === Number(destino))?.nombre || '—';
+        const totalUnidades = items.reduce((acc, i) => acc + Number(i.cantidad || 0), 0);
+        const rightPanel = (
+          <>
+            <div style={{ background: '#fff', border: '1px solid var(--border-color)', borderRadius: 10, padding: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span style={{ fontWeight: 700, fontSize: 13 }}>Información</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Origen:</span>
+                  <span style={{ fontWeight: 600 }}>{nombreSucursalOperativa}</span>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Destino:</span>
+                  <span style={{ fontWeight: 600 }}>{destinoNombre}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Ítems:</span>
+                  <span style={{ fontWeight: 600 }}>{items.length}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Unidades:</span>
+                  <span style={{ fontWeight: 600 }}>{totalUnidades}</span>
+                </div>
+              </div>
+            </div>
 
-                {items.length > 0 && (
-                  <table style={{ marginTop: 12 }}>
-                    <thead><tr><th>Producto</th><th>Disponible</th><th>Cantidad</th><th></th></tr></thead>
-                    <tbody>
-                      {items.map(i => (
-                        <tr key={i.productoId}>
-                          <td>{i.nombre} <small style={{ color: '#64748b' }}>{i.codigo}</small></td>
-                          <td>{i.disponible}</td>
-                          <td>
-                            <input type="number" className="form-control" style={{ width: 90 }}
-                              min={1} max={i.disponible} value={i.cantidad}
-                              onChange={e => cambiarCantidad(i.productoId, e.target.value)} />
-                          </td>
-                          <td><button type="button" className="btn-icon danger" onClick={() => quitar(i.productoId)}>✕</button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+            <div style={{ background: '#fff', border: '1px solid var(--border-color)', borderRadius: 10, padding: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span style={{ fontWeight: 700, fontSize: 13 }}>Datos Requeridos</span>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={() => setModal(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={enviando}>{enviando ? 'Transfiriendo...' : 'Confirmar transferencia'}</button>
-              </div>
-            </form>
+              {['Sucursal de destino distinta al origen', 'Al menos un producto en la lista', 'Cantidad ≤ stock disponible en origen', 'Motivo u observación opcional'].map(txt => (
+                <div key={txt} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" strokeWidth="2.5" style={{ marginTop: 1, flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                  {txt}
+                </div>
+              ))}
+            </div>
+          </>
+        );
+
+        return (
+        <FormModal
+          abierto={modal}
+          titulo="Nueva transferencia"
+          subtitulo={`Origen: ${nombreSucursalOperativa}`}
+          onCerrar={() => setModal(false)}
+          onSubmit={enviar}
+          saving={enviando}
+          saveLabel="Confirmar transferencia"
+          saveContent={enviando ? 'Transfiriendo...' : 'Confirmar transferencia'}
+          error={error}
+          rightPanel={rightPanel}
+          scrollable={true}
+        >
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Origen</label>
+              <input className="form-control" value={nombreSucursalOperativa} disabled />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Destino *</label>
+              <select className="form-control" value={destino} onChange={e => setDestino(e.target.value)} required>
+                <option value="">Seleccione...</option>
+                {destinos.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Motivo</label>
+              <input className="form-control" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Reposición de stock" maxLength={150} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Observación</label>
+              <input className="form-control" value={observacion} onChange={e => setObservacion(e.target.value)} />
+            </div>
+            <div className="form-group full">
+              <label className="form-label">Buscar producto</label>
+              <ProductoAutocomplete
+                onSelect={agregar}
+                placeholder="Nombre, código o modelo..."
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          {items.length > 0 && (
+            <TableCard
+              scrollY
+              style={{ maxHeight: 300, border: '1px solid var(--border-color)', borderRadius: 8 }}
+              header={<div style={{ fontWeight: 600, padding: '8px 12px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>Productos a transferir</div>}
+            >
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ position: 'sticky', top: 0, background: 'var(--bg-primary)', zIndex: 1 }}>
+                    <th style={{ textAlign: 'left', padding: '8px 12px', borderBottom: '1px solid var(--border-color)' }}>Producto</th>
+                    <th style={{ textAlign: 'center', padding: '8px 12px', borderBottom: '1px solid var(--border-color)', width: 100 }}>Disponible</th>
+                    <th style={{ textAlign: 'center', padding: '8px 12px', borderBottom: '1px solid var(--border-color)', width: 120 }}>Cantidad</th>
+                    <th style={{ textAlign: 'center', padding: '8px 12px', borderBottom: '1px solid var(--border-color)', width: 50 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(i => (
+                    <tr key={i.productoId} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '8px 12px' }}>{i.nombre} <small style={{ color: '#64748b' }}>{i.codigo}</small></td>
+                      <td style={{ textAlign: 'center', padding: '8px 12px' }}>{i.disponible}</td>
+                      <td style={{ textAlign: 'center', padding: '8px 12px' }}>
+                        <input type="number" className="form-control" style={{ width: 90 }}
+                          min={1} max={i.disponible} value={i.cantidad}
+                          onChange={e => cambiarCantidad(i.productoId, e.target.value)} />
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '8px 12px' }}>
+                        <button type="button" className="btn-icon danger" onClick={() => quitar(i.productoId)}>✕</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableCard>
+          )}
+        </FormModal>
+        );
+      })()}
 
       {detalle && (
         <div className="modal-overlay" onClick={() => setDetalle(null)}>

@@ -501,3 +501,63 @@ tbody tr:hover td {
     background: #f8d7da;
     color: #721c24;
 }
+
+/* ═══ Dashboard reorganizado: layout responsive 65/35 ═══ */
+.dashboard-grid-2cajas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.dashboard-grid-65-35 {
+    display: grid;
+    grid-template-columns: 65% 35%;
+    gap: 14px;
+    align-items: stretch;
+}
+
+.dashboard-grid-full {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    align-items: stretch;
+}
+
+.dashboard-accesos-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+/* Tablet: cajas apiladas, gráfico arriba y accesos debajo, tablas apiladas */
+@media (max-width: 1024px) {
+    .dashboard-grid-2cajas {
+        grid-template-columns: 1fr;
+    }
+    .dashboard-grid-65-35 {
+        grid-template-columns: 1fr;
+    }
+    .dashboard-accesos-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Móvil: todo en una sola columna */
+@media (max-width: 640px) {
+    .dashboard-accesos-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.dashboard-grid-65-35 {
+    display: grid;
+    grid-template-columns: 65fr 35fr;
+    gap: 14px;
+    align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid-65-35 {
+        grid-template-columns: 1fr;
+    }
+}

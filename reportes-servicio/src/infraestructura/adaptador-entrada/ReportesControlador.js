@@ -5,7 +5,14 @@ export default class ReportesControlador extends ReportesEntradaPuerto {
 
   async ejecutar(req, res, nombre, parametros = {}, contrato = 'legacy') {
     try {
-      const resultado = await this.usesCases[nombre](parametros, { authorization: req.headers.authorization, traceId: req.traceId });
+      // El contexto lleva la sucursal en curso para que el adaptador HTTP la
+      // reenvíe a los servicios de origen; null significa consolidado de todas.
+      const resultado = await this.usesCases[nombre](parametros, {
+        authorization: req.headers.authorization,
+        traceId: req.traceId,
+        sucursalId: req.sucursalScope?.filtroLectura ?? null,
+        puedeVerTodas: req.sucursalScope?.puedeVerTodas ?? false,
+      });
       if (contrato === 'estandar' && typeof resultado.toStandardResponse === 'function') {
         return res.status(200).json(resultado.toStandardResponse());
       }

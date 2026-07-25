@@ -78,7 +78,12 @@ export default class MovimientoStockPgsCommandAdaptador extends MovimientoStockS
 
         if (movimiento.naturaleza === 'ENTRADA') stockNuevo += cantidad;
         if (movimiento.naturaleza === 'SALIDA') {
-          if (stockAnterior < cantidad) throw new Error(`Stock insuficiente para ${producto.nombre}. Disponible: ${stockAnterior}, solicitado: ${cantidad}`);
+          if (stockAnterior < cantidad) {
+            // Indicar la sucursal evita la confusión de ver stock en el consolidado
+            // y que la venta falle porque la sucursal concreta no lo tiene.
+            const donde = movimiento.sucursalNombre || `sucursal ${movimiento.sucursalId}`;
+            throw new Error(`Stock insuficiente para ${producto.nombre} en ${donde}. Disponible: ${stockAnterior}, solicitado: ${cantidad}`);
+          }
           stockNuevo -= cantidad;
         }
 

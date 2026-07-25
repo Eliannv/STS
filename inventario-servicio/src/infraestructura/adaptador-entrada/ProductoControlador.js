@@ -42,7 +42,7 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
   }
 
   async buscarPorCodigoBarras(req, res) {
-    const respuesta = await this.queryUC.buscarPorCodigoBarras(req.params.codigo);
+    const respuesta = await this.queryUC.buscarPorCodigoBarras(req.params.codigo, req.sucursalScope?.filtroLectura ?? null);
     return res.status(respuesta.estado === 'ok' ? 200 : 404).json({ ...respuesta, traceId: req.traceId });
   }
 
@@ -72,7 +72,7 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
   }
 
   async buscarPorModeloColorGrupo(req, res) {
-    const respuesta = await this.queryUC.buscarPorModeloColorGrupo(req.query.modelo, req.query.color, req.query.grupo);
+    const respuesta = await this.queryUC.buscarPorModeloColorGrupo(req.query.modelo, req.query.color, req.query.grupo, req.sucursalScope?.filtroLectura ?? null);
     return res.status(respuesta.estado === 'ok' ? 200 : 404).json({ ...respuesta, traceId: req.traceId });
   }
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSucursal } from '../../context/SucursalContext';
 import ClienteFormModal from '../../components/clientes/ClienteFormModal';
 import HistorialListModal from '../../components/historial/HistorialListModal';
 import HistorialFormModal from '../../components/historial/HistorialFormModal';
@@ -41,6 +42,7 @@ const S = {
 export default function CrearVenta() {
   const navigate        = useNavigate();
   const { isAdmin }     = useAuth();
+  const { nombreSucursalOperativa } = useSucursal();
   const [searchParams]  = useSearchParams();
   const clienteIdInit   = searchParams.get('clienteId');
 
@@ -284,6 +286,12 @@ export default function CrearVenta() {
   /* ── carrito ── */
   function agregarAlCarrito(prod) {
     if (!prod) return;
+    // prod.stock es siempre el de la sucursal activa (el backend lo resuelve desde
+    // existencias). prod.stock_total es solo informativo y nunca limita la venta.
+    if (!prod.esServicio && Number(prod.stock ?? 0) <= 0) {
+      setError(`"${prod.nombre}" no tiene stock disponible en ${nombreSucursalOperativa}.`);
+      return;
+    }
     setCarrito(prev => {
       const idx = prev.findIndex(i => i.id === prod.id);
       const maxStock = prod.stock ?? null;
@@ -307,7 +315,7 @@ export default function CrearVenta() {
         setBuscarProd('');
         setError('');
       } else {
-        setError(`No se encontró un producto con el código de barras ${codigoBarras}.`);
+        setError(`No se encontró un producto con el código de barras ${codigoBarras} en ${nombreSucursalOperativa}.`);
       }
     } catch {
       setError('No fue posible consultar el código de barras.');
@@ -759,7 +767,7 @@ export default function CrearVenta() {
                     ? <div style={{ fontSize: 10, color: '#6c757d' }}>SERVICIO</div>
                     : item.stock !== null && (
                       <div style={{ fontSize: 10, fontWeight: 600, color: item.cantidad >= item.stock ? '#e74c3c' : '#6c757d' }}>
-                        Stock: {item.stock}
+                        Stock en {nombreSucursalOperativa}: {item.stock}
                       </div>
                     )
                   }

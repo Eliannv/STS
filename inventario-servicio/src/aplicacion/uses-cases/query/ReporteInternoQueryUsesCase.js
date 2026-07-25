@@ -6,6 +6,6 @@ export default class ReporteInternoQueryUsesCase {
 
   kardex(filtros) { return this.salidaQuery.kardex(filtros); }
   compras(filtros) { return this.salidaQuery.compras(filtros); }
-  alertasStock() { return this.salidaQuery.alertasStock(); }
-  valorInventario() { return this.salidaQuery.valorInventario(); }
+  alertasStock(filtros) { return this.salidaQuery.alertasStock(filtros); }
+  valorInventario(filtros) { return this.salidaQuery.valorInventario(filtros); }
 }

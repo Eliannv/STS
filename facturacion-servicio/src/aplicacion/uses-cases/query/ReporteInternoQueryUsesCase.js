@@ -8,8 +8,8 @@ export default class ReporteInternoQueryUsesCase {
     return this.salidaQuery.ventas(filtros);
   }
 
-  ventasHoy() {
-    return this.salidaQuery.ventasHoy();
+  ventasHoy(filtros) {
+    return this.salidaQuery.ventasHoy(filtros);
   }
 
   cobros(filtros) {
@@ -20,7 +20,7 @@ export default class ReporteInternoQueryUsesCase {
     return this.salidaQuery.tarjetas(filtros);
   }
 
-  dashboardSnapshot() {
-    return this.salidaQuery.dashboardSnapshot();
+  dashboardSnapshot(filtros) {
+    return this.salidaQuery.dashboardSnapshot(filtros);
   }
 }

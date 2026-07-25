@@ -60,7 +60,7 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
           Number(venta.total || 0) - Number(venta.saldoPendiente || 0),
         );
         if (montoTarjeta > 0) {
-          await VentaTarjeta.create({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: venta.clienteId, cliente_nombre: venta.nombreCliente, monto_total: montoTarjeta, monto_recibido: 0, saldo_pendiente: montoTarjeta, estado: 'PENDIENTE', observacion: venta.observacion, comision_acumulada: 0, retencion_acumulada: 0, monto_bruto_acreditado: 0, monto_neto_acreditado: 0, created_at: new Date(), updated_at: new Date() }, { transaction });
+          await VentaTarjeta.create({ factura_id: factura.id, sucursal_id: venta.sucursalId, factura_id_personalizado: factura.id_personalizado, cliente_id: venta.clienteId, cliente_nombre: venta.nombreCliente, monto_total: montoTarjeta, monto_recibido: 0, saldo_pendiente: montoTarjeta, estado: 'PENDIENTE', observacion: venta.observacion, comision_acumulada: 0, retencion_acumulada: 0, monto_bruto_acreditado: 0, monto_neto_acreditado: 0, created_at: new Date(), updated_at: new Date() }, { transaction });
         }
       }
       let operacionFinanciera = null;

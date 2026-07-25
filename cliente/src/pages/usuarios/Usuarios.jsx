@@ -21,6 +21,9 @@ export default function Usuarios() {
     if (buscar) params.set('buscar', buscar);
     params.set('limit',  '21');
     params.set('offset', String(page * 20));
+    // La administración de usuarios necesita el catálogo completo para poder
+    // reasignar personal entre sucursales, no solo el de la sucursal activa.
+    params.set('todasSucursales', 'true');
     const res = await api.get(`/usuario/lista?${params}`);
     if (res.ok) {
       const data = res.data.resultado || [];

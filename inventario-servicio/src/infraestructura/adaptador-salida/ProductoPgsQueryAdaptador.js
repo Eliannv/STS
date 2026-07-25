@@ -15,9 +15,12 @@ const conStockDeSucursal = async (productos, sucursalId) => {
   const porProducto = new Map(existencias.map((fila) => [Number(fila.producto_id), fila]));
   return productos.map((producto) => {
     const existencia = porProducto.get(Number(producto.id));
+    // Los productos sin control de stock (servicios) no tienen existencias:
+    // devolver 0 haría que el POS los tratara como agotados.
+    const ilimitado = producto.tipo_control_stock === 'ILIMITADO';
     return {
       ...producto,
-      stock: existencia ? Number(existencia.stock) : 0,
+      stock: ilimitado ? producto.stock : (existencia ? Number(existencia.stock) : 0),
       costo: existencia ? Number(existencia.costo_promedio) : producto.costo,
       stock_minimo: existencia ? Number(existencia.stock_minimo) : 0,
       stock_total: producto.stock,
@@ -75,13 +78,17 @@ export default class ProductoPgsQueryAdaptador extends ProductoSalidaQueryPuerto
     return { estado: 'ok', resultado };
   }
 
-  async buscarPorCodigoBarras(codigo) {
+  // El escáner del POS entra por aquí: debe devolver el stock de la sucursal en
+  // curso, nunca el consolidado de productos.stock.
+  async buscarPorCodigoBarras(codigo, sucursalId = null) {
     const resultados = await sequelize.query(
       'SELECT * FROM productos WHERE codigo_barras = $1 AND activo = TRUE LIMIT 1',
       { bind: [codigo], type: QueryTypes.SELECT }
     );
     const resultado = resultados[0] || null;
-    return resultado ? { estado: 'ok', resultado } : { estado: 'error', resultado: null };
+    if (!resultado) return { estado: 'error', resultado: null };
+    const [conStock] = await conStockDeSucursal([resultado], sucursalId);
+    return { estado: 'ok', resultado: conStock };
   }
 
   async siguienteCodigoBarras() {
@@ -92,10 +99,12 @@ export default class ProductoPgsQueryAdaptador extends ProductoSalidaQueryPuerto
     return { estado: 'ok', resultado };
   }
 
-  async buscarPorModeloColorGrupo(modelo, color, grupo) {
+  async buscarPorModeloColorGrupo(modelo, color, grupo, sucursalId = null) {
     const where = { modelo, grupo, activo: true };
     if (color) where.color = color;
     const resultado = await ProductoModel.findOne({ where });
-    return resultado ? { estado: 'ok', resultado } : { estado: 'error', resultado: null };
+    if (!resultado) return { estado: 'error', resultado: null };
+    const [conStock] = await conStockDeSucursal([resultado.toJSON()], sucursalId);
+    return { estado: 'ok', resultado: conStock };
   }
 }

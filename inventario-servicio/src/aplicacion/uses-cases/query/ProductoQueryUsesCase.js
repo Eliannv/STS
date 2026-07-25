@@ -6,16 +6,16 @@ export default class ProductoQueryUsesCase {
   lista(dtoProducto, pag = {}) { return this.adaptadorBDSalida.lista(dtoProducto.buscar, dtoProducto.sucursalId, pag); }
   buscarPorId(id, sucursalId = null) { return id ? this.adaptadorBDSalida.buscarPorId(id, sucursalId) : Promise.resolve({ estado: 'error', resultado: null }); }
   existenciasPorProducto(id) { return id ? this.adaptadorBDSalida.existenciasPorProducto(id) : Promise.resolve({ estado: 'error', resultado: null }); }
-  buscarPorCodigoBarras(codigo) {
+  buscarPorCodigoBarras(codigo, sucursalId = null) {
     const codigoNormalizado = String(codigo || '').trim();
     return codigoNormalizado
-      ? this.adaptadorBDSalida.buscarPorCodigoBarras(codigoNormalizado)
+      ? this.adaptadorBDSalida.buscarPorCodigoBarras(codigoNormalizado, sucursalId)
       : Promise.resolve({ estado: 'error', resultado: null });
   }
   siguienteCodigoBarras() { return this.adaptadorBDSalida.siguienteCodigoBarras(); }
-  buscarPorModeloColorGrupo(modelo, color, grupo) {
+  buscarPorModeloColorGrupo(modelo, color, grupo, sucursalId = null) {
     return modelo && grupo
-      ? this.adaptadorBDSalida.buscarPorModeloColorGrupo(modelo, color, grupo)
+      ? this.adaptadorBDSalida.buscarPorModeloColorGrupo(modelo, color, grupo, sucursalId)
       : Promise.resolve({ estado: 'error', resultado: null });
   }
 }

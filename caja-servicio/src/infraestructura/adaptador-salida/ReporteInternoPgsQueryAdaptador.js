@@ -6,6 +6,7 @@ import sequelize from '../base-dato/Postgresql.js';
 const UNION_MOVIMIENTOS = `
   SELECT
     'BANCO'::TEXT AS caja_tipo,
+    NULL::INTEGER AS sucursal_id,
     mb.id,
     mb.caja_banco_id AS caja_id,
     mb.fecha,
@@ -40,6 +41,7 @@ const UNION_MOVIMIENTOS = `
   UNION ALL
   SELECT
     'CHICA'::TEXT AS caja_tipo,
+    cc.sucursal_id,
     mc.id,
     mc.caja_chica_id AS caja_id,
     mc.fecha,
@@ -67,6 +69,7 @@ const UNION_MOVIMIENTOS = `
     cm.saldo_nuevo AS saldo_cuenta,
     c.estado::TEXT AS estado_cuenta
   FROM movimientos_cajas_chicas mc
+  JOIN cajas_chicas cc ON cc.id = mc.caja_chica_id
   LEFT JOIN movimientos_cuentas cm
     ON cm.movimiento_financiero_id = mc.id
     AND cm.caja_tipo = 'CHICA'
@@ -98,6 +101,12 @@ const filtrosMovimientos = (filtros = {}) => {
       replacements[reemplazo] = filtros[entrada];
     }
   });
+  // La caja chica pertenece a su sucursal; la caja banco es central y por decisión
+  // de negocio permanece visible en cualquier selección de sucursal.
+  if (filtros.sucursalId) {
+    condiciones.push("(m.caja_tipo = 'BANCO' OR m.sucursal_id = :sucursalId)");
+    replacements.sucursalId = Number(filtros.sucursalId);
+  }
   if (
     filtros.afectaFlujoOperativo !== undefined
     && filtros.afectaFlujoOperativo !== ''
@@ -126,6 +135,11 @@ const filtrosMovimientos = (filtros = {}) => {
 const filtrosCuenta = (tipo, filtros = {}) => {
   const condiciones = ['c.tipo = :tipo'];
   const replacements = { tipo };
+  // Las cuentas nacen de una factura o de una compra: pertenecen a esa sucursal.
+  if (filtros.sucursalId) {
+    condiciones.push('c.sucursal_id = :sucursalId');
+    replacements.sucursalId = Number(filtros.sucursalId);
+  }
   const terceroId = tipo === 'COBRAR'
     ? filtros.clienteId
     : filtros.proveedorId;
@@ -300,7 +314,16 @@ export default class ReporteInternoPgsQueryAdaptador
     };
   }
 
-  async saldoActual() {
+  // El saldo de caja chica es por sucursal: sumar todas daría una cifra que no
+  // corresponde al arqueo de ningún local. La caja banco es central y no se filtra.
+  async saldoActual(filtros = {}) {
+    const sucursalId = Number(filtros.sucursalId) || null;
+    const condicionChica = sucursalId ? 'AND sucursal_id = :sucursalId' : '';
+    const condicionMovimiento = sucursalId
+      ? "AND (caja_tipo = 'BANCO' OR sucursal_id = :sucursalId)"
+      : '';
+    const replacements = sucursalId ? { sucursalId } : {};
+
     const [saldos] = await sequelize.query(
       `
         SELECT
@@ -312,10 +335,10 @@ export default class ReporteInternoPgsQueryAdaptador
           COALESCE((
             SELECT SUM(monto_actual)
             FROM cajas_chicas
-            WHERE estado = 'ABIERTA' AND activo = TRUE
+            WHERE estado = 'ABIERTA' AND activo = TRUE ${condicionChica}
           ), 0)::NUMERIC(14,2) AS saldo_chica
       `,
-      { type: QueryTypes.SELECT },
+      { replacements, type: QueryTypes.SELECT },
     );
     const [movimientos] = await sequelize.query(
       `
@@ -334,10 +357,25 @@ export default class ReporteInternoPgsQueryAdaptador
         FROM movimientos
         WHERE (fecha_operacion AT TIME ZONE 'America/Bogota')::DATE
           = (NOW() AT TIME ZONE 'America/Bogota')::DATE
+          ${condicionMovimiento}
+      `,
+      { replacements, type: QueryTypes.SELECT },
+    );
+
+    // En la vista consolidada el saldo único oculta descuadres: se acompaña del
+    // detalle por sucursal para que el arqueo siga siendo verificable.
+    const desglose = sucursalId ? [] : await sequelize.query(
+      `
+        SELECT sucursal_id, sucursal_nombre, SUM(monto_actual)::NUMERIC(14,2) AS saldo_chica
+        FROM cajas_chicas
+        WHERE estado = 'ABIERTA' AND activo = TRUE
+        GROUP BY sucursal_id, sucursal_nombre
+        ORDER BY sucursal_id
       `,
       { type: QueryTypes.SELECT },
     );
-    return { ...saldos, ...movimientos };
+
+    return { ...saldos, ...movimientos, desglose_sucursales: desglose };
   }
 
   cuentasCobrar(filtros = {}) {

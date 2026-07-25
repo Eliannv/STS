@@ -19,9 +19,15 @@ export class UsuarioControlador extends UsuarioEntradaPuerto {
   }
 
   async lista(req, res) {
+    // El listado sigue el scope para que las métricas de empleados cuadren con las
+    // ventas y cajas de la sucursal. La administración de usuarios necesita ver el
+    // catálogo completo para reasignar personal: lo pide con todasSucursales=true.
+    const catalogoCompleto = req.query.todasSucursales === 'true'
+      && req.sucursalScope?.puedeVerTodas;
     const resultado = await this.query.lista(req.query.buscar, {
       limit: Math.min(Number(req.query.limit) || 20, 100),
       offset: Math.max(Number(req.query.offset) || 0, 0),
+      sucursalId: catalogoCompleto ? null : (req.sucursalScope?.filtroLectura ?? null),
       incluirInactivos: req.query.incluirInactivos === 'true'
     });
     return res.status(200).json({ ...resultado, traceId: req.traceId });

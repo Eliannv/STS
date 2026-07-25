@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
 import { generarReporte } from '../../api/reportesApi';
 import { useAuth } from '../../context/AuthContext';
+import { useSucursal } from '../../context/SucursalContext';
 import { FilePen, File, FileSpreadsheet } from 'lucide-react';
 import FilterCard, { FilterItem, filterInputStyle } from '../../components/common/FilterCard';
 import StatCard from '../../components/common/StatCard';
@@ -16,6 +17,7 @@ const FMT_FECHA = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('es-EC')
 export default function Ingresos() {
   const navigate  = useNavigate();
   const { isAdmin } = useAuth();
+  const { nombreSucursalOperativa, viendoTodas, nombreSucursal } = useSucursal();
 
   const [lista, setLista]         = useState([]);
   const [page, setPage]           = useState(0);
@@ -94,7 +96,12 @@ export default function Ingresos() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Ingresos</h1>
-          <p className="page-subtitle">Registro de compras y entradas de inventario</p>
+          {/* La compra pertenece a la sucursal donde se registra y su stock entra allí. */}
+          <p className="page-subtitle">
+            {viendoTodas
+              ? 'Registro de compras y entradas de inventario · Todas las sucursales'
+              : `Registro de compras y entradas de inventario · ${nombreSucursalOperativa}`}
+          </p>
         </div>
         {isAdmin && (
           <div ref={menuRef} style={{ position: 'relative' }}>
@@ -225,6 +232,7 @@ export default function Ingresos() {
           <thead>
             <tr>
               <th>ID</th><th>Proveedor</th><th>N° Factura</th>
+              {viendoTodas && <th>Sucursal</th>}
               <th>Fecha</th><th>Tipo</th><th>Productos</th>
               <th>Total</th><th>Estado</th>
               {isAdmin && <th>Acciones</th>}
@@ -244,6 +252,7 @@ export default function Ingresos() {
                       {ing.proveedor_nombre || <span style={{ color: 'var(--text-muted)' }}>Sin proveedor</span>}
                     </td>
                     <td>{ing.numero_factura}</td>
+                    {viendoTodas && <td>{ing.sucursal_nombre || nombreSucursal(ing.sucursal_id)}</td>}
                     <td>{FMT_FECHA(ing.fecha)}</td>
                     <td>
                       <span style={{

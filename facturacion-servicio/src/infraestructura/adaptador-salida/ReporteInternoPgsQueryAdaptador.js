@@ -148,7 +148,8 @@ export default class ReporteInternoPgsQueryAdaptador
     return { ...respuestaPaginada(items, page, limit), summary };
   }
 
-  async ventasHoy() {
+  async ventasHoy(filtros = {}) {
+    const sucursalId = Number(filtros.sucursalId) || null;
     const [resultado] = await sequelize.query(
       `
         WITH cobros AS (
@@ -184,8 +185,9 @@ export default class ReporteInternoPgsQueryAdaptador
           AND f.estado_pago <> 'ANULADA'
           AND (f.fecha AT TIME ZONE 'America/Bogota')::DATE
             = (NOW() AT TIME ZONE 'America/Bogota')::DATE
+          ${sucursalId ? 'AND f.sucursal_id = :sucursalId' : ''}
       `,
-      { type: QueryTypes.SELECT },
+      { replacements: sucursalId ? { sucursalId } : {}, type: QueryTypes.SELECT },
     );
     return resultado;
   }
@@ -198,6 +200,10 @@ export default class ReporteInternoPgsQueryAdaptador
     ];
     const replacements = { limit, offset };
     agregarRango(condiciones, replacements, 'op.aplicado_en', filtros);
+    if (filtros.sucursalId) {
+      condiciones.push('op.sucursal_id = :sucursalId');
+      replacements.sucursalId = Number(filtros.sucursalId);
+    }
     if (filtros.metodoPago) {
       condiciones.push('op.metodo_cobro = :metodoPago');
       replacements.metodoPago = filtros.metodoPago;
@@ -248,6 +254,10 @@ export default class ReporteInternoPgsQueryAdaptador
     const condiciones = ['1 = 1'];
     const replacements = { limit, offset };
     agregarRango(condiciones, replacements, 'vt.fecha_venta', filtros);
+    if (filtros.sucursalId) {
+      condiciones.push('vt.sucursal_id = :sucursalId');
+      replacements.sucursalId = Number(filtros.sucursalId);
+    }
     if (filtros.estado) {
       const estados = String(filtros.estado).split(',').filter(Boolean);
       condiciones.push('vt.estado IN (:estados)');
@@ -364,7 +374,7 @@ export default class ReporteInternoPgsQueryAdaptador
     return pagina;
   }
 
-  dashboardSnapshot() {
-    return this.ventasHoy();
+  dashboardSnapshot(filtros = {}) {
+    return this.ventasHoy(filtros);
   }
 }

@@ -17,8 +17,9 @@ const conSucursal = async (usuarios) => {
 };
 
 export default class UsuarioPgsQueryAdaptador extends UsuarioSalidaQueryPuerto {
-  async lista(buscar, { limit = 20, offset = 0, incluirInactivos = false } = {}) {
+  async lista(buscar, { limit = 20, offset = 0, incluirInactivos = false, sucursalId = null } = {}) {
     const where = incluirInactivos ? {} : { activo: true };
+    if (sucursalId) where.sucursal_id = Number(sucursalId);
     if (buscar) {
       where[Op.or] = [
         { nombre: { [Op.iLike]: `%${buscar}%` } },

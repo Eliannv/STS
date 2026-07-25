@@ -3,10 +3,11 @@ import IngresoSalidaQueryPuerto from '../../aplicacion/puertos/salida/IngresoSal
 import { Ingreso as IngresoModel, DetalleIngreso as DetalleIngresoModel } from '../modelos/Modelos.js';
 
 export default class IngresoPgsQueryAdaptador extends IngresoSalidaQueryPuerto {
-  async lista(buscar, estado, fechaDesde, fechaHasta, { limit = 10, offset = 0 } = {}) {
+  async lista(buscar, estado, fechaDesde, fechaHasta, { limit = 10, offset = 0, sucursalId = null } = {}) {
     const where = {};
     if (buscar) where[Op.or] = ['numero_factura', 'proveedor_nombre', 'id_personalizado'].map((campo) => ({ [campo]: { [Op.iLike]: `%${buscar}%` } }));
     if (estado) where.estado = estado;
+    if (sucursalId) where.sucursal_id = Number(sucursalId);
     if (fechaDesde || fechaHasta) where.fecha = { ...(fechaDesde ? { [Op.gte]: fechaDesde } : {}), ...(fechaHasta ? { [Op.lte]: fechaHasta } : {}) };
     try {
       const ingresos = await IngresoModel.findAll({ where, order: [['fecha', 'DESC'], ['created_at', 'DESC']], limit: Math.min(Number(limit) || 10, 100), offset: Math.max(Number(offset) || 0, 0) });

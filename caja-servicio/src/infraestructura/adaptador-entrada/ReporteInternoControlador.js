@@ -6,9 +6,7 @@ export default class ReporteInternoControlador {
 
   movimientos(req, res) { return this._ejecutar('movimientos', req, res); }
   flujo(req, res) { return this._ejecutar('flujo', req, res); }
-  saldoActual(req, res) {
-    return this._ejecutar('saldoActual', req, res, false);
-  }
+  saldoActual(req, res) { return this._ejecutar('saldoActual', req, res); }
   cuentasCobrar(req, res) {
     return this._ejecutar('cuentasCobrar', req, res);
   }
@@ -16,11 +14,14 @@ export default class ReporteInternoControlador {
     return this._ejecutar('cuentasPagar', req, res);
   }
 
-  async _ejecutar(metodo, req, res, usaQuery = true) {
+  // Todos los reportes internos reciben el scope resuelto: la sucursal no es un
+  // parámetro opcional que cada método pueda olvidar, sino parte del contrato.
+  async _ejecutar(metodo, req, res) {
     try {
-      const resultado = await this.useCase[metodo](
-        ...(usaQuery ? [req.query ?? {}] : []),
-      );
+      const resultado = await this.useCase[metodo]({
+        ...(req.query ?? {}),
+        sucursalId: req.sucursalScope?.filtroLectura ?? null,
+      });
       return res.status(200).json({
         estado: 'ok',
         resultado,

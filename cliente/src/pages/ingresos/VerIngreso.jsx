@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSucursal } from '../../context/SucursalContext';
 import { imprimirIngreso } from '../../utils/imprimirIngreso';
 
 const FMT = v => `$${parseFloat(v || 0).toFixed(2)}`;
@@ -20,6 +21,7 @@ export default function VerIngreso() {
   const navigate = useNavigate();
 
   const { usuario } = useAuth();
+  const { nombreSucursal } = useSucursal();
 
   const [ingreso,  setIngreso]  = useState(null);
   const [detalles, setDetalles] = useState([]);
@@ -182,6 +184,12 @@ export default function VerIngreso() {
               </InfoItem>
               <InfoItem label="Fecha de Ingreso">
                 <span style={{ fontSize: 14 }}>{FMT_FECHA(ingreso.fecha)}</span>
+              </InfoItem>
+              {/* La sucursal es la que recibió la mercadería: define dónde entró el stock. */}
+              <InfoItem label="Sucursal">
+                <span style={{ fontSize: 14 }}>
+                  {ingreso.sucursal_nombre || nombreSucursal(ingreso.sucursal_id)}
+                </span>
               </InfoItem>
             </div>
 

@@ -2,6 +2,8 @@
 import { Router } from 'express';
 import { egresoMercaderiaControlador } from '../contenedor/InventarioContenedor.js';
 import { authMiddleware } from '../middleware/AuthMiddleware.js';
+import { guardaSucursal } from '../middleware/SucursalScopeMiddleware.js';
+import { sucursalDeEgreso } from '../middleware/resolversSucursal.js';
 
 const router = Router();
 const admin = authMiddleware('ADMINISTRADOR');
@@ -10,7 +12,7 @@ router.post('/', admin, (req, res) =>
   egresoMercaderiaControlador.crearEgreso(req, res));
 router.get('/', authMiddleware(), (req, res) =>
   egresoMercaderiaControlador.obtenerEgresos(req, res));
-router.get('/:id/movimientos', authMiddleware(), (req, res) =>
+router.get('/:id/movimientos', authMiddleware(), guardaSucursal({ resolverPadre: sucursalDeEgreso }), (req, res) =>
   egresoMercaderiaControlador.obtenerMovimientos(req, res));
 router.post('/:id/detalles', admin, (req, res) =>
   egresoMercaderiaControlador.agregarDetalle(req, res));
@@ -22,7 +24,7 @@ router.post('/:id/anular', admin, (req, res) =>
   egresoMercaderiaControlador.anularEgreso(req, res));
 router.post('/:id/descartar', admin, (req, res) =>
   egresoMercaderiaControlador.descartarEgreso(req, res));
-router.get('/:id', authMiddleware(), (req, res) =>
+router.get('/:id', authMiddleware(), guardaSucursal(), (req, res) =>
   egresoMercaderiaControlador.obtenerEgresoPorId(req, res));
 
 export default router;

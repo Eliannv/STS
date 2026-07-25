@@ -627,6 +627,8 @@ export default class ReportesDominioServicio {
     return reporte('estado-cuentas-cobrar', 'Estado de cuentas por cobrar', filtros, filas, { facturas: filas.length, saldo_total: filas.reduce((suma, item) => suma + item.saldo_pendiente, 0) });
   }
 
+  // Caja chica de la sucursal en curso. En la vista consolidada 'abierta' devolvería
+  // una sola caja arbitraria, así que el desglose se resuelve aparte en cajasChicasAbiertas().
   async cajaDashboard(tipo, contexto, periodo) {
     const esChica = tipo === 'CHICA';
     const ruta = esChica ? 'cajas-chicas' : 'cajas-banco';
@@ -666,19 +668,49 @@ export default class ReportesDominioServicio {
     };
   }
 
+  // Existencias valorizadas por sucursal. Se resuelve contra el reporte interno de
+  // inventario porque el listado de productos consolidado no expone la sucursal.
+  async inventarioPorSucursal(contexto) {
+    try {
+      const respuesta = resultado(
+        await this.salida.leer('inventario', 'inventario/reportes/valor', {}, contexto),
+      );
+      return respuesta?.desglose_sucursales ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  // Cajas chicas abiertas de todas las sucursales: alimenta el desglose de la
+  // vista consolidada, donde un saldo único ocultaría el arqueo de cada local.
+  async cajasChicasAbiertas(contexto) {
+    const cajas = lista(await this.salida.leer('caja', 'cajas-chicas', { estado: 'ABIERTA', limit: 100 }, contexto));
+    return cajas.map(caja => ({
+      sucursalId: caja.sucursalId ?? caja.sucursal_id ?? null,
+      sucursal: caja.sucursalNombre ?? caja.sucursal_nombre ?? null,
+      montoActual: numero(caja.montoActual ?? caja.monto_actual),
+      cajaId: caja.id,
+    }));
+  }
+
   async dashboardIndicadores(filtros, contexto) {
     const periodo = periodoMes(filtros);
-    const [analisisVentas, inventario, ingresos, clientes, cajaChica, cajaBanco] = await resolverParalelo([
+    // Los filtros se propagan a cada sub-reporte: pasar {} hacía que el selector
+    // de sucursal no afectara a ninguna tarjeta.
+    const consolidado = !filtros.sucursalId;
+    const [analisisVentas, inventario, ingresos, clientes, cajaChica, cajaBanco, cajasSucursal, inventarioSucursal] = await resolverParalelo([
       this.ventasGenerales(
-        { tipoTransaccion: 'VENTAS_COBROS', page: 1, pageSize: Number.MAX_SAFE_INTEGER },
+        { ...filtros, tipoTransaccion: 'VENTAS_COBROS', page: 1, pageSize: Number.MAX_SAFE_INTEGER },
         contexto,
         { pageSizeMax: Number.MAX_SAFE_INTEGER },
       ),
-      this.inventarioActual({}, contexto),
-      this.ingresosBase({}, contexto),
+      this.inventarioActual(filtros, contexto),
+      this.ingresosBase(filtros, contexto),
       this.catalogoSeguro('cliente', 'clientes', contexto, { estado: 'todos' }),
       this.cajaDashboard('CHICA', contexto, periodo),
       this.cajaDashboard('BANCO', contexto, periodo),
+      consolidado ? this.cajasChicasAbiertas(contexto) : Promise.resolve([]),
+      consolidado ? this.inventarioPorSucursal(contexto) : Promise.resolve([]),
     ]);
 
     const transacciones = analisisVentas.filas;
@@ -704,6 +736,31 @@ export default class ReportesDominioServicio {
         montoAbonadoMes: resumenVentasMes.montoCobrado,
         ventasPendientes: transaccionesMes.filter(item => item.tipoTransaccion === 'VENTA' && item.estado === 'PENDIENTE').length,
       },
+      // Serie diaria de ventas del mes para el gráfico del dashboard.
+      // Solo Ventas (no cobros) y no anuladas: mismo criterio que resumirTransacciones.
+      // Los días sin ventas se incluyen con monto 0 para que la línea sea continua.
+      ventasPorDia: (() => {
+        const desdeFecha = new Date(periodo.fechaDesde + 'T00:00:00');
+        const hastaFecha = new Date(periodo.fechaHasta + 'T23:59:59');
+        const dias = [];
+        for (let d = 1; d <= hastaFecha.getDate(); d++) {
+          dias.push({
+            dia: d,
+            fecha: `${periodo.fechaDesde.slice(0, 8)}${String(d).padStart(2, '0')}`,
+            monto: 0,
+          });
+        }
+        const porDia = new Map(dias.map(d => [d.dia, d]));
+        transaccionesMes
+          .filter(item => item.tipoTransaccion === 'VENTA' && item.estado !== 'ANULADA')
+          .forEach(item => {
+            const fecha = new Date(item.fecha);
+            const dia = fecha.getDate();
+            const registro = porDia.get(dia);
+            if (registro) registro.monto = Number((registro.monto + numero(item.total)).toFixed(2));
+          });
+        return dias;
+      })(),
       deudas: {
         facturasConDeuda: facturasPendientes.length,
         totalDeuda: Number(facturasPendientes.reduce((suma, factura) => suma + numero(factura.saldoPendiente), 0).toFixed(2)),
@@ -730,6 +787,32 @@ export default class ReportesDominioServicio {
       cajaChicaStats: cajaChica.stats,
       cajaBanco: cajaBanco.caja,
       cajaBancoStats: cajaBanco.stats,
+      // Ámbito con el que se calcularon las cifras: la UI necesita distinguir
+      // "datos de una sucursal" de "consolidado", no son intercambiables.
+      alcance: {
+        consolidado,
+        sucursalId: filtros.sucursalId ?? null,
+      },
+      // Desglose solo en consolidado: ventas y stock por sucursal, y el arqueo
+      // de cada caja chica abierta, que no debe presentarse como un saldo único.
+      desglose: consolidado ? {
+        // Mismo criterio que resumirTransacciones: las anuladas no suman, o el
+        // desglose no cuadraría con el total que se muestra arriba.
+        ventas: Object.values(transaccionesMes
+          .filter(item => item.tipoTransaccion === 'VENTA' && item.estado !== 'ANULADA')
+          .reduce((acumulado, venta) => {
+            const clave = venta.sucursalId ?? 'sin-sucursal';
+            acumulado[clave] ??= { sucursalId: venta.sucursalId ?? null, sucursal: venta.sucursal ?? null, ventas: 0, total: 0, cobrado: 0 };
+            acumulado[clave].ventas += 1;
+            acumulado[clave].total += numero(venta.total);
+            acumulado[clave].cobrado += numero(venta.abonado ?? venta.cobrado);
+            return acumulado;
+          }, {})),
+        cajasChicas: cajasSucursal,
+        // En consolidado el listado de productos viene sin sucursal (trae el total
+        // derivado), así que el desglose se pide a existencias.
+        inventario: inventarioSucursal,
+      } : null,
     };
 
     const ultimasVentas = transacciones

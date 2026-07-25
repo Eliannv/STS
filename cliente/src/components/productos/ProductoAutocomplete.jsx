@@ -100,7 +100,14 @@ const ProductoAutocomplete = forwardRef(function ProductoAutocomplete({ producto
                   {item.grupo && <span>{item.grupo}</span>}
                 </small>
               </span>
-              <span className="product-autocomplete__stock">Stock {item.stock ?? 0}</span>
+              {/* Stock de la sucursal activa: es el único que puede venderse aquí. */}
+              <span
+                className="product-autocomplete__stock"
+                style={{ color: Number(item.stock ?? 0) > 0 ? undefined : '#e74c3c' }}
+                title={item.stock_total != null ? `Total en todas las sucursales: ${item.stock_total}` : undefined}
+              >
+                Stock {item.stock ?? 0}
+              </span>
             </button>
           )) : !buscando && texto.trim() ? (
             <div className="product-autocomplete__empty">No se encontraron productos.</div>

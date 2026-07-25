@@ -6,18 +6,16 @@ export default class ReporteInternoControlador {
 
   kardex(req, res) { return this._ejecutar('kardex', req, res); }
   compras(req, res) { return this._ejecutar('compras', req, res); }
-  alertasStock(req, res) {
-    return this._ejecutar('alertasStock', req, res, false);
-  }
-  valorInventario(req, res) {
-    return this._ejecutar('valorInventario', req, res, false);
-  }
+  alertasStock(req, res) { return this._ejecutar('alertasStock', req, res); }
+  valorInventario(req, res) { return this._ejecutar('valorInventario', req, res); }
 
-  async _ejecutar(metodo, req, res, usaQuery = true) {
+  // El scope de sucursal es parte del contrato, no un parámetro opcional.
+  async _ejecutar(metodo, req, res) {
     try {
-      const resultado = await this.useCase[metodo](
-        ...(usaQuery ? [req.query ?? {}] : []),
-      );
+      const resultado = await this.useCase[metodo]({
+        ...(req.query ?? {}),
+        sucursalId: req.sucursalScope?.filtroLectura ?? null,
+      });
       return res.status(200).json({
         estado: 'ok',
         resultado,

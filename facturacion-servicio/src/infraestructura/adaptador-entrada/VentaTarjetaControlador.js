@@ -11,7 +11,7 @@ export default class VentaTarjetaControlador extends VentaTarjetaEntradaPuerto {
   listarVentasTarjeta(req, res) {
     return this.responderConsulta(
       res,
-      this.queryUC.listarVentasTarjeta(req.query),
+      this.queryUC.listarVentasTarjeta({ ...req.query, sucursalId: req.sucursalScope?.filtroLectura ?? null }),
     );
   }
 

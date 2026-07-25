@@ -10,12 +10,21 @@ export default class IngresoControlador extends IngresoEntradaPuerto {
   }
 
   async crear(req, res) {
-    const respuesta = await this.commandUC.crear(new IngresoDTO({ ...req.body, usuarioId: req.usuario?.id }));
+    // La compra se registra en la sucursal en la que se está operando.
+    const respuesta = await this.commandUC.crear(new IngresoDTO({
+      ...req.body,
+      usuarioId: req.usuario?.id,
+      sucursalId: req.sucursalScope?.sucursalId ?? null,
+      sucursalNombre: req.sucursalScope?.sucursalNombre ?? null,
+    }));
     return res.status(respuesta.estado === 'ok' ? 201 : 400).json({ ...respuesta, traceId: req.traceId });
   }
 
   async lista(req, res) {
-    const respuesta = await this.queryUC.lista(new IngresoDTO(req.query), { limit: Number(req.query.limit) || 10, offset: Number(req.query.offset) || 0 });
+    const respuesta = await this.queryUC.lista(
+      new IngresoDTO({ ...req.query, sucursalId: req.sucursalScope?.filtroLectura ?? null }),
+      { limit: Number(req.query.limit) || 10, offset: Number(req.query.offset) || 0 },
+    );
     return res.status(200).json({ ...respuesta, traceId: req.traceId });
   }
 

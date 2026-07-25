@@ -39,6 +39,11 @@ export default class ReporteInternoPgsQueryAdaptador
     const condiciones = ['1 = 1'];
     const replacements = { limit, offset };
     rango(condiciones, replacements, 'm.fecha_operacion', filtros);
+    // Un kardex que mezcle sucursales no cuadra con las existencias de ninguna.
+    if (filtros.sucursalId) {
+      condiciones.push('m.sucursal_id = :sucursalId');
+      replacements.sucursalId = Number(filtros.sucursalId);
+    }
     if (filtros.productoId) {
       condiciones.push('m.producto_id = :productoId');
       replacements.productoId = filtros.productoId;
@@ -99,6 +104,10 @@ export default class ReporteInternoPgsQueryAdaptador
     const condiciones = ['1 = 1'];
     const replacements = { limit, offset };
     rango(condiciones, replacements, 'i.fecha', filtros);
+    if (filtros.sucursalId) {
+      condiciones.push('i.sucursal_id = :sucursalId');
+      replacements.sucursalId = Number(filtros.sucursalId);
+    }
     if (filtros.proveedorId) {
       condiciones.push('i.proveedor_id = :proveedorId');
       replacements.proveedorId = filtros.proveedorId;
@@ -162,33 +171,39 @@ export default class ReporteInternoPgsQueryAdaptador
     };
   }
 
-  async alertasStock() {
-    const columnas = await sequelize
-      .getQueryInterface()
-      .describeTable('productos');
-    const umbral = columnas.stock_minimo
-      ? 'COALESCE(p.stock_minimo, 5)'
-      : '5';
+  // Con sucursal seleccionada el inventario se lee de existencias; sin ella,
+  // productos.stock ya es el total derivado y sirve como consolidado.
+  _baseInventario(sucursalId) {
+    return sucursalId
+      ? `
+        SELECT p.id, p.codigo, p.nombre, p.grupo,
+               COALESCE(e.stock, 0) AS stock,
+               COALESCE(e.costo_promedio, p.costo, 0) AS costo,
+               GREATEST(COALESCE(NULLIF(e.stock_minimo, 0), 5), 1) AS stock_minimo
+        FROM productos p
+        JOIN existencias e ON e.producto_id = p.id AND e.sucursal_id = :sucursalId
+        WHERE p.activo = TRUE AND p.tipo_control_stock = 'NORMAL'
+      `
+      : `
+        SELECT p.id, p.codigo, p.nombre, p.grupo,
+               p.stock, COALESCE(p.costo, 0) AS costo, 5 AS stock_minimo
+        FROM productos p
+        WHERE p.activo = TRUE AND p.tipo_control_stock = 'NORMAL'
+      `;
+  }
+
+  async alertasStock(filtros = {}) {
+    const sucursalId = Number(filtros.sucursalId) || null;
+    const replacements = sucursalId ? { sucursalId } : {};
     const items = await sequelize.query(
       `
-        SELECT
-          p.id,
-          p.codigo,
-          p.nombre,
-          p.grupo,
-          p.stock,
-          ${umbral} AS stock_minimo,
-          CASE
-            WHEN p.stock = 0 THEN 'SIN_STOCK'
-            ELSE 'STOCK_BAJO'
-          END AS alerta
-        FROM productos p
-        WHERE p.activo = TRUE
-          AND p.tipo_control_stock = 'NORMAL'
-          AND p.stock <= ${umbral}
-        ORDER BY p.stock ASC, p.nombre
+        WITH base AS (${this._baseInventario(sucursalId)})
+        SELECT b.*, CASE WHEN b.stock = 0 THEN 'SIN_STOCK' ELSE 'STOCK_BAJO' END AS alerta
+        FROM base b
+        WHERE b.stock <= b.stock_minimo
+        ORDER BY b.stock ASC, b.nombre
       `,
-      { type: QueryTypes.SELECT },
+      { replacements, type: QueryTypes.SELECT },
     );
     return {
       items,
@@ -197,30 +212,46 @@ export default class ReporteInternoPgsQueryAdaptador
     };
   }
 
-  async valorInventario() {
+  async valorInventario(filtros = {}) {
+    const sucursalId = Number(filtros.sucursalId) || null;
+    const replacements = sucursalId ? { sucursalId } : {};
+    const base = this._baseInventario(sucursalId);
+
     const porGrupo = await sequelize.query(
       `
-        SELECT
-          COALESCE(p.grupo, 'SIN_GRUPO') AS grupo,
-          COALESCE(SUM(p.stock * p.costo), 0)::NUMERIC(14,2) AS valor
-        FROM productos p
-        WHERE p.activo = TRUE
-          AND p.tipo_control_stock = 'NORMAL'
-        GROUP BY COALESCE(p.grupo, 'SIN_GRUPO')
+        WITH base AS (${base})
+        SELECT COALESCE(b.grupo, 'SIN_GRUPO') AS grupo,
+               COALESCE(SUM(b.stock * b.costo), 0)::NUMERIC(14,2) AS valor
+        FROM base b
+        GROUP BY COALESCE(b.grupo, 'SIN_GRUPO')
         ORDER BY grupo
       `,
-      { type: QueryTypes.SELECT },
+      { replacements, type: QueryTypes.SELECT },
     );
     const [total] = await sequelize.query(
       `
-        SELECT
-          COALESCE(SUM(p.stock * p.costo), 0)::NUMERIC(14,2) AS valor_total
-        FROM productos p
-        WHERE p.activo = TRUE
-          AND p.tipo_control_stock = 'NORMAL'
+        WITH base AS (${base})
+        SELECT COALESCE(SUM(b.stock * b.costo), 0)::NUMERIC(14,2) AS valor_total
+        FROM base b
+      `,
+      { replacements, type: QueryTypes.SELECT },
+    );
+
+    // Desglose por sucursal para la vista consolidada.
+    const desglose = sucursalId ? [] : await sequelize.query(
+      `
+        SELECT e.sucursal_id,
+               COALESCE(SUM(e.stock), 0)::INTEGER AS unidades,
+               COALESCE(SUM(e.stock * e.costo_promedio), 0)::NUMERIC(14,2) AS valor
+        FROM existencias e
+        JOIN productos p ON p.id = e.producto_id
+        WHERE p.activo = TRUE AND p.tipo_control_stock = 'NORMAL'
+        GROUP BY e.sucursal_id
+        ORDER BY e.sucursal_id
       `,
       { type: QueryTypes.SELECT },
     );
-    return { ...total, por_grupo: porGrupo };
+
+    return { ...total, por_grupo: porGrupo, desglose_sucursales: desglose };
   }
 }

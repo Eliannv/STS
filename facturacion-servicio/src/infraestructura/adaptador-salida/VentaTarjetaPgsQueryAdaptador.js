@@ -27,6 +27,7 @@ export default class VentaTarjetaPgsQueryAdaptador
 
   async listarVentasTarjeta(filtros = {}) {
     const where = {};
+    if (filtros.sucursalId) where.sucursal_id = Number(filtros.sucursalId);
     if (filtros.estado) where.estado = filtros.estado;
     if (filtros.clienteId) where.cliente_id = filtros.clienteId;
     if (filtros.banco) where.banco = { [Op.iLike]: `%${filtros.banco}%` };

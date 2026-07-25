@@ -33,6 +33,9 @@ export default class MicroserviciosHttpAdaptador extends ReportesSalidaPuerto {
   async leer(servicio, ruta, query = {}, contexto = {}) {
     const headers = { Accept: 'application/json', 'X-Trace-Id': contexto.traceId || '' };
     if (contexto.authorization) headers.Authorization = contexto.authorization;
+    // Sin esta cabecera cada servicio resolvería la sucursal propia del token y el
+    // selector del administrador no afectaría a ningún reporte ni al dashboard.
+    if (contexto.sucursalId) headers['X-Sucursal-Id'] = String(contexto.sucursalId);
     const response = await fetch(this.url(servicio, ruta, query), { headers, signal: AbortSignal.timeout(15000) });
     const data = await response.json().catch(() => null);
     if (!response.ok) {

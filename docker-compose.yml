@@ -100,6 +100,7 @@ services:
       - ./inventario-servicio/sql/05_egresos_upgrade.sql:/docker-entrypoint-initdb.d/05_egresos_upgrade.sql:ro
       - ./inventario-servicio/sql/06_existencias_por_sucursal.sql:/docker-entrypoint-initdb.d/06_existencias_por_sucursal.sql:ro
       - ./inventario-servicio/sql/07_transferencias_sucursal.sql:/docker-entrypoint-initdb.d/07_transferencias_sucursal.sql:ro
+      - ./inventario-servicio/sql/08_ingresos_por_sucursal.sql:/docker-entrypoint-initdb.d/08_ingresos_por_sucursal.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d inventario_db"]
       interval: 5s

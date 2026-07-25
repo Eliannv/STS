@@ -23,6 +23,13 @@ const ingresoDb = (ingreso) => ({
   updated_at: new Date()
 });
 
+// La sucursal se fija al crear la compra y no vuelve a tocarse: reasignar un
+// documento ya registrado descuadraría el stock que cargó en su sucursal original.
+const sucursalDb = (ingreso) => ({
+  sucursal_id: ingreso.sucursalId,
+  sucursal_nombre: ingreso.sucursalNombre,
+});
+
 const detalleDb = (detalle, ingresoId) => ({
   ingreso_id: ingresoId ?? detalle.ingresoId,
   producto_id: detalle.productoId,
@@ -57,7 +64,7 @@ export default class IngresoPgsCommandAdaptador extends IngresoSalidaCommandPuer
   async guardar(ingreso, detalles = []) {
     const transaction = await sequelize.transaction();
     try {
-      const creado = await IngresoModel.create({ ...ingresoDb(ingreso), estado: 'BORRADOR', created_at: new Date() }, { transaction });
+      const creado = await IngresoModel.create({ ...ingresoDb(ingreso), ...sucursalDb(ingreso), estado: 'BORRADOR', created_at: new Date() }, { transaction });
       for (const detalle of detalles) await DetalleIngresoModel.create(detalleDb(detalle, creado.id), { transaction });
       await transaction.commit();
       return { estado: 'ok', resultado: creado };
@@ -150,8 +157,11 @@ export default class IngresoPgsCommandAdaptador extends IngresoSalidaCommandPuer
           referenciaCodigo: ingreso.id_personalizado || ingreso.numero_factura,
           usuarioId: contexto.usuarioId ?? ingreso.usuario_id,
           usuarioNombre: contexto.usuarioNombre,
-          sucursalId: contexto.sucursalId,
-          sucursalNombre: contexto.sucursalNombre,
+          // El stock entra en la sucursal DEL DOCUMENTO, no en la que tenga
+          // seleccionada quien finaliza: un borrador de Pasaje finalizado por el
+          // administrador desde Machala debe cargar en Pasaje.
+          sucursalId: ingreso.sucursal_id ?? contexto.sucursalId,
+          sucursalNombre: ingreso.sucursal_nombre ?? contexto.sucursalNombre,
           fechaOperacion: ingreso.fecha,
           operacionId: contexto.operacionId || `INGRESO-${ingreso.id}`,
           idempotencyKey: `${contexto.idempotencyKey || `INGRESO-${ingreso.id}`}:DETALLE-${detalle.id}`,

@@ -6,7 +6,7 @@ export default class ReporteInternoQueryUsesCase {
 
   movimientos(filtros) { return this.salidaQuery.movimientos(filtros); }
   flujo(filtros) { return this.salidaQuery.flujo(filtros); }
-  saldoActual() { return this.salidaQuery.saldoActual(); }
+  saldoActual(filtros) { return this.salidaQuery.saldoActual(filtros); }
   cuentasCobrar(filtros) {
     return this.salidaQuery.cuentasCobrar(filtros);
   }

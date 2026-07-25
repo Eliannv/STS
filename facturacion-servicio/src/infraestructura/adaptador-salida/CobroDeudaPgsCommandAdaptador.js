@@ -14,7 +14,7 @@ export default class CobroDeudaPgsCommandAdaptador extends CobroDeudaCommandSali
       if (monto > saldoActual) { await transaction.rollback(); return { estado: 'error', resultado: `Monto ${monto} excede saldo pendiente ${saldoActual}` }; }
       const saldoNuevo = Math.max(0, saldoActual - monto);
       const estado = saldoNuevo <= 0.01 ? 'PAGADA' : 'PENDIENTE';
-      const abonoCreado = await Deuda.create({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: factura.cliente_id, cliente_nombre: factura.cliente_nombre || 'Cliente', metodo_pago: abono.metodoPago, fecha_pago: abono.fechaPago, monto_pagado: monto, total_factura: factura.total, saldo_restante: saldoNuevo, estado_pago: estado, es_credito: factura.es_credito, usuario_id: abono.usuarioId, created_at: new Date() }, { transaction });
+      const abonoCreado = await Deuda.create({ factura_id: factura.id, sucursal_id: factura.sucursal_id, factura_id_personalizado: factura.id_personalizado, cliente_id: factura.cliente_id, cliente_nombre: factura.cliente_nombre || 'Cliente', metodo_pago: abono.metodoPago, fecha_pago: abono.fechaPago, monto_pagado: monto, total_factura: factura.total, saldo_restante: saldoNuevo, estado_pago: estado, es_credito: factura.es_credito, usuario_id: abono.usuarioId, created_at: new Date() }, { transaction });
       await factura.update({ abonado: Number(factura.abonado || 0) + monto, saldo_pendiente: saldoNuevo, estado_pago: estado, updated_at: new Date() }, { transaction });
       await transaction.commit();
       return { estado: 'ok', resultado: { id: abonoCreado.id, factura, abono: abonoCreado, facturaCompleta: estado === 'PAGADA' } };

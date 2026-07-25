@@ -9,7 +9,12 @@ const servicios = {
   cliente: process.env.CLIENTE_SERVICIO_URL,
 };
 
-const lista = (respuesta) => Array.isArray(respuesta?.resultado) ? respuesta.resultado : [];
+const lista = (respuesta) => {
+  if (Array.isArray(respuesta?.resultado)) return respuesta.resultado;
+  if (Array.isArray(respuesta?.data)) return respuesta.data;
+  if (Array.isArray(respuesta?.data?.rows)) return respuesta.data.rows;
+  return [];
+};
 
 export default class MicroserviciosHttpAdaptador extends ReportesSalidaPuerto {
   constructor(configuracion = servicios) { super(); this.servicios = configuracion; }

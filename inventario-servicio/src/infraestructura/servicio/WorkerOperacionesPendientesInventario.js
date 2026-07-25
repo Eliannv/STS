@@ -38,17 +38,31 @@ export default class WorkerOperacionesPendientesInventario {
 
   async procesar(operacion) {
     try {
-      const respuesta = ['COMPRA_CONTADO', 'COMPRA_CREDITO'].includes(
-        operacion.getTipo(),
-      )
-        ? await this.cajaHttp.postCompra(
-          operacion.getPayload(),
-          operacion.getTraceId(),
-        )
-        : await this.cajaHttp.postAnulacionCompra(
+      const tipo = operacion.getTipo();
+      let respuesta;
+      if (['COMPRA_CONTADO', 'COMPRA_CREDITO'].includes(tipo)) {
+        respuesta = await this.cajaHttp.postCompra(
           operacion.getPayload(),
           operacion.getTraceId(),
         );
+      } else if (['ANULACION_COMPRA', 'DEVOLUCION_PROVEEDOR'].includes(tipo)) {
+        respuesta = await this.cajaHttp.postAnulacionCompra(
+          operacion.getPayload(),
+          operacion.getTraceId(),
+        );
+      } else if (tipo === 'REEMBOLSO_DEVOLUCION') {
+        respuesta = await this.cajaHttp.postDevolucionProveedor(
+          operacion.getPayload(),
+          operacion.getTraceId(),
+        );
+      } else if (tipo === 'ANULACION_REEMBOLSO') {
+        respuesta = await this.cajaHttp.postAnulacionDevolucion(
+          operacion.getPayload(),
+          operacion.getTraceId(),
+        );
+      } else {
+        respuesta = { ok: false, error: `Tipo no soportado: ${tipo}` };
+      }
       if (respuesta.ok) {
         await this.operacionCommand.marcarAplicada(
           operacion.getId(),

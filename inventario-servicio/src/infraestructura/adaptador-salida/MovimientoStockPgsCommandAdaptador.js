@@ -1,3 +1,4 @@
+// inventario-servicio/src/infraestructura/adaptador-salida/MovimientoStockPgsCommandAdaptador.js
 import sequelize from '../base-dato/Postgresql.js';
 import MovimientoStockSalidaCommandPuerto from '../../aplicacion/puertos/salida/MovimientoStockSalidaCommandPuerto.js';
 import { MovimientoStock } from '../modelos/Modelos.js';
@@ -9,14 +10,30 @@ const tipoLegacy = (tipoMovimiento, naturaleza) => {
   if (tipoMovimiento === 'COMPRA' || tipoMovimiento === 'INVENTARIO_INICIAL') return 'INGRESO';
   if (tipoMovimiento === 'ANULACION_VENTA' || tipoMovimiento === 'ANULACION_EGRESO') return 'ANULACION';
   if (tipoMovimiento === 'ANULACION_COMPRA') return 'ELIMINACION';
-  if (['EGRESO', 'DEVOLUCION_PROVEEDOR', 'TRANSFERENCIA_SALIDA'].includes(tipoMovimiento)) return 'SALIDA';
+  if ([
+    'EGRESO',
+    'DEVOLUCION_PROVEEDOR',
+    'TRANSFERENCIA_SALIDA',
+    'MERMA',
+    'ROTURA',
+    'ROBO',
+    'PERDIDA',
+    'VENCIMIENTO',
+    'CONSUMO_INTERNO',
+    'MUESTRA',
+    'DONACION',
+    'OBSOLESCENCIA',
+    'RETIRO_CALIDAD',
+  ].includes(tipoMovimiento)) return 'SALIDA';
   if (tipoMovimiento === 'TRANSFERENCIA_ENTRADA' || tipoMovimiento === 'DEVOLUCION_CLIENTE') return 'INGRESO';
   return naturaleza === 'SALIDA' ? 'SALIDA' : 'AJUSTE';
 };
 
 const costoResultante = ({ tipoMovimiento, naturaleza, stockAnterior, cantidad, costoAnterior, costoUnitario }) => {
   if (tipoMovimiento === 'REVALORIZACION') return costoUnitario;
-  if (naturaleza !== 'ENTRADA' || !['COMPRA', 'INVENTARIO_INICIAL'].includes(tipoMovimiento)) return costoAnterior;
+  // La mercadería que entra por transferencia llega con el costo de la sucursal de
+  // origen y debe promediarse: si no, el destino la valoraría a su costo previo (0 si es nueva).
+  if (naturaleza !== 'ENTRADA' || !['COMPRA', 'INVENTARIO_INICIAL', 'TRANSFERENCIA_ENTRADA'].includes(tipoMovimiento)) return costoAnterior;
   const total = stockAnterior + cantidad;
   return total > 0 ? Number(((stockAnterior * costoAnterior + cantidad * costoUnitario) / total).toFixed(4)) : costoUnitario;
 };
@@ -37,7 +54,9 @@ export default class MovimientoStockPgsCommandAdaptador extends MovimientoStockS
       for (let indice = 0; indice < movimiento.items.length; indice++) {
         const item = movimiento.items[indice];
         const claveLinea = item.lineaId ?? item.productoId;
-        const idempotencyKey = `${movimiento.idempotencyKey}:${claveLinea}:${indice}`;
+        const idempotencyKey =
+          item.idempotencyKey
+          ?? `${movimiento.idempotencyKey}:${claveLinea}:${indice}`;
         const existente = await MovimientoStock.findOne({ where: { idempotency_key: idempotencyKey }, transaction });
         if (existente) {
           creados.push(existente);
@@ -156,8 +175,9 @@ export default class MovimientoStockPgsCommandAdaptador extends MovimientoStockS
             cantidad: original.cantidad,
             costoUnitario: original.costo_unitario,
             precioVenta: original.precio_venta,
-            lineaId: original.id,
-            movimientoRevertidoId: original.id,
+           lineaId: original.id,
+           movimientoRevertidoId: original.id,
+           idempotencyKey: datos.idempotencyKey,
           }],
           referenciaId: datos.referenciaId ?? original.referencia_id,
           referenciaTipo: datos.referenciaTipo ?? original.referencia_tipo,

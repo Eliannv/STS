@@ -42,11 +42,19 @@ function getToken() {
   return localStorage.getItem('token');
 }
 
+// Sucursal elegida por el administrador en el selector de la barra superior.
+// El backend la valida contra el rol del token: un operador nunca puede salir de la suya.
+function getSucursalActiva() {
+  return localStorage.getItem('sucursalActiva');
+}
+
 async function request(method, path, body = null) {
   const normalized = normalizeRequest(method, path, body);
   const headers = { Accept: 'application/json' };
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
+  const sucursalActiva = getSucursalActiva();
+  if (sucursalActiva) headers['X-Sucursal-Id'] = sucursalActiva;
 
   const config = { method, headers };
   if (normalized.body !== null && normalized.body !== undefined) {
@@ -76,6 +84,7 @@ async function request(method, path, body = null) {
   if (res.status === 401) {
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
+    localStorage.removeItem('sucursalActiva');
     window.location.href = '/login';
   }
 

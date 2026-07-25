@@ -1,3 +1,4 @@
+// cliente/src/context/TabHistoryContext.jsx
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -13,10 +14,13 @@ const ROUTE_LABELS = {
   '/usuarios': 'Usuarios',
   '/productos': 'Productos',
   '/ingresos': 'Ingresos',
+  '/egresos': 'Egresos',
   '/facturas': 'Facturas',
   '/ventas/venta-tarjeta': 'Venta con Tarjeta',
   '/caja-chica': 'Caja Chica',
   '/caja-banco': 'Caja Banco',
+  '/cuentas-cobrar': 'Cuentas por Cobrar',
+  '/cuentas-pagar': 'Cuentas por Pagar',
   '/sucursales': 'Sucursales',
 };
 
@@ -26,8 +30,8 @@ function getLabel(pathname) {
   if (pathname.startsWith('/ingresos/nuevo')) return 'Nuevo Ingreso';
   if (pathname.startsWith('/ingresos/importar')) return 'Importar Ingreso';
   if (pathname.startsWith('/ingresos/')) return 'Ingreso';
+  if (pathname.startsWith('/egresos/')) return 'Egreso';
   if (pathname.startsWith('/facturas/nueva')) return 'Nueva Venta';
-  if (pathname.startsWith('/facturas/cobrar')) return 'Cobrar Deuda';
   if (pathname.startsWith('/facturas/')) return 'Factura';
   if (pathname.startsWith('/ventas/venta-tarjeta/')) return 'Ver Venta Tarjeta';
   if (pathname.startsWith('/caja-chica/')) return 'Ver Caja Chica';

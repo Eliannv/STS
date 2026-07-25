@@ -20,6 +20,9 @@ router.post('/compras', (req, res) => (
 router.post('/anulaciones-compras', (req, res) => (
   operacionControlador.procesarAnulacionCompra(req, res)
 ));
+router.post('/devoluciones-proveedor', (req, res) => (
+  operacionControlador.procesarDevolucionProveedor(req, res)
+));
 router.post(
   '/ajustes',
   authMiddleware('ADMINISTRADOR'),

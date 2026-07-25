@@ -15,6 +15,7 @@ const recursos = ['detalle-facturas','deudas','abonos-tarjeta'];
 for (const recurso of recursos) {
   router.get(`/${recurso}`, authMiddleware(), (req, res) => { req.params.recurso = recurso; return facturacionControlador.lista(req, res); });
   router.get(`/${recurso}/:id`, authMiddleware(), (req, res) => { req.params.recurso = recurso; return facturacionControlador.buscar(req, res); });
+  if (recurso === 'deudas') continue;
   router.post(`/${recurso}`, authMiddleware(), (req, res) => { req.params.recurso = recurso; return facturacionControlador.crear(req, res); });
   router.put(`/${recurso}/:id`, authMiddleware(), (req, res) => { req.params.recurso = recurso; return facturacionControlador.editar(req, res); });
   router.delete(`/${recurso}/:id`, authMiddleware('ADMINISTRADOR'), (req, res) => { req.params.recurso = recurso; return facturacionControlador.eliminar(req, res); });

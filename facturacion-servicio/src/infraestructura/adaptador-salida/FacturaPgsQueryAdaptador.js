@@ -34,10 +34,11 @@ export default class FacturaPgsQueryAdaptador extends FacturaSalidaQueryPuerto {
         return { estado: 'ok', resultado: { total_facturado: totalFacturado, total_pagado: totalPagado, deuda_total: facturas.reduce((sum, factura) => sum + Number(factura.saldo_pendiente || 0), 0), cantidad_facturas: facturas.length, ultima_factura: facturas[0] ? created_at ? null : promedio_compra : facturas.length ? Number((totalFacturado / facturas.length).toFixed(2)) : 0 } };
     }
 
-    async listaGeneral({ buscar, estado, tipo, fechaDesde, fechaHasta, limit = 15, offset = 0 } = {}) {
+    async listaGeneral({ buscar, estado, tipo, sucursalId, fechaDesde, fechaHasta, limit = 15, offset = 0 } = {}) {
         const where = {};
         if (estado) where.estado_pago = estado;
         if (tipo) where.tipo_venta = tipo;
+        if (sucursalId) where.sucursal_id = sucursalId;
         if (buscar) where[Op.or] = [{
             id_personalizado: {
                 [Op.iLike]: `%${buscar}%`

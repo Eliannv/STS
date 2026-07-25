@@ -1,5 +1,5 @@
 // cliente/src/App.jsx
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/auth/Login';
@@ -8,6 +8,7 @@ import Clientes from './pages/clientes/Clientes';
 import Productos from './pages/productos/Productos';
 import Proveedores from './pages/proveedores/Proveedores';
 import Sucursales from './pages/sucursales/Sucursales';
+import Transferencias from './pages/transferencias/Transferencias';
 import Usuarios from './pages/usuarios/Usuarios';
 import EmpleadoEstadisticas from './pages/usuarios/EmpleadoEstadisticas';
 import Ingresos from './pages/ingresos/Ingresos';
@@ -15,10 +16,11 @@ import CrearIngreso from './pages/ingresos/CrearIngreso';
 import ImportarIngreso from './pages/ingresos/ImportarIngreso';
 import AgregarProductosIngreso from './pages/ingresos/AgregarProductosIngreso';
 import VerIngreso from './pages/ingresos/VerIngreso';
+import EgresosPage from './pages/Egresos/EgresosPage';
+import EgresoDetalle from './pages/Egresos/EgresoDetalle';
 import FichaCliente from './pages/clientes/FichaCliente';
 import Ventas from './pages/ventas/Ventas';
 import CrearVenta from './pages/ventas/CrearVenta';
-import CobrarDeuda from './pages/ventas/CobrarDeuda';
 import VerFactura from './pages/facturas/VerFactura';
 import CajaBancoPage from './pages/CajaBanco/CajaBancoPage';
 import CajaBancoDetalle from './pages/CajaBanco/CajaBancoDetalle';
@@ -33,6 +35,11 @@ import ReportPage from './pages/reportes/ReportPage';
 import KardexPage from './pages/reportes/KardexPage';
 import AnalisisVentas from './pages/reportes/AnalisisVentas';
 
+function CobrarDeudaRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/cuentas-cobrar${location.search}`} replace />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -46,6 +53,7 @@ export default function App() {
             <Route path="/productos" element={<Productos />} />
             <Route path="/proveedores" element={<Proveedores />} />
             <Route path="/sucursales" element={<Sucursales />} />
+            <Route path="/transferencias" element={<Transferencias />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/empleados" element={<EmpleadoEstadisticas />} />
             <Route path="/ingresos" element={<Ingresos />} />
@@ -53,9 +61,11 @@ export default function App() {
             <Route path="/ingresos/importar" element={<ImportarIngreso />} />
             <Route path="/ingresos/:id" element={<VerIngreso />} />
             <Route path="/ingresos/:id/productos" element={<AgregarProductosIngreso />} />
+            <Route path="/egresos" element={<EgresosPage />} />
+            <Route path="/egresos/:id" element={<EgresoDetalle />} />
             <Route path="/facturas" element={<Ventas />} />
             <Route path="/facturas/nueva" element={<CrearVenta />} />
-            <Route path="/facturas/cobrar" element={<CobrarDeuda />} />
+            <Route path="/facturas/cobrar" element={<CobrarDeudaRedirect />} />
             <Route path="/ventas/venta-tarjeta" element={<VentasTarjetaPage />} />
             <Route path="/ventas/venta-tarjeta/:id" element={<VentaTarjetaDetalle />} />
             <Route path="/ventas-tarjeta" element={<Navigate to="/ventas/venta-tarjeta" replace />} />

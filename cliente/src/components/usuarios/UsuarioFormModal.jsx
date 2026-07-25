@@ -11,7 +11,8 @@ export default function UsuarioFormModal({ abierto, editando, usuarioInicial, on
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.get('/sucursal/lista').then(res => {
+    // Solo sucursales activas: no debe poder asignarse personal a una desactivada.
+    api.get('/sucursales').then(res => {
       if (res.ok) setSucursales(res.data.resultado || []);
     });
   }, []);
@@ -143,9 +144,11 @@ export default function UsuarioFormModal({ abierto, editando, usuarioInicial, on
           </select>
         </div>
         <div className="form-group">
-          <label className="form-label">Sucursal</label>
-          <select className="form-control" name="sucursalId" value={form.sucursalId} onChange={handleChange}>
-            <option value="">Sin sucursal</option>
+          <label className="form-label">Sucursal *</label>
+          {/* Un usuario sin sucursal generaría ventas y movimientos huérfanos:
+              el backend también lo rechaza. */}
+          <select className="form-control" name="sucursalId" value={form.sucursalId} onChange={handleChange} required>
+            <option value="">Seleccione una sucursal...</option>
             {sucursales.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
           </select>
         </div>

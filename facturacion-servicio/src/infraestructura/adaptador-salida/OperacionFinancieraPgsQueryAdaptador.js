@@ -40,4 +40,12 @@ export default class OperacionFinancieraPgsQueryAdaptador
       }),
     );
   }
+
+  async findByFacturaId(facturaId) {
+    const operaciones = await ModeloOperacionFinanciera.findAll({
+      where: { factura_id: facturaId },
+      order: [['created_at', 'ASC'], ['id', 'ASC']],
+    });
+    return operaciones.map(mapearEntidad);
+  }
 }

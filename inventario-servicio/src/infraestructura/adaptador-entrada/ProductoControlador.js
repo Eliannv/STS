@@ -13,7 +13,8 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
       ...req.body,
       usuarioId: req.usuario?.id,
       usuarioNombre: req.usuario ? `${req.usuario.nombre || ''} ${req.usuario.apellido || ''}`.trim() : null,
-      sucursalId: req.usuario?.sucursalId ?? req.body.sucursalId,
+      sucursalId: req.sucursalScope?.sucursalId ?? null,
+      sucursalNombre: req.sucursalScope?.sucursalNombre ?? null,
       operacionId: req.body.operacionId || req.traceId,
       idempotencyKey: req.body.idempotencyKey || req.headers['x-idempotency-key'] || req.traceId,
       traceId: req.traceId,
@@ -22,14 +23,21 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
   }
 
   async lista(req, res) {
-    const dto = new ProductoDTO({ buscar: req.query.buscar, sucursalId: req.query.sucursalId });
+    // El scope manda sobre el query param: un operador no puede consultar otra sucursal.
+    const dto = new ProductoDTO({ buscar: req.query.buscar, sucursalId: req.sucursalScope?.filtroLectura ?? null });
     const pag = { limit: Number(req.query.limit) || 20, offset: Number(req.query.offset) || 0, estado: req.query.estado || 'activos' };
     const respuesta = await this.queryUC.lista(dto, pag);
     return res.status(200).json({ ...respuesta, traceId: req.traceId });
   }
 
   async buscarPorId(req, res) {
-    const respuesta = await this.queryUC.buscarPorId(Number(req.params.id));
+    const respuesta = await this.queryUC.buscarPorId(Number(req.params.id), req.sucursalScope?.filtroLectura ?? null);
+    return res.status(respuesta.estado === 'ok' ? 200 : 404).json({ ...respuesta, traceId: req.traceId });
+  }
+
+  // Stock del producto desglosado por sucursal.
+  async existencias(req, res) {
+    const respuesta = await this.queryUC.existenciasPorProducto(Number(req.params.id));
     return res.status(respuesta.estado === 'ok' ? 200 : 404).json({ ...respuesta, traceId: req.traceId });
   }
 
@@ -49,7 +57,8 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
       id: req.params.id ?? req.body.id,
       usuarioId: req.usuario?.id,
       usuarioNombre: req.usuario ? `${req.usuario.nombre || ''} ${req.usuario.apellido || ''}`.trim() : null,
-      sucursalId: req.usuario?.sucursalId ?? req.body.sucursalId,
+      sucursalId: req.sucursalScope?.sucursalId ?? null,
+      sucursalNombre: req.sucursalScope?.sucursalNombre ?? null,
       operacionId: req.body.operacionId || req.traceId,
       idempotencyKey: req.body.idempotencyKey || req.headers['x-idempotency-key'] || req.traceId,
       traceId: req.traceId,
@@ -71,7 +80,8 @@ export default class ProductoControlador extends ProductoEntradaPuerto {
     const respuesta = await this.commandUC.reducirStock(req.body.items || [], {
       usuarioId: req.usuario?.id,
       usuarioNombre: req.usuario ? `${req.usuario.nombre || ''} ${req.usuario.apellido || ''}`.trim() : null,
-      sucursalId: req.usuario?.sucursalId,
+      sucursalId: req.sucursalScope?.sucursalId ?? null,
+      sucursalNombre: req.sucursalScope?.sucursalNombre ?? null,
       referenciaId: req.body.referenciaId,
       referenciaCodigo: req.body.referenciaCodigo,
       operacionId: req.body.operacionId || req.traceId,

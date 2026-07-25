@@ -18,6 +18,8 @@ export function AuthProvider({ children }) {
   function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
+    // La sucursal seleccionada no debe sobrevivir a un cambio de usuario.
+    localStorage.removeItem('sucursalActiva');
     setToken(null);
     setUsuario(null);
   }

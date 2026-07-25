@@ -1,6 +1,8 @@
+// cliente/src/components/productos/ProductoAutocomplete.jsx
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Check, PackageSearch, Search, X } from 'lucide-react';
 import { api } from '../../api/api';
+import './ProductoAutocomplete.css';
 
 const ProductoAutocomplete = forwardRef(function ProductoAutocomplete({ producto, onSelect, onClear }, ref) {
   const [texto, setTexto] = useState(producto?.nombre || '');

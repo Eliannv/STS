@@ -3,6 +3,7 @@ export default class OperacionFinancieraInventario {
   constructor(datos = {}) {
     this.id = datos.id ?? null;
     this.ingresoId = datos.ingresoId ?? datos.ingreso_id ?? null;
+    this.egresoId = datos.egresoId ?? datos.egreso_id ?? null;
     this.cuentaPagarId = datos.cuentaPagarId ?? datos.cuenta_pagar_id ?? null;
     this.operacionId = datos.operacionId ?? datos.operacion_id ?? null;
     this.operacionIdOriginal =
@@ -16,6 +17,16 @@ export default class OperacionFinancieraInventario {
     this.cajaTipo = datos.cajaTipo ?? datos.caja_tipo ?? null;
     this.cajaId = datos.cajaId ?? datos.caja_id ?? null;
     this.montoTotal = datos.montoTotal ?? datos.monto_total ?? 0;
+    this.monto = datos.monto ?? 0;
+    this.proveedorId = datos.proveedorId ?? datos.proveedor_id ?? null;
+    this.proveedorNombre =
+      datos.proveedorNombre
+      ?? datos.proveedor_nombre
+      ?? null;
+    this.ingresoOrigenId =
+      datos.ingresoOrigenId
+      ?? datos.ingreso_origen_id
+      ?? null;
     this.fechaVencimiento =
       datos.fechaVencimiento
       ?? datos.fecha_vencimiento
@@ -48,6 +59,8 @@ export default class OperacionFinancieraInventario {
   setId(id) { this.id = id; }
   getIngresoId() { return this.ingresoId; }
   setIngresoId(ingresoId) { this.ingresoId = ingresoId; }
+  getEgresoId() { return this.egresoId; }
+  setEgresoId(egresoId) { this.egresoId = egresoId; }
   getCuentaPagarId() { return this.cuentaPagarId; }
   setCuentaPagarId(cuentaPagarId) { this.cuentaPagarId = cuentaPagarId; }
   getOperacionId() { return this.operacionId; }
@@ -68,6 +81,14 @@ export default class OperacionFinancieraInventario {
   setCajaId(cajaId) { this.cajaId = cajaId; }
   getMontoTotal() { return this.montoTotal; }
   setMontoTotal(montoTotal) { this.montoTotal = montoTotal; }
+  getMonto() { return this.monto; }
+  setMonto(monto) { this.monto = monto; }
+  getProveedorId() { return this.proveedorId; }
+  setProveedorId(proveedorId) { this.proveedorId = proveedorId; }
+  getProveedorNombre() { return this.proveedorNombre; }
+  setProveedorNombre(proveedorNombre) { this.proveedorNombre = proveedorNombre; }
+  getIngresoOrigenId() { return this.ingresoOrigenId; }
+  setIngresoOrigenId(ingresoOrigenId) { this.ingresoOrigenId = ingresoOrigenId; }
   getFechaVencimiento() { return this.fechaVencimiento; }
   setFechaVencimiento(fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
   getEstado() { return this.estado; }

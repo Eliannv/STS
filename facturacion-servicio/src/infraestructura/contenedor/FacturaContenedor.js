@@ -36,6 +36,7 @@ export const facturaControlador = new FacturaControlador(
     inventarioStock,
     operacionCommand,
     cajaHttp,
+    operacionQuery,
   ),
   queryUsesCase,
 );

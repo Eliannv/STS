@@ -1,3 +1,4 @@
+// cliente/src/pages/clientes/Clientes.jsx
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
@@ -170,9 +171,9 @@ export default function Clientes() {
                         className="btn btn-sm"
                         style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffc107', fontSize: 12, padding: '3px 10px', borderRadius: 20, fontWeight: 700, cursor: 'pointer' }}
                         title="Ver deuda del cliente"
-                        onClick={() => navigate(`/facturas/cobrar?clienteId=${c.id}`)}
+                        onClick={() => navigate(`/cuentas-cobrar?clienteId=${c.id}`)}
                       >
-                        Cobrar deuda
+                        Cuentas por cobrar
                       </button>
                     : <span style={{ fontSize: 12, color: '#adb5bd' }}>—</span>
                   }

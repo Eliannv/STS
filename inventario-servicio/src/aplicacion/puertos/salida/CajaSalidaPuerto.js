@@ -2,4 +2,6 @@
 export default class CajaSalidaPuerto {
   postCompra(payload, traceId) { throw new Error('Not implemented'); }
   postAnulacionCompra(payload, traceId) { throw new Error('Not implemented'); }
+  postDevolucionProveedor(payload, traceId) { throw new Error('Not implemented'); }
+  postAnulacionDevolucion(payload, traceId) { throw new Error('Not implemented'); }
 }

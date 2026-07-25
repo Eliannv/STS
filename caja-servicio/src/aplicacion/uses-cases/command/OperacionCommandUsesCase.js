@@ -241,7 +241,7 @@ export default class OperacionCommandUsesCase {
 
   async procesarAnulacion(params = {}) {
     const { operacionId, idempotencyKey } = validarIdentificadores(params);
-    const operacionesOriginales = obtener(
+    const operacionesSolicitadas = obtener(
       params,
       'operacionIdsOriginales',
       'operacion_ids_originales',
@@ -256,6 +256,57 @@ export default class OperacionCommandUsesCase {
       throw new Error('El motivo es requerido');
     }
 
+    const cuentaIdSolicitada = Number(
+      obtener(params, 'cuentaCobrarId', 'cuenta_cobrar_id'),
+    );
+    const referenciaTipo = obtener(
+      params,
+      'referenciaTipo',
+      'referencia_tipo',
+    );
+    const referenciaId = Number(
+      obtener(params, 'referenciaId', 'referencia_id'),
+    );
+    let cuenta = null;
+    if (cuentaIdSolicitada) {
+      cuenta = extraerResultado(
+        await this.cuentaQuery.findById(cuentaIdSolicitada),
+      );
+    } else if (
+      referenciaTipo
+      && referenciaId
+      && typeof this.cuentaQuery.findByReferencia === 'function'
+    ) {
+      cuenta = extraerResultado(
+        await this.cuentaQuery.findByReferencia(referenciaTipo, referenciaId),
+      );
+    }
+    if (cuentaIdSolicitada && !cuenta) {
+      throw new Error('Cuenta por cobrar no encontrada');
+    }
+
+    const operacionesCuenta = [];
+    if (
+      cuenta
+      && typeof this.cuentaQuery.findMovimientosByCuentaId === 'function'
+    ) {
+      const movimientosCuenta = extraerResultado(
+        await this.cuentaQuery.findMovimientosByCuentaId(cuenta.getId()),
+      ) ?? [];
+      movimientosCuenta
+        .filter((movimiento) => (
+          ['CREACION', 'ABONO', 'PAGO'].includes(movimiento.getTipoMovimiento())
+          && movimiento.getOperacionId()
+        ))
+        .forEach((movimiento) => {
+          operacionesCuenta.push(movimiento.getOperacionId());
+        });
+    }
+
+    const operacionesOriginales = [
+      ...(Array.isArray(operacionesSolicitadas) ? operacionesSolicitadas : []),
+      ...operacionesCuenta,
+    ];
     const originales = await this.buscarMovimientosOriginales(operacionesOriginales);
     const revertidos = [];
 
@@ -265,12 +316,8 @@ export default class OperacionCommandUsesCase {
         ? idempotencyKey
         : clavesReversos[movimientoOriginal.getId()]
           ?? clavesReversos[movimientoOriginal.getOperacionId()]
-          ?? clavesReversos[indice];
-      if (!claveReverso) {
-        throw new Error(
-          'idempotency_keys_reversos es requerido para anulaciones múltiples',
-        );
-      }
+          ?? clavesReversos[indice]
+          ?? `${idempotencyKey}:MOVIMIENTO:${movimientoOriginal.getId()}`;
       let reverso = extraerResultado(
         await destino.movimientoQuery.findByIdempotencyKey(claveReverso),
       );
@@ -297,27 +344,21 @@ export default class OperacionCommandUsesCase {
     }
 
     let cuentaAnuladaId = null;
-    const cuentaId = Number(
-      obtener(params, 'cuentaCobrarId', 'cuenta_cobrar_id'),
-    );
-    if (cuentaId) {
-      const cuenta = extraerResultado(await this.cuentaQuery.findById(cuentaId));
-      if (!cuenta) {
-        throw new Error('Cuenta por cobrar no encontrada');
-      }
+    if (cuenta) {
       if (cuenta.getEstado() !== 'ANULADA') {
         const movimientoCuenta = this.cuentaDominioServicio.construirAnulacion(
           cuenta,
           motivo,
           obtener(params, 'usuarioId', 'usuario_id'),
-        );
-        movimientoCuenta.setOperacionId(operacionId);
-        movimientoCuenta.setIdempotencyKey(idempotencyKey);
-        movimientoCuenta.setUsuarioNombre(
           obtener(params, 'usuarioNombre', 'usuario_nombre'),
+          {
+            operacionId,
+            idempotencyKey: `${idempotencyKey}:CUENTA`,
+            traceId: params.traceId,
+          },
         );
-        movimientoCuenta.setTraceId(params.traceId);
         cuenta.setSaldo(0);
+        cuenta.setMontoAbonado(0);
         cuenta.setEstado('ANULADA');
         await this.cuentaCommand.saveMovimiento(movimientoCuenta, cuenta);
       }
@@ -779,6 +820,59 @@ export default class OperacionCommandUsesCase {
     };
   }
 
+  async procesarDevolucionProveedor(params = {}) {
+    const { operacionId, idempotencyKey } = validarIdentificadores(params);
+    const monto = redondear(params.monto);
+    if (!(monto > 0)) throw new Error('monto válido es requerido');
+    const metodoPago = String(
+      obtener(params, 'metodoPago', 'metodo_pago') ?? '',
+    ).toUpperCase();
+    if (!['EFECTIVO', 'TRANSFERENCIA'].includes(metodoPago)) {
+      throw new Error('metodo_pago debe ser EFECTIVO o TRANSFERENCIA');
+    }
+    const cajaTipo = String(
+      obtener(params, 'cajaTipo', 'caja_tipo') ?? '',
+    ).toUpperCase();
+    if (
+      (metodoPago === 'EFECTIVO' && cajaTipo !== 'CHICA')
+      || (metodoPago === 'TRANSFERENCIA' && cajaTipo !== 'BANCO')
+    ) {
+      throw new Error('El método de pago no corresponde al tipo de caja');
+    }
+    const destino = this.obtenerDestinoPorCaja(cajaTipo);
+    let movimiento = extraerResultado(
+      await destino.movimientoQuery.findByIdempotencyKey(idempotencyKey),
+    );
+    if (!movimiento) {
+      const caja = await this.obtenerCajaSeleccionada(
+        destino,
+        Number(obtener(params, 'cajaId', 'caja_id')),
+      );
+      movimiento = this.construirMovimientoCaja({
+        params: {
+          ...params,
+          referenciaTipo: 'EGRESO',
+          referenciaId: obtener(params, 'egresoId', 'egreso_id'),
+          referenciaCodigo:
+            obtener(params, 'referenciaCodigo', 'referencia_codigo')
+            ?? `EGR-${obtener(params, 'egresoId', 'egreso_id')}`,
+          descripcion: 'Reembolso por devolución a proveedor',
+        },
+        caja,
+        tipo: 'INGRESO',
+        monto,
+        categoria: 'DEVOLUCION_PROVEEDOR',
+        origen: 'INVENTARIO',
+        operacionId,
+        idempotencyKey,
+      });
+      movimiento = extraerResultado(
+        await destino.movimientoCommand.save(movimiento),
+      );
+    }
+    return { movimiento_id: movimiento.getId() };
+  }
+
   async procesarAjuste(params = {}) {
     const { operacionId, idempotencyKey } = validarIdentificadores(params);
     const tipo = String(params.tipo ?? '').toUpperCase();
@@ -971,8 +1065,11 @@ export default class OperacionCommandUsesCase {
       }));
     }
 
-    return encontrados.filter(
-      ({ movimientoOriginal }) => !movimientoOriginal.getMovimientoRevertidoId(),
-    );
+    return encontrados.filter(({ movimientoOriginal }) => (
+      !movimientoOriginal.getMovimientoRevertidoId()
+      && !['COMISION_BANCARIA', 'RETENCION_BANCARIA'].includes(
+        movimientoOriginal.getCategoria(),
+      )
+    ));
   }
 }

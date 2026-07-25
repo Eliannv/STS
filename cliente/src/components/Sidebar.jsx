@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { PackageMinus } from 'lucide-react';
 import categoriesConfig from '../config/reportes/categories.config';
 import reportsConfig from '../config/reportes/reports.config';
 import './Sidebar.css';
@@ -61,11 +62,12 @@ const allMenuItems = [
     children: [
       { label: 'Productos', route: '/productos' },
       { label: 'Ingresos',  route: '/ingresos'  },
+      { label: 'Egresos', route: '/egresos' },
     ],
   },
   // VENTAS
   {
-    label: 'Venta',
+    label: 'Ventas',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <line x1="12" y1="1" x2="12" y2="23"/>
@@ -75,7 +77,6 @@ const allMenuItems = [
     children: [
       { label: 'Facturas',     route: '/facturas',        end: true },
       { label: 'Venta POS',   route: '/facturas/nueva',  end: true },
-      { label: 'Cobrar deuda', route: '/facturas/cobrar', end: true },
       { label: 'Venta con Tarjeta', route: '/ventas/venta-tarjeta' },
     ],
   },
@@ -92,8 +93,8 @@ const allMenuItems = [
     children: [
       { label: 'Caja Chica', route: '/caja-chica' },
       { label: 'Caja Banco', route: '/caja-banco', adminOnly: true },
+      { label: 'Cuentas por cobrar', route: '/cuentas-cobrar' },
       { label: 'Cuentas por pagar', route: '/cuentas-pagar', adminOnly: true },
-      { label: 'Cuentas por cobrar', route: '/cuentas-cobrar', adminOnly: true },
     ],
   },
   // REPORTES
@@ -118,7 +119,18 @@ const allMenuItems = [
       </svg>
     ),
   },
-  
+  // TRANSFERENCIAS
+  {
+    label: 'Transferencias',
+    route: '/transferencias',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="16 3 21 3 21 8"/><line x1="21" y1="3" x2="13" y2="11"/>
+        <polyline points="8 21 3 21 3 16"/><line x1="3" y1="21" x2="11" y2="13"/>
+      </svg>
+    ),
+  },
+
 ];
 
 function ChevronIcon({ open }) {
@@ -240,7 +252,8 @@ export default function Sidebar() {
                             end={!!child.end}
                             className={({ isActive }) => `submenu-link ${isActive ? 'active' : ''}`}
                           >
-                            {child.label}
+                            {child.icon && <child.icon className="submenu-link-icon" size={14} />}
+                            <span>{child.label}</span>
                           </NavLink>
                         </li>
                       );

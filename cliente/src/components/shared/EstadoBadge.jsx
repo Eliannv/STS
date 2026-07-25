@@ -16,6 +16,10 @@ const ESTADOS = {
   APLICADO: ['Aplicado', '#dcfce7', '#166534'],
   ERROR: ['Error', '#fee2e2', '#b91c1c'],
   REVERTIDO: ['Revertido', '#e5e7eb', '#4b5563'],
+  BORRADOR: ['Borrador', '#fef3c7', '#92400e'],
+  CONFIRMADO: ['Confirmado', '#dcfce7', '#166534'],
+  DESCARTADO: ['Descartado', '#e5e7eb', '#4b5563'],
+  NO_APLICA: ['No aplica', '#f3f4f6', '#6b7280'],
   INGRESO: ['Ingreso', '#dcfce7', '#166534'],
   EGRESO: ['Egreso', '#fee2e2', '#b91c1c'],
 };

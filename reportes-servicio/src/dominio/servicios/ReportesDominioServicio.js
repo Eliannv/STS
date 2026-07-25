@@ -10,7 +10,7 @@ const resolverParalelo = async (promesas) => {
   if (fallido) throw fallido.reason;
   return resultados.map((item) => item.value);
 };
-const fechaRegistro = (registro) => registro.created_at || registro.fecha || registro.fecha_pago || registro.fecha_venta || registro.fecha_emision;
+const fechaRegistro = (registro) => registro.fecha_operacion || registro.created_at || registro.fecha || registro.fecha_pago || registro.fecha_venta || registro.fecha_emision;
 const dentroDeRango = (valor, desde, hasta) => {
   if (!desde && !hasta) return true;
   const fecha = new Date(valor);
@@ -60,7 +60,7 @@ const columnasPorReporte = {
   'ventas-menos-vendidos': [columna('codigo', 'Código'), columna('nombre', 'Producto'), columna('cantidad_vendida', 'Cantidad vendida', 'number'), columna('total_vendido', 'Total vendido', 'currency'), columna('stock_actual', 'Stock actual', 'number')],
   'compras-proveedor': [columna('proveedor_nombre', 'Proveedor'), columna('compras', 'Compras', 'number'), columna('total_comprado', 'Total comprado', 'currency')],
   'ingresos-mercaderia': [columna('id_personalizado', 'Código'), columna('numero_factura', 'Factura'), columna('proveedor_nombre', 'Proveedor'), columna('fecha', 'Fecha', 'date'), columna('estado', 'Estado'), columna('total', 'Total', 'currency')],
-  'egresos-mercaderia': [columna('fecha', 'Fecha', 'date'), columna('motivo', 'Motivo'), columna('descripcion', 'Descripción'), columna('usuario_nombre', 'Usuario'), columna('sucursal_nombre', 'Sucursal'), columna('costo_total', 'Costo total', 'currency')],
+  'egresos-mercaderia': [columna('fecha', 'Fecha', 'date'), columna('tipo_egreso', 'Tipo de egreso'), columna('motivo', 'Motivo'), columna('observacion', 'Observación'), columna('estado', 'Estado'), columna('usuario_nombre', 'Usuario'), columna('sucursal_nombre', 'Sucursal'), columna('costo_total', 'Costo total', 'currency')],
   'ventas-sucursal': [columna('sucursal_nombre', 'Sucursal'), columna('ventas', 'Ventas', 'number'), columna('total', 'Total', 'currency'), columna('abonado', 'Abonado', 'currency'), columna('saldo_pendiente', 'Saldo pendiente', 'currency')],
   'ventas-usuario': [columna('usuario_nombre', 'Usuario'), columna('ventas', 'Ventas', 'number'), columna('total', 'Total', 'currency'), columna('abonado', 'Abonado', 'currency'), columna('saldo_pendiente', 'Saldo pendiente', 'currency')],
   'ventas-cliente': [columna('cliente_nombre', 'Cliente'), columna('ventas', 'Ventas', 'number'), columna('total', 'Total', 'currency'), columna('abonado', 'Abonado', 'currency'), columna('saldo_pendiente', 'Saldo pendiente', 'currency')],
@@ -101,7 +101,19 @@ export default class ReportesDominioServicio {
   async movimientos(contexto, query = {}) { return this.salida.listarTodos('inventario', 'movimientos', query, contexto); }
   async facturas(contexto) { return this.salida.listarTodos('facturacion', 'facturas', {}, contexto); }
   async detallesFacturas(contexto) { return this.salida.listarTodos('facturacion', 'detalle-facturas', {}, contexto); }
-  async abonos(contexto) { return this.salida.listarTodos('facturacion', 'deudas', {}, contexto); }
+  async abonos(contexto, filtros = {}) {
+    return this.reporteInterno(
+      'caja',
+      'caja/reportes/movimientos',
+      {
+        fechaDesde: filtros.fechaDesde,
+        fechaHasta: filtros.fechaHasta,
+        tipo: 'INGRESO',
+        categorias: 'COBRO_DEUDA_EFECTIVO,COBRO_DEUDA_TRANSFERENCIA',
+      },
+      contexto,
+    );
+  }
 
   async reporteInterno(servicio, ruta, query = {}, contexto = {}) {
     const registros = [];
@@ -319,7 +331,7 @@ export default class ReportesDominioServicio {
       this.facturas(contexto),
       this.detallesFacturas(contexto),
       this.productos(contexto),
-      this.abonos(contexto),
+      this.abonos(contexto, filtros),
       this.catalogosVentas(contexto),
     ]);
     const [ventasFinancierasResultado, cuentasCobrarResultado] = await Promise.allSettled([
@@ -364,13 +376,22 @@ export default class ReportesDominioServicio {
     const nombreUsuario = id => catalogos.usuarios.get(Number(id)) || (id ? `Usuario #${id}` : 'Sin usuario');
     const nombreSucursal = id => catalogos.sucursales.get(Number(id)) || (id ? `Sucursal #${id}` : 'Sin sucursal');
     const nombreCliente = registro => registro.cliente_nombre
-      || catalogos.clientes.get(Number(registro.cliente_id))
-      || (registro.cliente_id ? `Cliente #${registro.cliente_id}` : 'Consumidor final');
+      || registro.tercero_nombre
+      || catalogos.clientes.get(Number(registro.cliente_id ?? registro.tercero_id))
+      || ((registro.cliente_id ?? registro.tercero_id)
+        ? `Cliente #${registro.cliente_id ?? registro.tercero_id}`
+        : 'Consumidor final');
     const coincide = (valor, filtro) => !filtro || String(valor) === String(filtro);
     const filtrarComun = registro => dentroDeRango(fechaRegistro(registro), filtros.fechaDesde, filtros.fechaHasta)
       && coincide(registro.cliente_id, filtros.clienteId)
       && coincide(registro.usuario_id, filtros.usuarioId)
-      && coincideTexto(registro.id_personalizado || registro.factura_id_personalizado, filtros.buscarFactura)
+      && coincideTexto(
+        registro.id_personalizado
+          || registro.factura_id_personalizado
+          || registro.cuenta_referencia_codigo
+          || registro.referencia_codigo,
+        filtros.buscarFactura,
+      )
       && coincideTexto(nombreCliente(registro), filtros.buscarCliente || filtros.buscar);
 
     const filasVentas = facturas
@@ -422,36 +443,45 @@ export default class ReportesDominioServicio {
       });
 
     const filasCobros = abonos
-      .filter(abono => numero(abono.monto_pagado) > 0)
+      .filter(abono => numero(abono.monto) > 0)
       .filter(abono => filtrarComun(abono))
-      .filter(abono => !filtros.metodoPago || normalizarMetodoPago(abono.metodo_pago) === filtros.metodoPago)
+      .filter(abono => !filtros.metodoPago || normalizarMetodoPago(
+        abono.categoria === 'COBRO_DEUDA_TRANSFERENCIA' ? 'TRANSFERENCIA' : 'EFECTIVO',
+      ) === filtros.metodoPago)
       .map(abono => {
-        const factura = facturasPorId.get(Number(abono.factura_id)) || {};
+        const facturaId = Number(abono.cuenta_referencia_id ?? abono.referencia_id);
+        const factura = facturasPorId.get(facturaId) || {};
         const sucursalId = factura.sucursal_id || null;
         if (!coincide(sucursalId, filtros.sucursalId)) return null;
-        const monto = numero(abono.monto_pagado);
+        const monto = numero(abono.monto);
+        const metodoPago = abono.categoria === 'COBRO_DEUDA_TRANSFERENCIA'
+          ? 'TRANSFERENCIA'
+          : 'EFECTIVO';
         return {
-          id: `COBRO-${abono.id}`,
+          id: `COBRO-${abono.caja_tipo}-${abono.id}`,
           referenciaId: abono.id,
           tipoTransaccion: 'COBRO',
-          tipoTransaccionLabel: 'Pago de deuda',
-          numeroFactura: abono.factura_id_personalizado || factura.id_personalizado || `#${abono.factura_id}`,
-          clienteId: abono.cliente_id,
+          tipoTransaccionLabel: 'Cobro de cuenta',
+          numeroFactura: abono.cuenta_referencia_codigo
+            || abono.referencia_codigo
+            || factura.id_personalizado
+            || (facturaId ? `#${facturaId}` : 'Sin factura'),
+          clienteId: abono.tercero_id ?? factura.cliente_id,
           cliente: nombreCliente(abono),
           sucursalId,
           sucursal: nombreSucursal(sucursalId),
           usuarioId: abono.usuario_id,
           usuario: nombreUsuario(abono.usuario_id),
           fecha: fechaRegistro(abono),
-          metodoPago: normalizarMetodoPago(abono.metodo_pago),
-          estado: abono.estado_pago,
+          metodoPago,
+          estado: abono.estado_cuenta || 'APLICADO',
           subtotal: 0,
           iva: 0,
           total: monto,
           monto,
           montoCobrado: monto,
           abonado: monto,
-          saldoPendiente: numero(abono.saldo_restante),
+          saldoPendiente: numero(abono.saldo_cuenta),
           costo: 0,
           utilidad: 0,
         };

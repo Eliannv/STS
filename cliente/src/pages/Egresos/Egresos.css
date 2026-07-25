@@ -1,0 +1,276 @@
+/* cliente/src/pages/Egresos/Egresos.css */
+.egresos-page {
+  min-width: 0;
+}
+
+.egresos-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: 12px;
+}
+
+.egresos-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.egreso-type-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.egreso-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(310px, .75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.egreso-info-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 22px;
+}
+
+.egreso-info-list__full {
+  grid-column: 1 / -1;
+}
+
+.egreso-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.egreso-summary-number {
+  padding: 16px;
+  border: 1px solid #dbe7f0;
+  border-radius: 10px;
+  background: #f7fbfe;
+}
+
+.egreso-summary-number span {
+  display: block;
+  margin-bottom: 4px;
+  color: #6c757d;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+}
+
+.egreso-summary-number strong {
+  color: #2c3e50;
+  font-size: 24px;
+}
+
+.egreso-table {
+  min-width: 980px;
+}
+
+.egreso-table td,
+.egreso-table th {
+  white-space: nowrap;
+}
+
+.egreso-stock-warning {
+  color: #e74c3c;
+  font-weight: 700;
+}
+
+.egreso-movement-original td {
+  color: #8b949e;
+  text-decoration: line-through;
+  background: #fafafa;
+}
+
+.egreso-movement-reverse td {
+  background: #f0fbf4;
+}
+
+.egreso-idempotency {
+  display: inline-block;
+  max-width: 145px;
+  overflow: hidden;
+  color: #6c757d;
+  font-family: monospace;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.egreso-empty {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 28px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.egreso-empty__icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #2980b9;
+  background: #edf6fc;
+}
+
+.egreso-modal-products {
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.egreso-modal-products table {
+  margin: 0;
+}
+
+.entity-autocomplete {
+  position: relative;
+  width: 100%;
+}
+
+.entity-autocomplete__input {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: var(--text-muted);
+}
+
+.entity-autocomplete__input:focus-within {
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, .12);
+}
+
+.entity-autocomplete__input.is-selected {
+  border-color: #8fd0ad;
+  background: #fbfffc;
+}
+
+.entity-autocomplete__input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.entity-autocomplete__input button {
+  display: inline-flex;
+  border: 0;
+  padding: 2px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.entity-autocomplete__spinner {
+  width: 15px;
+  height: 15px;
+  border-width: 2px;
+}
+
+.entity-autocomplete__check {
+  color: var(--success-color);
+}
+
+.entity-autocomplete__results {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #fff;
+  box-shadow: var(--shadow-lg);
+}
+
+.entity-autocomplete__results > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border-light);
+  background: #fff;
+  text-align: left;
+}
+
+.entity-autocomplete__results > button:hover {
+  background: #f4f9fd;
+}
+
+.entity-autocomplete__icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #eaf4fb;
+  color: var(--primary-color);
+}
+
+.entity-autocomplete__content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.entity-autocomplete__content strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entity-autocomplete__content small {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.entity-autocomplete__empty {
+  padding: 18px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 1180px) {
+  .egreso-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .egresos-kpi-grid {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
+}

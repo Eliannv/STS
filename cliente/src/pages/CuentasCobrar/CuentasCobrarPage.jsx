@@ -1,7 +1,7 @@
 // cliente/src/pages/CuentasCobrar/CuentasCobrarPage.jsx
 import { AlertTriangle, CalendarClock, CircleDollarSign, HandCoins, Plus, ReceiptText, Search, TrendingUp, Users } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/api';
 import FilterCard, { FilterItem, filterInputStyle } from '../../components/common/FilterCard';
 import StatCard from '../../components/common/StatCard';
@@ -11,7 +11,7 @@ import CuentaHistorialDrawer from '../../components/shared/CuentaHistorialDrawer
 import EstadoBadge from '../../components/shared/EstadoBadge';
 import '../../components/shared/FinanceModule.css';
 import { useAuth } from '../../context/AuthContext';
-import { confirmarAccionDestructiva, notificarError, notificarExito } from '../../utils/confirmaciones';
+import { notificarError, notificarExito, solicitarMotivoDestructivo } from '../../utils/confirmaciones';
 import { CAMPO, DIAS_ANTIGUEDAD, FECHA, FECHAHORA, FMT, HOY, NUMERO, PORCENTAJE, RESULTADO_LISTA } from '../../utils/formato';
 import { CobroCuentaModal, NuevaCuentaCobrarModal } from './CuentasCobrarModal';
 
@@ -61,6 +61,8 @@ function badgeAntiguedad(dias, saldo) {
 
 export default function CuentasCobrarPage() {
   const { isAdmin } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const aperturaAutomaticaRef = useRef('');
   const [cuentas, setCuentas] = useState([]);
   const [cajasBanco, setCajasBanco] = useState([]);
   const [cajasChicas, setCajasChicas] = useState([]);
@@ -73,6 +75,9 @@ export default function CuentasCobrarPage() {
   const [modalNueva, setModalNueva] = useState(false);
   const [modalCobro, setModalCobro] = useState(false);
   const [drawer, setDrawer] = useState(false);
+  const cuentaIdUrl = searchParams.get('cuentaId');
+  const facturaIdUrl = searchParams.get('facturaId');
+  const clienteIdUrl = searchParams.get('clienteId');
 
   const cargarUltimoCobro = useCallback(async (lista) => {
     const candidatas = lista
@@ -125,17 +130,59 @@ export default function CuentasCobrarPage() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  useEffect(() => {
+    if (loading || cuentas.length === 0) return;
+    const clave = searchParams.toString();
+    if (!clave || aperturaAutomaticaRef.current === clave) return;
+    aperturaAutomaticaRef.current = clave;
+
+    let cuentaObjetivo = null;
+    if (cuentaIdUrl) {
+      cuentaObjetivo = cuentas.find((cuenta) => String(cuenta.id) === String(cuentaIdUrl));
+    } else if (facturaIdUrl) {
+      cuentaObjetivo = cuentas.find((cuenta) => (
+        String(CAMPO(cuenta, 'referenciaId', 'referencia_id', '')) === String(facturaIdUrl)
+        || String(CAMPO(cuenta, 'referenciaCodigo', 'referencia_codigo', '')) === String(facturaIdUrl)
+      ));
+    } else if (clienteIdUrl) {
+      const cuentasCliente = cuentas.filter((cuenta) => (
+        String(CAMPO(cuenta, 'terceroId', 'tercero_id', '')) === String(clienteIdUrl)
+        && ['PENDIENTE', 'PARCIAL', 'VENCIDA'].includes(cuenta.estado)
+      ));
+      if (cuentasCliente.length === 1) [cuentaObjetivo] = cuentasCliente;
+    }
+
+    if (cuentaObjetivo && ['PENDIENTE', 'PARCIAL', 'VENCIDA'].includes(cuentaObjetivo.estado)) {
+      const timer = setTimeout(() => {
+        setCuentaSeleccionada(cuentaObjetivo);
+        setModalCobro(true);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [clienteIdUrl, cuentaIdUrl, cuentas, facturaIdUrl, loading, searchParams]);
+
   const cuentasFiltradas = useMemo(() => cuentas.filter((cuenta) => {
     const vencimiento = CAMPO(cuenta, 'fechaVencimiento', 'fecha_vencimiento');
     const dias = DIAS_ANTIGUEDAD(vencimiento);
-    const texto = `${CAMPO(cuenta, 'terceroNombre', 'tercero_nombre', '')} ${CAMPO(cuenta, 'referenciaCodigo', 'referencia_codigo', '')}`.toLowerCase();
+    const texto = [
+      CAMPO(cuenta, 'terceroNombre', 'tercero_nombre', ''),
+      CAMPO(cuenta, 'referenciaCodigo', 'referencia_codigo', ''),
+      CAMPO(cuenta, 'referenciaId', 'referencia_id', ''),
+      cuenta.id,
+    ].join(' ').toLowerCase();
     const vencida = cuenta.estado === 'VENCIDA' || (vencimiento && vencimiento < HOY && NUMERO(cuenta.saldo) > 0);
     return (!filtros.buscar || texto.includes(filtros.buscar.toLowerCase()))
+      && (!cuentaIdUrl || String(cuenta.id) === String(cuentaIdUrl))
+      && (!facturaIdUrl
+        || String(CAMPO(cuenta, 'referenciaId', 'referencia_id', '')) === String(facturaIdUrl)
+        || String(CAMPO(cuenta, 'referenciaCodigo', 'referencia_codigo', '')) === String(facturaIdUrl))
+      && (!clienteIdUrl || String(CAMPO(cuenta, 'terceroId', 'tercero_id', '')) === String(clienteIdUrl))
       && (!filtros.estado || cuenta.estado === filtros.estado)
       && (!filtros.soloVencidas || vencida)
       && coincideAntiguedad(dias, filtros.antiguedad)
       && pertenecePeriodo(fechaCuenta(cuenta), filtros.periodo);
-  }), [cuentas, filtros]);
+  }), [clienteIdUrl, cuentaIdUrl, cuentas, facturaIdUrl, filtros]);
 
   const resumen = useMemo(() => {
     const valores = cuentas.reduce((acumulado, cuenta) => {
@@ -192,18 +239,37 @@ export default function CuentasCobrarPage() {
   }
 
   async function anular(cuenta) {
-    const confirmado = await confirmarAccionDestructiva(
-      `La cuenta de ${CAMPO(cuenta, 'terceroNombre', 'tercero_nombre', 'este cliente')} quedará anulada y conservará su historial.`,
-      'Anular cuenta por cobrar',
-      'Sí, anular',
-    );
-    if (!confirmado) return;
-    const respuesta = await api.put(`/cuentas/${cuenta.id}/cancelar`, {});
+    const motivo = await solicitarMotivoDestructivo({
+      title: 'Anular cuenta por cobrar',
+      text: `La cuenta de ${CAMPO(cuenta, 'terceroNombre', 'tercero_nombre', 'este cliente')} quedará anulada. Los cobros registrados se revertirán mediante movimientos compensatorios.`,
+    });
+    if (!motivo) return;
+
+    const referenciaTipo = String(
+      CAMPO(cuenta, 'referenciaTipo', 'referencia_tipo', ''),
+    ).toUpperCase();
+    const facturaId = CAMPO(cuenta, 'referenciaId', 'referencia_id');
+    const respuesta = referenciaTipo === 'FACTURA' && facturaId
+      ? await api.put(`/factura/anular/${facturaId}`, {
+        motivo,
+        cuenta_cobrar_id: cuenta.id,
+      })
+      : await api.post('/operaciones/anulaciones', {
+        operacion_id: crypto.randomUUID(),
+        idempotency_key: `ANULACION:CUENTA:${cuenta.id}`,
+        cuenta_cobrar_id: cuenta.id,
+        operacion_ids_originales: [],
+        motivo,
+      });
     if (!respuesta.ok) {
       await notificarError(respuesta, 'No se pudo anular la cuenta.');
       return;
     }
-    await notificarExito('La cuenta fue anulada.');
+    await notificarExito(
+      referenciaTipo === 'FACTURA'
+        ? 'La factura, la cuenta y sus movimientos fueron enviados a anulación.'
+        : 'La cuenta y sus cobros fueron anulados mediante movimientos compensatorios.',
+    );
     cargar();
   }
 
@@ -255,7 +321,11 @@ export default function CuentasCobrarPage() {
 
       <FilterCard
         titulo="Filtros"
-        onLimpiar={() => setFiltros(FILTROS_INICIALES)}
+        onLimpiar={() => {
+          setFiltros(FILTROS_INICIALES);
+          setSearchParams({});
+          aperturaAutomaticaRef.current = '';
+        }}
         resultado={`${cuentasFiltradas.length} cuenta${cuentasFiltradas.length === 1 ? '' : 's'}`}
       >
         <FilterItem label="Período">

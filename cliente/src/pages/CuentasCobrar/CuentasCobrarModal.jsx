@@ -4,6 +4,7 @@ import { api } from '../../api/api';
 import FormModal from '../../components/common/FormModal';
 import { confirmarAccion, notificarError, notificarExito } from '../../utils/confirmaciones';
 import { CAMPO, FMT, HOY, NUMERO } from '../../utils/formato';
+import { imprimirTicketAbono } from '../../utils/ticketVenta';
 
 const CUENTA_INICIAL = {
   clienteNombre: '',
@@ -190,6 +191,11 @@ export function CobroCuentaModal({
       metodo_cobro: formulario.metodoCobro,
       caja_tipo: cajaTipo,
       caja_id: Number(formulario.cajaId),
+      referencia_tipo: CAMPO(cuenta, 'referenciaTipo', 'referencia_tipo', 'CUENTA_COBRAR'),
+      referencia_id: CAMPO(cuenta, 'referenciaId', 'referencia_id', cuenta.id),
+      referencia_codigo: CAMPO(cuenta, 'referenciaCodigo', 'referencia_codigo', `CUENTA-${cuenta.id}`),
+      tercero_id: CAMPO(cuenta, 'terceroId', 'tercero_id'),
+      tercero_nombre: CAMPO(cuenta, 'terceroNombre', 'tercero_nombre'),
       referencia_pago: formulario.referenciaPago.trim() || null,
       observacion: formulario.observacion.trim() || null,
     });
@@ -200,6 +206,24 @@ export function CobroCuentaModal({
       return;
     }
     await notificarExito('El cobro fue registrado correctamente.');
+    imprimirTicketAbono({
+      factura: {
+        id: CAMPO(cuenta, 'referenciaId', 'referencia_id', cuenta.id),
+        id_personalizado: CAMPO(cuenta, 'referenciaCodigo', 'referencia_codigo', `CUENTA-${cuenta.id}`),
+        cliente_nombre: CAMPO(cuenta, 'terceroNombre', 'tercero_nombre', 'Cliente'),
+        total: CAMPO(cuenta, 'montoTotal', 'monto_total', saldo),
+      },
+      abono: monto,
+      saldoAnterior: saldo,
+      saldoNuevo: saldoResultante,
+      cliente: {
+        nombres: CAMPO(cuenta, 'terceroNombre', 'tercero_nombre', 'Cliente'),
+        apellidos: '',
+      },
+      metodoPago: formulario.metodoCobro,
+      referencia: formulario.referenciaPago.trim() || null,
+      fechaPago: new Date().toISOString(),
+    });
     onCerrar();
     onGuardado();
   }

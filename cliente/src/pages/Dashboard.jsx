@@ -1,3 +1,4 @@
+// cliente/src/pages/Dashboard.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -146,7 +147,7 @@ export default function Dashboard() {
 
   const accesosRapidos = [
     { label: 'Nueva Venta',   color: '#3498db', route: '/facturas/nueva',  icon: <PlusCircle  size={16} /> },
-    { label: 'Cobrar Deuda',  color: '#e74c3c', route: '/facturas/cobrar', icon: <Handshake   size={16} /> },    
+    { label: 'Cuentas por Cobrar', color: '#e74c3c', route: '/cuentas-cobrar', icon: <Handshake size={16} /> },
     { label: 'Ver Facturas',  color: '#27ae60', route: '/facturas',        icon: <FileText    size={16} /> },
     { label: 'Clientes',          color: '#3498db', route: '/clientes',    icon: <Users    size={16} /> },
     

@@ -12,6 +12,10 @@ export default class OperacionFinancieraSalidaCommandPuerto {
     throw new Error('Not implemented');
   }
 
+  marcarDescartado(id, motivo) {
+    throw new Error('Not implemented');
+  }
+
   incrementarIntentos(id) {
     throw new Error('Not implemented');
   }

@@ -9,6 +9,8 @@ export default class BffHttpAdaptador {
     if (req.headers.authorization) headers.authorization = req.headers.authorization;
     if (req.headers.accept) headers.accept = req.headers.accept;
     if (req.headers['accept-language']) headers['accept-language'] = req.headers['accept-language'];
+    // Sucursal seleccionada por el administrador; los servicios la validan contra el rol del token.
+    if (req.headers['x-sucursal-id']) headers['x-sucursal-id'] = req.headers['x-sucursal-id'];
     const options = { method: req.method, headers };
     if (!['GET', 'HEAD'].includes(req.method)) {
       headers['Content-Type'] = req.headers['content-type'] || 'application/json';

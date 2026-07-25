@@ -1,3 +1,4 @@
+/* cliente/src/components/Sidebar.css */
 .sidebar {
   background-color: var(--sidebar-bg);
   color: var(--sidebar-text);
@@ -115,7 +116,9 @@
   white-space: nowrap;
 }
 .submenu-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 7px;
   padding: 8px 16px 8px 52px;
   font-size: 12.5px;
   font-weight: 400;
@@ -125,6 +128,7 @@
   transition: background 0.15s, color 0.15s;
   white-space: nowrap;
 }
+.submenu-link-icon { flex: 0 0 auto; }
 .submenu-link:hover { background: var(--sidebar-hover); color: var(--sidebar-text-hover); }
 .submenu-link.active {
   background: var(--sidebar-active);

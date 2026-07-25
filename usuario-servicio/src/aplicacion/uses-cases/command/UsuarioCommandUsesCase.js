@@ -22,13 +22,22 @@ export default class UsuarioCommandUsesCase {
       return { estado: 'error', mensaje: 'Credenciales inválidas' };
     }
 
+    if (!usuario.sucursal_id) {
+      return { estado: 'error', mensaje: 'El usuario no tiene una sucursal asignada. Contacte al administrador.' };
+    }
+    if (!usuario.sucursal_activa) {
+      return { estado: 'error', mensaje: 'La sucursal asignada está desactivada. Contacte al administrador.' };
+    }
+
     const payload = {
       id: usuario.id,
       email: usuario.email,
       nombre: usuario.nombre,
       apellido: usuario.apellido,
       rol: usuario.rol,
-      sucursalId: usuario.sucursal_id
+      sucursalId: usuario.sucursal_id,
+      sucursalNombre: usuario.sucursal_nombre,
+      sucursalCodigo: usuario.sucursal_codigo
     };
 
     return {
@@ -43,6 +52,10 @@ export default class UsuarioCommandUsesCase {
   async crear(dto) {
     if (!dto.getNombre() || !dto.getEmail() || !dto.getPassword()) {
       return { estado: 'error', resultado: 'Nombre, email y contraseña son requeridos' };
+    }
+    // Sin sucursal, todo lo que registre el usuario queda huérfano en los reportes.
+    if (!dto.getSucursalId()) {
+      return { estado: 'error', resultado: 'La sucursal es requerida' };
     }
 
     const usuario = new Usuario(
@@ -63,6 +76,7 @@ export default class UsuarioCommandUsesCase {
 
   async editar(dto) {
     if (!dto.getId()) return { estado: 'error', resultado: 'El ID es requerido para actualizar' };
+    if (!dto.getSucursalId()) return { estado: 'error', resultado: 'La sucursal es requerida' };
     return this.adaptadorBDSalida.actualizar(new Usuario(
       dto.getId(), dto.getNombre(), dto.getApellido(), dto.getEmail(), null,
       dto.getCedula(), dto.getFechaNacimiento(), dto.getRol(), dto.getActivo(), dto.getSucursalId()

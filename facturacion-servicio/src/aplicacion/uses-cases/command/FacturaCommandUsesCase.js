@@ -14,12 +14,14 @@ export default class FacturaCommandUsesCase {
     inventarioStock,
     operacionFinancieraCommand = null,
     cajaHttp = null,
+    operacionFinancieraQuery = null,
   ) {
     this.adaptador = adaptador;
     this.query = query;
     this.inventarioStock = inventarioStock;
     this.operacionFinancieraCommand = operacionFinancieraCommand;
     this.cajaHttp = cajaHttp;
+    this.operacionFinancieraQuery = operacionFinancieraQuery;
   }
 
   async crear(datos) {
@@ -155,6 +157,84 @@ export default class FacturaCommandUsesCase {
 
   cobrar(id) { return id ? this.adaptador.cobrar(id) : Promise.resolve({ estado: 'error', resultado: 'id es requerido' }); }
 
+  async construirOperacionAnulacion(factura, contexto = {}) {
+    if (!this.operacionFinancieraCommand || !this.cajaHttp) {
+      return null;
+    }
+
+    const idempotencyKey = `ANULACION:FACTURA:${factura.id}`;
+    const existente = this.operacionFinancieraQuery
+      ? await this.operacionFinancieraQuery.findByIdempotencyKey(idempotencyKey)
+      : null;
+    if (existente) {
+      return existente;
+    }
+
+    const operaciones = this.operacionFinancieraQuery
+      ? await this.operacionFinancieraQuery.findByFacturaId(factura.id)
+      : [];
+    const operacionesOrigen = operaciones.filter(
+      (operacion) => operacion.getTipo() !== 'ANULACION_VENTA',
+    );
+    const pendientes = operacionesOrigen.filter(
+      (operacion) => operacion.getEstado() === 'PENDIENTE',
+    );
+    for (const operacion of pendientes) {
+      await this.operacionFinancieraCommand.marcarDescartado(
+        operacion.getId(),
+        `Factura ${factura.id_personalizado || factura.id} anulada`,
+      );
+    }
+
+    const operacionIdsOriginales = [
+      ...new Set(
+        operacionesOrigen
+          .map((operacion) => operacion.getOperacionId())
+          .filter(Boolean),
+      ),
+    ];
+    const cuentaCobrarId =
+      contexto.cuentaCobrarId
+      ?? operacionesOrigen
+        .map((operacion) => operacion.getCuentaCobrarId())
+        .find(Boolean)
+      ?? null;
+    const operacionId = randomUUID();
+    const motivo = contexto.motivo || 'Anulación de factura';
+    const payload = {
+      operacion_id: operacionId,
+      idempotency_key: idempotencyKey,
+      operacion_ids_originales: operacionIdsOriginales,
+      cuenta_cobrar_id: cuentaCobrarId,
+      referencia_tipo: 'FACTURA',
+      referencia_id: factura.id,
+      referencia_codigo: factura.id_personalizado,
+      motivo,
+      usuario_id: contexto.usuarioId,
+      usuario_nombre: contexto.usuarioNombre,
+      sucursal_id: contexto.sucursalId,
+    };
+
+    return new OperacionFinanciera({
+      facturaId: factura.id,
+      cuentaCobrarId,
+      operacionId,
+      operacionIdOriginal: operacionIdsOriginales[0] ?? null,
+      idempotencyKey,
+      tipo: 'ANULACION_VENTA',
+      metodoPago: factura.metodo_pago,
+      montoTotal: redondear(factura.total),
+      montoCobrado: redondear(factura.abonado),
+      montoCredito: redondear(factura.saldo_pendiente),
+      estado: 'PENDIENTE',
+      payload,
+      traceId: contexto.traceId,
+      usuarioId: contexto.usuarioId,
+      usuarioNombre: contexto.usuarioNombre,
+      sucursalId: contexto.sucursalId,
+    });
+  }
+
   async anular(id, contexto = {}) {
     if (!id) return { estado: 'error', resultado: 'id es requerido' };
     const consulta = await this.query.buscarPorId(id);
@@ -162,7 +242,7 @@ export default class FacturaCommandUsesCase {
     const factura = consulta.resultado;
     if (factura.estado_pago === 'ANULADA') return { estado: 'error', resultado: 'Factura no encontrada o ya estaba anulada' };
 
-    if (factura.estado_inventario !== 'NO_APLICA') {
+    if (!['NO_APLICA', 'REVERSADO'].includes(factura.estado_inventario)) {
       await this.adaptador.actualizarEstadoInventario(id, 'REVERSA_PENDIENTE');
       const reversa = await this.inventarioStock.revertirVenta({ factura, contexto });
       if (reversa.estado !== 'ok') {
@@ -171,7 +251,42 @@ export default class FacturaCommandUsesCase {
       }
     }
 
-    return this.adaptador.anular(id, factura.estado_inventario === 'NO_APLICA' ? 'NO_APLICA' : 'REVERSADO');
+    const operacion = await this.construirOperacionAnulacion(factura, contexto);
+    const anulacion = await this.adaptador.anular(
+      id,
+      factura.estado_inventario === 'NO_APLICA' ? 'NO_APLICA' : 'REVERSADO',
+      operacion,
+    );
+    if (anulacion.estado !== 'ok') {
+      return anulacion;
+    }
+
+    const operacionGuardada = anulacion.operacionFinanciera;
+    if (operacionGuardada) {
+      const respuestaCaja = await this.cajaHttp.postAnulacion(
+        operacionGuardada.getPayload(),
+        operacionGuardada.getTraceId(),
+      );
+      if (respuestaCaja.ok) {
+        await this.operacionFinancieraCommand.marcarAplicado(
+          operacionGuardada.getId(),
+          respuestaCaja.data,
+        );
+        return {
+          ...anulacion,
+          reversoFinanciero: 'APLICADO',
+          detalleFinanciero: respuestaCaja.data,
+        };
+      }
+      return {
+        ...anulacion,
+        reversoFinanciero: 'PENDIENTE',
+        advertencia:
+          `La factura fue anulada. El reverso financiero se reintentará automáticamente: ${respuestaCaja.error}`,
+      };
+    }
+
+    return anulacion;
   }
 
   eliminar(id, contexto = {}) {

@@ -4,4 +4,5 @@ export default class OperacionFinancieraInventarioSalidaQueryPuerto {
   findByIdempotencyKey(key) { throw new Error('Not implemented'); }
   findByOperacionId(id) { throw new Error('Not implemented'); }
   findByIngresoId(ingresoId) { throw new Error('Not implemented'); }
+  findByEgresoId(egresoId, options) { throw new Error('Not implemented'); }
 }

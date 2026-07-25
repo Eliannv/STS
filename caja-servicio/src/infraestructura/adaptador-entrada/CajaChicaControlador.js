@@ -40,10 +40,13 @@ export default class CajaChicaControlador extends CajaChicaEntradaPuerto {
   }
 
   abrir(req, res) {
+    // La caja se abre siempre en la sucursal en la que se está operando.
     return responder(res, req.traceId, 201, () => this.commandUC.abrirCajaChica({
       ...req.body,
       usuarioId: req.usuario?.id,
       usuarioNombre: req.usuario?.nombre,
+      sucursalId: req.sucursalScope?.sucursalId ?? null,
+      sucursalNombre: req.sucursalScope?.sucursalNombre ?? null,
     }));
   }
 
@@ -75,7 +78,10 @@ export default class CajaChicaControlador extends CajaChicaEntradaPuerto {
   }
 
   async lista(req, res) {
-    const resultado = await this.queryUC.lista(req.query);
+    const resultado = await this.queryUC.lista({
+      ...req.query,
+      sucursalId: req.sucursalScope?.filtroLectura ?? null,
+    });
     return res
       .status(200)
       .json(serializarRespuesta({ ...resultado, traceId: req.traceId }));
@@ -89,7 +95,8 @@ export default class CajaChicaControlador extends CajaChicaEntradaPuerto {
   }
 
   async cajaAbierta(req, res) {
-    const resultado = await this.queryUC.cajaAbierta();
+    // Devuelve la caja abierta de la sucursal en curso, no la de cualquier otra.
+    const resultado = await this.queryUC.cajaAbierta(req.sucursalScope?.sucursalId ?? null);
     return res
       .status(200)
       .json(serializarRespuesta({ ...resultado, traceId: req.traceId }));

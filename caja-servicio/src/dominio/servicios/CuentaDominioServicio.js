@@ -176,31 +176,44 @@ export default class CuentaDominioServicio {
   }
 
   validarCuentaActiva(cuenta) {
-    if (['PAGADA', 'ANULADA', 'VENCIDA'].includes(cuenta.getEstado())) {
+    if (['PAGADA', 'ANULADA'].includes(cuenta.getEstado())) {
       throw new Error('La cuenta no admite movimientos');
     }
   }
 
   construirAnulacion(cuenta, motivo, usuarioId, usuarioNombre = null, extra = {}) {
-    this.validarCuentaActiva(cuenta);
+    if (cuenta.getEstado() === 'ANULADA') {
+      throw new Error('La cuenta ya está anulada');
+    }
     if (!motivo) {
       throw new Error('El motivo es requerido');
     }
 
-    return this.construirMovimientoCuenta(
-      cuenta,
-      'ANULACION',
-      cuenta.getSaldo(),
-      extra.operacionId ?? extra.operacion_id ?? null,
+    const saldoAnterior = redondear(cuenta.getSaldo());
+    const monto = saldoAnterior > 0
+      ? saldoAnterior
+      : redondear(cuenta.getMontoTotal());
+    if (!(monto > 0)) {
+      throw new Error('La cuenta no tiene un monto válido para anular');
+    }
+
+    return new MovimientoCuenta({
+      ...extra,
+      cuentaId: cuenta.getId(),
+      tipoMovimiento: 'ANULACION',
+      monto,
+      saldoAnterior,
+      saldoNuevo: 0,
+      referenciaTipo: cuenta.getReferenciaTipo(),
+      referenciaId: cuenta.getReferenciaId(),
+      referenciaCodigo: cuenta.getReferenciaCodigo(),
+      operacionId: extra.operacionId ?? extra.operacion_id ?? null,
       usuarioId,
       usuarioNombre,
-      {
-        ...extra,
-        motivo,
-        observacion:
-          extra.observacion
-          ?? `Anulación de cuenta por ${cuenta.getTipo() === 'PAGAR' ? 'pagar' : 'cobrar'}`,
-      },
-    );
+      motivo,
+      observacion:
+        extra.observacion
+        ?? `Anulación de cuenta por ${cuenta.getTipo() === 'PAGAR' ? 'pagar' : 'cobrar'}`,
+    });
   }
 }

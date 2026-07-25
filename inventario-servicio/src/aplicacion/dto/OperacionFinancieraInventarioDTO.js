@@ -8,6 +8,7 @@ export default class OperacionFinancieraInventarioDTO {
     return new OperacionFinancieraInventarioDTO({
       id: entidad.getId(),
       ingreso_id: entidad.getIngresoId(),
+      egreso_id: entidad.getEgresoId(),
       cuenta_pagar_id: entidad.getCuentaPagarId(),
       operacion_id: entidad.getOperacionId(),
       operacion_id_original: entidad.getOperacionIdOriginal(),
@@ -18,6 +19,10 @@ export default class OperacionFinancieraInventarioDTO {
       caja_tipo: entidad.getCajaTipo(),
       caja_id: entidad.getCajaId(),
       monto_total: entidad.getMontoTotal(),
+      monto: entidad.getMonto(),
+      proveedor_id: entidad.getProveedorId(),
+      proveedor_nombre: entidad.getProveedorNombre(),
+      ingreso_origen_id: entidad.getIngresoOrigenId(),
       fecha_vencimiento: entidad.getFechaVencimiento(),
       estado: entidad.getEstado(),
       intentos: entidad.getIntentos(),

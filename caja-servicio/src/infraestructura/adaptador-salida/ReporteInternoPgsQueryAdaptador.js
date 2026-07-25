@@ -23,8 +23,20 @@ const UNION_MOVIMIENTOS = `
     mb.operacion_id,
     mb.afecta_flujo_operativo,
     mb.usuario_id,
-    mb.usuario_nombre
+    mb.usuario_nombre,
+    cm.cuenta_id,
+    c.tercero_id,
+    c.tercero_nombre,
+    c.referencia_tipo AS cuenta_referencia_tipo,
+    c.referencia_id AS cuenta_referencia_id,
+    c.referencia_codigo AS cuenta_referencia_codigo,
+    cm.saldo_nuevo AS saldo_cuenta,
+    c.estado::TEXT AS estado_cuenta
   FROM movimientos_cajas_banco mb
+  LEFT JOIN movimientos_cuentas cm
+    ON cm.movimiento_financiero_id = mb.id
+    AND cm.caja_tipo = 'BANCO'
+  LEFT JOIN cuentas c ON c.id = cm.cuenta_id
   UNION ALL
   SELECT
     'CHICA'::TEXT AS caja_tipo,
@@ -45,8 +57,20 @@ const UNION_MOVIMIENTOS = `
     mc.operacion_id,
     mc.afecta_flujo_operativo,
     mc.usuario_id,
-    mc.usuario_nombre
+    mc.usuario_nombre,
+    cm.cuenta_id,
+    c.tercero_id,
+    c.tercero_nombre,
+    c.referencia_tipo AS cuenta_referencia_tipo,
+    c.referencia_id AS cuenta_referencia_id,
+    c.referencia_codigo AS cuenta_referencia_codigo,
+    cm.saldo_nuevo AS saldo_cuenta,
+    c.estado::TEXT AS estado_cuenta
   FROM movimientos_cajas_chicas mc
+  LEFT JOIN movimientos_cuentas cm
+    ON cm.movimiento_financiero_id = mc.id
+    AND cm.caja_tipo = 'CHICA'
+  LEFT JOIN cuentas c ON c.id = cm.cuenta_id
 `;
 
 const paginar = (filtros = {}) => {

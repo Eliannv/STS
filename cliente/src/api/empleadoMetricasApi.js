@@ -1,3 +1,4 @@
+// cliente/src/api/empleadoMetricasApi.js
 import { api } from './api';
 
 const LIMITE = 100;
@@ -25,14 +26,13 @@ function enPeriodo(fecha, mes, anio) {
 }
 
 async function cargarDatos() {
-  const [usuarios, facturas, abonos, cajasBanco, cajasChicas] = await Promise.all([
+  const [usuarios, facturas, cajasBanco, cajasChicas] = await Promise.all([
     cargarTodas('/usuarios?incluirInactivos=true'),
     cargarTodas('/facturas'),
-    api.get('/cobro-deuda/lista-abonos'),
     api.get('/cajas-banco?limit=100'),
     api.get('/cajas-chicas?limit=100'),
   ]);
-  if (![usuarios, facturas, abonos, cajasBanco, cajasChicas].every((respuesta) => respuesta.ok)) return null;
+  if (![usuarios, facturas, cajasBanco, cajasChicas].every((respuesta) => respuesta.ok)) return null;
 
   const cajas = [
     ...lista(cajasBanco).map((caja) => ({ tipo: 'banco', id: caja.id })),
@@ -43,12 +43,21 @@ async function cargarDatos() {
     return respuesta.ok ? lista(respuesta).map((movimiento) => ({ ...movimiento, tipoCaja: caja.tipo })) : [];
   }));
 
-  return { usuarios: lista(usuarios), facturas: lista(facturas), abonos: lista(abonos), movimientos: movimientos.flat() };
+  const movimientosFinancieros = movimientos.flat();
+  const abonos = movimientosFinancieros.filter((movimiento) => (
+    ['COBRO_DEUDA_EFECTIVO', 'COBRO_DEUDA_TRANSFERENCIA'].includes(movimiento.categoria)
+  ));
+  return {
+    usuarios: lista(usuarios),
+    facturas: lista(facturas),
+    abonos,
+    movimientos: movimientosFinancieros,
+  };
 }
 
 function metricasDeEmpleado(datos, usuarioId, mes, anio) {
   const facturas = datos.facturas.filter((factura) => Number(factura.usuario_id) === Number(usuarioId) && enPeriodo(factura.created_at || factura.fecha, mes, anio));
-  const abonos = datos.abonos.filter((abono) => Number(abono.usuario_id) === Number(usuarioId) && enPeriodo(abono.fecha_pago || abono.created_at, mes, anio));
+  const abonos = datos.abonos.filter((abono) => Number(abono.usuario_id) === Number(usuarioId) && enPeriodo(abono.fecha_operacion || abono.created_at || abono.fecha, mes, anio));
   const movimientosChica = datos.movimientos.filter((movimiento) => movimiento.tipoCaja === 'chica' && Number(movimiento.usuario_id) === Number(usuarioId) && enPeriodo(movimiento.created_at || movimiento.fecha, mes, anio));
   const movimientosBanco = datos.movimientos.filter((movimiento) => movimiento.tipoCaja === 'banco' && Number(movimiento.usuario_id) === Number(usuarioId) && enPeriodo(movimiento.created_at || movimiento.fecha, mes, anio));
 
@@ -62,7 +71,7 @@ function metricasDeEmpleado(datos, usuarioId, mes, anio) {
     },
     cobros: {
       cantidadCobros: abonos.length,
-      montoCobrado: abonos.reduce((total, abono) => total + Number(abono.monto_pagado || 0), 0),
+      montoCobrado: abonos.reduce((total, abono) => total + Number(abono.monto || 0), 0),
     },
     cajaChica: {
       cantidad: movimientosChica.length,

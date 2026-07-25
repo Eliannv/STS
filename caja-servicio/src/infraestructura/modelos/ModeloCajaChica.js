@@ -41,6 +41,11 @@ const ModeloCajaChica = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    sucursal_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    sucursal_nombre: DataTypes.STRING(100),
     created_at: DataTypes.DATE,
     updated_at: DataTypes.DATE,
     cerrado_en: DataTypes.DATE,

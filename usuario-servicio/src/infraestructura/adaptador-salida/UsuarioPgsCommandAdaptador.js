@@ -1,10 +1,25 @@
 import UsuarioSalidaCommandPuerto from '../../aplicacion/puertos/salida/UsuarioSalidaCommandPuerto.js';
 import ModeloUsuario, { sequelize } from '../modelos/ModeloUsuario.js';
+import ModeloSucursal from '../modelos/ModeloSucursal.js';
 
 export default class UsuarioPgsCommandAdaptador extends UsuarioSalidaCommandPuerto {
   async buscarPorEmail(email) {
     const usuario = await ModeloUsuario.findOne({ where: { email } });
-    return usuario ? { estado: 'ok', resultado: usuario.get({ plain: true }) } : { estado: 'error', resultado: null };
+    if (!usuario) return { estado: 'error', resultado: null };
+
+    // La sucursal viaja resuelta en el login: el resto del sistema la denormaliza
+    // en facturas, movimientos y egresos sin volver a consultar este servicio.
+    const plano = usuario.get({ plain: true });
+    const sucursal = plano.sucursal_id ? await ModeloSucursal.findByPk(plano.sucursal_id) : null;
+    return {
+      estado: 'ok',
+      resultado: {
+        ...plano,
+        sucursal_nombre: sucursal?.nombre ?? null,
+        sucursal_codigo: sucursal?.codigo ?? null,
+        sucursal_activa: sucursal?.activo ?? false
+      }
+    };
   }
 
   async guardar(usuario) {

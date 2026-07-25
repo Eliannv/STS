@@ -4,7 +4,8 @@ export default class ProductoQueryUsesCase {
   }
 
   lista(dtoProducto, pag = {}) { return this.adaptadorBDSalida.lista(dtoProducto.buscar, dtoProducto.sucursalId, pag); }
-  buscarPorId(id) { return id ? this.adaptadorBDSalida.buscarPorId(id) : Promise.resolve({ estado: 'error', resultado: null }); }
+  buscarPorId(id, sucursalId = null) { return id ? this.adaptadorBDSalida.buscarPorId(id, sucursalId) : Promise.resolve({ estado: 'error', resultado: null }); }
+  existenciasPorProducto(id) { return id ? this.adaptadorBDSalida.existenciasPorProducto(id) : Promise.resolve({ estado: 'error', resultado: null }); }
   buscarPorCodigoBarras(codigo) {
     const codigoNormalizado = String(codigo || '').trim();
     return codigoNormalizado

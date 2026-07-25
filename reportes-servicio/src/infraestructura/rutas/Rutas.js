@@ -4,7 +4,14 @@ import { reportesControlador } from '../contenedor/ReportesContenedor.js';
 
 const router = Router();
 const lectura = authMiddleware();
-const ejecutar = (nombre, transformar = (req) => req.query, contrato = 'estandar') => (req, res) => reportesControlador.ejecutar(req, res, nombre, transformar(req), contrato);
+// El scope de sucursal se impone sobre los filtros recibidos: un operador no puede
+// pedir el reporte de otra sucursal cambiando el query param.
+const conSucursal = (req, parametros) => (
+  req.sucursalScope?.puedeVerTodas
+    ? { ...parametros, sucursalId: req.sucursalScope.filtroLectura ?? parametros.sucursalId ?? null }
+    : { ...parametros, sucursalId: req.sucursalScope?.filtroLectura ?? null }
+);
+const ejecutar = (nombre, transformar = (req) => req.query, contrato = 'estandar') => (req, res) => reportesControlador.ejecutar(req, res, nombre, conSucursal(req, transformar(req)), contrato);
 
 router.get('/kardex/producto/:codigo', lectura, ejecutar('kardexProducto', (req) => ({ ...req.query, codigo: req.params.codigo })));
 router.get('/kardex/fecha', lectura, ejecutar('kardexFecha'));

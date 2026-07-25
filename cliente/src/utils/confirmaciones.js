@@ -44,6 +44,34 @@ export async function confirmarAccionDestructiva(configuracion, titulo, boton) {
   return resultado.isConfirmed;
 }
 
+export async function solicitarMotivoDestructivo(configuracion = {}) {
+  const resultado = await Swal.fire({
+    icon: 'warning',
+    title: configuracion.title || 'Confirmar anulación',
+    html: configuracion.html,
+    text: configuracion.text,
+    input: 'textarea',
+    inputLabel: configuracion.inputLabel || 'Motivo',
+    inputPlaceholder:
+      configuracion.inputPlaceholder
+      || 'Explique por qué se realiza esta anulación.',
+    inputAttributes: { maxlength: '500' },
+    inputValidator: (valor) => (
+      String(valor || '').trim()
+        ? undefined
+        : 'El motivo de la anulación es obligatorio.'
+    ),
+    showCancelButton: true,
+    confirmButtonColor: '#e74c3c',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: configuracion.confirmButtonText || 'Sí, anular',
+    cancelButtonText: 'Cancelar',
+    reverseButtons: true,
+  });
+
+  return resultado.isConfirmed ? String(resultado.value).trim() : null;
+}
+
 export async function confirmarAccion(configuracion, titulo, boton) {
   const {
     title,

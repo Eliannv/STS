@@ -11,4 +11,8 @@ export default class OperacionFinancieraSalidaQueryPuerto {
   findByOperacionId(id) {
     throw new Error('Not implemented');
   }
+
+  findByFacturaId(facturaId) {
+    throw new Error('Not implemented');
+  }
 }

@@ -1,3 +1,4 @@
+// cliente/src/pages/ventas/Ventas.jsx
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
@@ -119,28 +120,6 @@ export default function Ventas() {
   }
 }
 
-  async function handleCobrar(v) {
-    const montoPendiente = parseFloat(v.saldo_pendiente);
-    const result = await Swal.fire({
-      title: 'Cobrar deuda',
-      text: `Factura #${v.id_personalizado || v.id} — Saldo pendiente: ${FMT(montoPendiente)}`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#27ae60',
-      confirmButtonText: `Cobrar ${FMT(montoPendiente)}`,
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true,
-    });
-    if (!result.isConfirmed) return;
-    const res = await api.put(`/factura/cobrar/${v.id}`);
-    if (res.ok) {
-      Swal.fire({ title: 'Venta marcada como pagada', icon: 'success', timer: 2000, toast: true, position: 'top-end', showConfirmButton: false });
-      cargar();
-    } else {
-      Swal.fire({ title: 'Error', text: res.data?.resultado || 'No se pudo procesar el pago', icon: 'error', timer: 3000, toast: true, position: 'top-end', showConfirmButton: false });
-    }
-  }
-
   function limpiarFiltros() {
     setBuscar(''); setEstado(''); setTipo(''); setFechaDesde(''); setFechaHasta('');
   }
@@ -155,12 +134,12 @@ export default function Ventas() {
           <p className="page-subtitle">Registro de facturas y cobros</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost" onClick={() => navigate('/facturas/cobrar')}>
+          <button className="btn btn-ghost" onClick={() => navigate('/cuentas-cobrar')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
               <path d="M9 12h6"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
-            Cobrar deuda
+            Cuentas por cobrar
           </button>
           <button className="btn btn-primary" onClick={() => navigate('/facturas/nueva')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -284,7 +263,11 @@ export default function Ventas() {
                   <td>
                     <div style={{ display: 'flex', gap: 4 }}>
                       {parseFloat(v.saldo_pendiente) > 0 && (
-                        <button className="btn btn-ghost btn-sm" onClick={() => handleCobrar(v)} title="Marcar como pagada">
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => navigate(`/cuentas-cobrar?facturaId=${v.id}&clienteId=${v.cliente_id}`)}
+                          title="Registrar cobro"
+                        >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
                           </svg>

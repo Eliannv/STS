@@ -17,6 +17,10 @@ export default class CuentaSalidaQueryPuerto {
     throw new Error('Not implemented');
   }
 
+  findByReferencia(referenciaTipo, referenciaId) {
+    throw new Error('Not implemented');
+  }
+
   findMovimientoByIdempotencyKey(key) {
     throw new Error('Not implemented');
   }

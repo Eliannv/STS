@@ -4,7 +4,8 @@ import MovimientoStockDTO from '../../aplicacion/dto/MovimientoStockDTO.js';
 const contextoUsuario = (req) => ({
   usuarioId: req.usuario?.id ?? req.body?.usuarioId ?? null,
   usuarioNombre: req.usuario ? `${req.usuario.nombre || ''} ${req.usuario.apellido || ''}`.trim() : req.body?.usuarioNombre ?? null,
-  sucursalId: req.usuario?.sucursalId ?? req.body?.sucursalId ?? null,
+  sucursalId: req.sucursalScope?.sucursalId ?? null,
+  sucursalNombre: req.sucursalScope?.sucursalNombre ?? null,
   traceId: req.traceId,
 });
 
@@ -31,7 +32,7 @@ export default class MovimientoStockControlador extends MovimientoStockEntradaPu
   }
 
   async listar(req, res) {
-    const respuesta = await this.queryUC.listar(req.query);
+    const respuesta = await this.queryUC.listar({ ...req.query, sucursalId: req.sucursalScope?.filtroLectura ?? null });
     return res.status(200).json({ ...respuesta, traceId: req.traceId });
   }
 

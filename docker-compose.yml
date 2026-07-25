@@ -13,6 +13,7 @@ services:
       - usuario_postgres_data:/var/lib/postgresql/data
       - ./usuario-servicio/sql/01_usuario_schema.sql:/docker-entrypoint-initdb.d/01_usuario_schema.sql:ro
       - ./usuario-servicio/sql/02_usuario_schema_migration.sql:/docker-entrypoint-initdb.d/02_usuario_schema_migration.sql:ro
+      - ./usuario-servicio/sql/03_sucursales_multisucursal.sql:/docker-entrypoint-initdb.d/03_sucursales_multisucursal.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d usuario_db"]
       interval: 5s
@@ -96,6 +97,9 @@ services:
       - ./inventario-servicio/sql/02_movimientos_stock_ledger.sql:/docker-entrypoint-initdb.d/02_movimientos_stock_ledger.sql:ro
       - ./inventario-servicio/sql/03_producto_codigo_barras.sql:/docker-entrypoint-initdb.d/03_producto_codigo_barras.sql:ro
       - ./inventario-servicio/sql/04_operaciones_financieras_compras.sql:/docker-entrypoint-initdb.d/04_operaciones_financieras_compras.sql:ro
+      - ./inventario-servicio/sql/05_egresos_upgrade.sql:/docker-entrypoint-initdb.d/05_egresos_upgrade.sql:ro
+      - ./inventario-servicio/sql/06_existencias_por_sucursal.sql:/docker-entrypoint-initdb.d/06_existencias_por_sucursal.sql:ro
+      - ./inventario-servicio/sql/07_transferencias_sucursal.sql:/docker-entrypoint-initdb.d/07_transferencias_sucursal.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d inventario_db"]
       interval: 5s
@@ -142,6 +146,7 @@ services:
       - ./facturacion-servicio/sql/02_factura_estado_inventario.sql:/docker-entrypoint-initdb.d/02_factura_estado_inventario.sql:ro
       - ./facturacion-servicio/sql/02_operaciones_financieras.sql:/docker-entrypoint-initdb.d/03_operaciones_financieras.sql:ro
       - ./facturacion-servicio/sql/03_tarjetas_acreditaciones.sql:/docker-entrypoint-initdb.d/04_tarjetas_acreditaciones.sql:ro
+      - ./facturacion-servicio/sql/04_facturas_por_sucursal.sql:/docker-entrypoint-initdb.d/05_facturas_por_sucursal.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d facturacion_db"]
       interval: 5s
@@ -188,6 +193,7 @@ services:
       - ./caja-servicio/sql/03_cuentas_cobrar.sql:/docker-entrypoint-initdb.d/03_cuentas_cobrar.sql:ro
       - ./caja-servicio/sql/04_tarjetas_acreditaciones.sql:/docker-entrypoint-initdb.d/04_tarjetas_acreditaciones.sql:ro
       - ./caja-servicio/sql/05_cuentas_pagar_compras.sql:/docker-entrypoint-initdb.d/05_cuentas_pagar_compras.sql:ro
+      - ./caja-servicio/sql/06_caja_chica_por_sucursal.sql:/docker-entrypoint-initdb.d/06_caja_chica_por_sucursal.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d caja_db"]
       interval: 5s

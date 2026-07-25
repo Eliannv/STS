@@ -67,16 +67,22 @@ export default class OperacionFinancieraPgsCommandAdaptador
   }
 
   async marcarAplicado(id, respuesta) {
+    const cambios = {
+      estado: 'APLICADO',
+      respuesta,
+      aplicado_en: new Date(),
+      proximo_reintento_en: null,
+      ultimo_error: null,
+      updated_at: new Date(),
+    };
+    const cuentaCobrarId =
+      respuesta?.cuenta_cobrar_id
+      ?? respuesta?.cuenta_anulada_id;
+    if (cuentaCobrarId != null) {
+      cambios.cuenta_cobrar_id = cuentaCobrarId;
+    }
     const [cantidad] = await ModeloOperacionFinanciera.update(
-      {
-        estado: 'APLICADO',
-        respuesta,
-        cuenta_cobrar_id: respuesta?.cuenta_cobrar_id ?? null,
-        aplicado_en: new Date(),
-        proximo_reintento_en: null,
-        ultimo_error: null,
-        updated_at: new Date(),
-      },
+      cambios,
       { where: { id, estado: 'PENDIENTE' } },
     );
     return cantidad > 0;
@@ -88,6 +94,22 @@ export default class OperacionFinancieraPgsCommandAdaptador
       {
         estado: 'DESCARTADO',
         ultimo_error: mensaje,
+        motivo_descarte: mensaje,
+        descartado_en: new Date(),
+        proximo_reintento_en: null,
+        updated_at: new Date(),
+      },
+      { where: { id, estado: 'PENDIENTE' } },
+    );
+    return cantidad > 0;
+  }
+
+  async marcarDescartado(id, motivo) {
+    const mensaje = motivo instanceof Error ? motivo.message : String(motivo);
+    const [cantidad] = await ModeloOperacionFinanciera.update(
+      {
+        estado: 'DESCARTADO',
+        ultimo_error: null,
         motivo_descarte: mensaje,
         descartado_en: new Date(),
         proximo_reintento_en: null,

@@ -11,6 +11,7 @@ router.get('/buscar-unico', authMiddleware(), (req, res) => productoControlador.
 router.get('/por-codigo-barras/:codigo', authMiddleware(), (req, res) => productoControlador.buscarPorCodigoBarras(req, res));
 router.get('/siguiente-codigo-barras', authMiddleware('ADMINISTRADOR'), (req, res) => productoControlador.siguienteCodigoBarras(req, res));
 router.get('/buscar/:id', authMiddleware(), (req, res) => productoControlador.buscarPorId(req, res));
+router.get('/:id/existencias', authMiddleware(), (req, res) => productoControlador.existencias(req, res));
 router.post('/crear', authMiddleware('ADMINISTRADOR'), (req, res) => productoControlador.crear(req, res));
 router.put('/editar', authMiddleware('ADMINISTRADOR'), (req, res) => productoControlador.editar(req, res));
 router.delete('/eliminar', authMiddleware('ADMINISTRADOR'), (req, res) => productoControlador.eliminar(req, res));

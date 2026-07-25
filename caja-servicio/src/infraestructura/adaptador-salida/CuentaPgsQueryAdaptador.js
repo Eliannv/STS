@@ -71,6 +71,19 @@ export default class CuentaPgsQueryAdaptador extends CuentaSalidaQueryPuerto {
     );
   }
 
+  async findByReferencia(referenciaTipo, referenciaId) {
+    return mapearCuenta(
+      await ModeloCuenta.findOne({
+        where: {
+          tipo: 'COBRAR',
+          referencia_tipo: referenciaTipo,
+          referencia_id: referenciaId,
+        },
+        order: [['id', 'DESC']],
+      }),
+    );
+  }
+
   async findMovimientoByIdempotencyKey(key) {
     return mapearMovimiento(
       await ModeloMovimientoCuenta.findOne({

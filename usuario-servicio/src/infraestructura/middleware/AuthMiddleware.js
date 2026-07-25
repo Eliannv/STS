@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { resolverSucursalScope } from './SucursalScopeMiddleware.js';
 
 export const authMiddleware = (rolRequerido = null) => (req, res, next) => {
   const header = req.headers.authorization;
@@ -7,6 +8,7 @@ export const authMiddleware = (rolRequerido = null) => (req, res, next) => {
     const usuario = jwt.verify(header.slice(7), process.env.JWT_SECRET);
     if (rolRequerido && usuario.rol !== rolRequerido) return res.status(403).json({ estado: 'error', mensaje: 'Permisos insuficientes' });
     req.usuario = usuario;
+    resolverSucursalScope(req);
     next();
   } catch {
     return res.status(401).json({ estado: 'error', mensaje: 'Token inválido o expirado' });

@@ -10,7 +10,8 @@ const ModeloSucursal = sequelize.define('Sucursal', {
   telefono: DataTypes.STRING(30),
   email: DataTypes.STRING(150),
   fecha_creacion: DataTypes.DATE,
-  creado_por_id: DataTypes.INTEGER
+  creado_por_id: DataTypes.INTEGER,
+  es_matriz: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }
 }, { tableName: 'sucursales', timestamps: false, freezeTableName: true });
 
 export default ModeloSucursal;

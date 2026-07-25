@@ -1,9 +1,21 @@
 import SucursalSalidaPuerto from '../../aplicacion/puertos/salida/SucursalSalidaPuerto.js';
 import ModeloSucursal from '../modelos/ModeloSucursal.js';
+import ModeloUsuario from '../modelos/ModeloUsuario.js';
 
 export class SucursalQueryAdaptador extends SucursalSalidaPuerto {
-  async lista() { return { estado: 'ok', resultado: await ModeloSucursal.findAll({ order: [['nombre', 'ASC']] }) }; }
-  async buscarPorId(id) { const sucursal = await ModeloSucursal.findByPk(id); return sucursal ? { estado: 'ok', resultado: sucursal } : { estado: 'error', resultado: null }; }
+  async lista({ incluirInactivas = false } = {}) {
+    const where = incluirInactivas ? {} : { activo: true };
+    return { estado: 'ok', resultado: await ModeloSucursal.findAll({ where, order: [['es_matriz', 'DESC'], ['nombre', 'ASC']] }) };
+  }
+
+  async buscarPorId(id) {
+    const sucursal = await ModeloSucursal.findByPk(id);
+    return sucursal ? { estado: 'ok', resultado: sucursal.get({ plain: true }) } : { estado: 'error', resultado: null };
+  }
+
+  contarUsuariosActivos(sucursalId) {
+    return ModeloUsuario.count({ where: { sucursal_id: sucursalId, activo: true } });
+  }
 }
 
 export class SucursalCommandAdaptador extends SucursalSalidaPuerto {

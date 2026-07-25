@@ -53,7 +53,7 @@ export default class CajaChicaCommandUsesCase {
     if (!cajaBancoId) {
       throw new Error('La Caja Banco es requerida');
     }
-    if (!(montoInicial > 0)) {
+    if (!(montoInicial >= 0)) {
       throw new Error('El monto inicial debe ser mayor que cero');
     }
     if (!datos.usuarioId && !datos.usuario_id) {
@@ -66,11 +66,17 @@ export default class CajaChicaCommandUsesCase {
       );
     }
 
+    const sucursalId = Number(datos.sucursalId ?? datos.sucursal_id);
+    if (!sucursalId) {
+      throw new Error('La sucursal es requerida para abrir una Caja Chica');
+    }
+
+    // El bloqueo es por sucursal: dos sucursales pueden tener su caja abierta a la vez.
     const abierta = extraerResultado(
-      await this.cajaChicaQueryPuerto.cajaAbierta(),
+      await this.cajaChicaQueryPuerto.cajaAbierta(sucursalId),
     );
     if (abierta) {
-      throw new Error('Ya existe una Caja Chica abierta');
+      throw new Error('Esta sucursal ya tiene una Caja Chica abierta');
     }
 
     const cajaBanco = this.convertirCajaBanco(

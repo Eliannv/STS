@@ -1,5 +1,5 @@
 export default class Sucursal {
-  constructor(id, codigo, nombre, activo, direccion, telefono, email, creadoPorId) {
+  constructor(id, codigo, nombre, activo, direccion, telefono, email, creadoPorId, esMatriz) {
     this.id = id;
     this.codigo = codigo;
     this.nombre = nombre;
@@ -8,5 +8,6 @@ export default class Sucursal {
     this.telefono = telefono ?? null;
     this.email = email ?? null;
     this.creadoPorId = creadoPorId ?? null;
+    this.esMatriz = esMatriz ?? false;
   }
 }

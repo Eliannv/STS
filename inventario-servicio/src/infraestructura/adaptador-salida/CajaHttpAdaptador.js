@@ -22,6 +22,18 @@ export default class CajaHttpAdaptador extends CajaSalidaPuerto {
     return this.post('/api/v1/operaciones/anulaciones-compras', payload, traceId);
   }
 
+  postDevolucionProveedor(payload, traceId) {
+    return this.post(
+      '/api/v1/operaciones/devoluciones-proveedor',
+      payload,
+      traceId,
+    );
+  }
+
+  postAnulacionDevolucion(payload, traceId) {
+    return this.post('/api/v1/operaciones/anulaciones', payload, traceId);
+  }
+
   async post(path, payload, traceId) {
     if (!this.baseUrl) {
       return { ok: false, error: 'CAJA_SERVICIO_URL no está configurada' };

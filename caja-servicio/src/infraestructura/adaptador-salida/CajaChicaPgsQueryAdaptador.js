@@ -20,12 +20,14 @@ export default class CajaChicaPgsQueryAdaptador extends CajaChicaSalidaQueryPuer
     fechaDesde,
     fechaHasta,
     cajaBancoId,
+    sucursalId,
     limit = 20,
     offset = 0,
   } = {}) {
     const where = { activo: true };
     if (estado) where.estado = estado;
     if (cajaBancoId) where.caja_banco_id = cajaBancoId;
+    if (sucursalId) where.sucursal_id = sucursalId;
     if (fechaDesde || fechaHasta) {
       where.fecha = {
         ...(fechaDesde ? { [Op.gte]: fechaDesde } : {}),
@@ -60,12 +62,14 @@ export default class CajaChicaPgsQueryAdaptador extends CajaChicaSalidaQueryPuer
       : { estado: 'error', resultado: 'Caja Chica no encontrada' };
   }
 
-  async cajaAbierta() {
+  // Cada sucursal tiene su propia caja chica abierta: sin sucursalId esto
+  // devolvería la de cualquier otra y bloquearía la apertura local.
+  async cajaAbierta(sucursalId = null) {
     return {
       estado: 'ok',
       resultado: mapearCaja(
         await ModeloCajaChica.findOne({
-          where: { estado: 'ABIERTA', activo: true },
+          where: { estado: 'ABIERTA', activo: true, ...(sucursalId ? { sucursal_id: sucursalId } : {}) },
           order: [['created_at', 'DESC']],
         }),
       ),

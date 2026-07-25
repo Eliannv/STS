@@ -8,5 +8,6 @@ export class SucursalDTO {
     this.telefono = datos.telefono ?? null;
     this.email = datos.email ?? null;
     this.creadoPorId = datos.creadoPorId ?? null;
+    this.esMatriz = datos.esMatriz ?? datos.es_matriz ?? false;
   }
 }

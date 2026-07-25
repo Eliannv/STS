@@ -6,16 +6,20 @@ import moduloProductoRutas from './moduloProductoRutas.js';
 import moduloProveedorRutas from './moduloProveedorRutas.js';
 import moduloIngresoRutas from './moduloIngresoRutas.js';
 import moduloMovimientoStockRutas from './moduloMovimientoStockRutas.js';
+import moduloTransferenciaRutas from './moduloTransferenciaRutas.js';
 import moduloReporteInternoRutas from './moduloReporteInternoRutas.js';
+import moduloEgresoRutas from './moduloEgresoRutas.js';
 
 const router = Router();
-const lectura = ['catalogo', 'detalle-ingresos', 'egresos', 'detalle-egresos'];
-const escritura = ['catalogo', 'detalle-ingresos', 'egresos', 'detalle-egresos'];
+const lectura = ['catalogo', 'detalle-ingresos'];
+const escritura = ['catalogo', 'detalle-ingresos'];
 
 router.use('/productos', moduloProductoRutas);
 router.use('/proveedores', moduloProveedorRutas);
 router.use('/ingresos', moduloIngresoRutas);
+router.use('/egresos', moduloEgresoRutas);
 router.use('/movimientos', moduloMovimientoStockRutas);
+router.use('/transferencias', moduloTransferenciaRutas);
 router.use('/inventario/reportes', moduloReporteInternoRutas);
 
 for (const recurso of lectura) {

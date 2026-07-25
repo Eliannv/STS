@@ -20,6 +20,8 @@ const cajaDb = (caja) => ({
   observacion: caja.getObservacion(),
   activo: caja.getActivo(),
   caja_banco_id: caja.getCajaBancoId(),
+  sucursal_id: caja.getSucursalId(),
+  sucursal_nombre: caja.getSucursalNombre(),
   ingresos_acumulados: caja.getIngresosAcumulados(),
   egresos_acumulados: caja.getEgresosAcumulados(),
   total_movimientos: caja.getTotalMovimientos(),

@@ -1,10 +1,26 @@
+// inventario-servicio/src/infraestructura/adaptador-salida/ProductoStockGlobalPgsAdaptador.js
 import ExistenciaStockSalidaPuerto from '../../aplicacion/puertos/salida/ExistenciaStockSalidaPuerto.js';
 import { Producto } from '../modelos/Modelos.js';
 import sequelize from '../base-dato/Postgresql.js';
 
 export default class ProductoStockGlobalPgsAdaptador extends ExistenciaStockSalidaPuerto {
+  async findStockByProductoId(productoId, options = {}) {
+    const producto = await Producto.findByPk(productoId, {
+      transaction: options.transaction,
+    });
+    return producto?.get({ plain: true }) ?? null;
+  }
+
+  lockProductoForUpdate(productoId, transaction) {
+    return Producto.findOne({
+      where: { id: productoId },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+  }
+
   bloquear(productoId, sucursalId, transaction) {
-    return Producto.findOne({ where: { id: productoId }, transaction, lock: transaction.LOCK.UPDATE });
+    return this.lockProductoForUpdate(productoId, transaction);
   }
 
   async actualizar(producto, valores, transaction) {

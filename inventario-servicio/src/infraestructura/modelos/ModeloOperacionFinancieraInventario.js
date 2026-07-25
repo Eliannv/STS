@@ -6,7 +6,8 @@ const ModeloOperacionFinancieraInventario = sequelize.define(
   'OperacionFinancieraInventario',
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    ingreso_id: { type: DataTypes.INTEGER, allowNull: false },
+    ingreso_id: DataTypes.INTEGER,
+    egreso_id: DataTypes.INTEGER,
     cuenta_pagar_id: DataTypes.INTEGER,
     operacion_id: { type: DataTypes.UUID, allowNull: false, unique: true },
     operacion_id_original: DataTypes.UUID,
@@ -21,6 +22,10 @@ const ModeloOperacionFinancieraInventario = sequelize.define(
     caja_tipo: DataTypes.STRING(10),
     caja_id: DataTypes.INTEGER,
     monto_total: { type: DataTypes.DECIMAL(14, 2), defaultValue: 0 },
+    monto: { type: DataTypes.DECIMAL(14, 2), defaultValue: 0 },
+    proveedor_id: DataTypes.INTEGER,
+    proveedor_nombre: DataTypes.STRING(150),
+    ingreso_origen_id: DataTypes.INTEGER,
     fecha_vencimiento: DataTypes.DATEONLY,
     estado: {
       type: DataTypes.STRING(20),

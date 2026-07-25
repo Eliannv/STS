@@ -1,3 +1,4 @@
+// facturacion-servicio/src/infraestructura/rutas/moduloFacturaRutas.js
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/AuthMiddleware.js';
 import { facturaControlador } from '../contenedor/FacturaContenedor.js';
@@ -11,7 +12,11 @@ router.get('/resumen/:clienteId', authMiddleware(), (req, res) => facturaControl
 router.get('/buscar/:id', authMiddleware(), (req, res) => facturaControlador.buscarPorId(req, res));
 router.post('/crear', authMiddleware(), (req, res) => facturaControlador.crear(req, res));
 router.put('/editar', authMiddleware(), (req, res) => facturaControlador.editar(req, res));
-router.put('/cobrar/:id', authMiddleware(), (req, res) => facturaControlador.cobrar(req, res));
+router.put('/cobrar/:id', authMiddleware(), (req, res) => res.status(410).json({
+  estado: 'error',
+  resultado: 'Ruta obsoleta. Utilice Cuentas por Cobrar.',
+  traceId: req.traceId,
+}));
 router.put('/anular/:id', authMiddleware('ADMINISTRADOR'), (req, res) => facturaControlador.anular(req, res));
 router.delete('/eliminar', authMiddleware('ADMINISTRADOR'), (req, res) => facturaControlador.eliminar(req, res));
 router.get('/:id', authMiddleware(), (req, res) => facturaControlador.buscarPorId(req, res));

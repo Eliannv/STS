@@ -11,6 +11,8 @@ export default class CajaChica {
     this.observacion = datos.observacion ?? null;
     this.activo = datos.activo ?? true;
     this.cajaBancoId = datos.cajaBancoId ?? datos.caja_banco_id ?? null;
+    this.sucursalId = datos.sucursalId ?? datos.sucursal_id ?? null;
+    this.sucursalNombre = datos.sucursalNombre ?? datos.sucursal_nombre ?? null;
     this.createdAt = datos.createdAt ?? datos.created_at ?? null;
     this.updatedAt = datos.updatedAt ?? datos.updated_at ?? null;
     this.cerradoEn = datos.cerradoEn ?? datos.cerrado_en ?? null;
@@ -27,6 +29,18 @@ export default class CajaChica {
 
   getTipoCaja() {
     return 'CHICA';
+  }
+
+  getSucursalId() {
+    return this.sucursalId;
+  }
+
+  setSucursalId(sucursalId) {
+    this.sucursalId = sucursalId;
+  }
+
+  getSucursalNombre() {
+    return this.sucursalNombre;
   }
 
   getPermiteSaldoNegativo() {

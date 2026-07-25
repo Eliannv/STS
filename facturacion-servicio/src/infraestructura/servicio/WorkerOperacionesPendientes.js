@@ -48,6 +48,13 @@ export default class WorkerOperacionesPendientes {
 
   async procesar(operacion) {
     try {
+      const vigente = await this.operacionQuery.findByOperacionId(
+        operacion.getOperacionId(),
+      );
+      if (!vigente || vigente.getEstado() !== 'PENDIENTE') {
+        return;
+      }
+      operacion = vigente;
       const respuesta = await this.enviar(operacion);
       if (respuesta.ok) {
         await this.actualizarEstadoAbono(operacion, 'APLICADO');

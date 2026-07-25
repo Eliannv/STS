@@ -150,6 +150,9 @@ export default class InventarioStockHttpAdaptador extends InventarioStockSalidaP
     if (!this.baseUrl) return { estado: 'error', resultado: 'INVENTARIO_SERVICIO_URL no está configurada' };
     const headers = { 'Content-Type': 'application/json', 'X-Trace-Id': contexto.traceId || '' };
     if (contexto.authorization) headers.Authorization = contexto.authorization;
+    // Sin esto, inventario resolvería la sucursal propia del token y descontaría el
+    // stock de la sucursal equivocada cuando un administrador opera en otra.
+    if (contexto.sucursalId) headers['X-Sucursal-Id'] = String(contexto.sucursalId);
     try {
       const response = await fetch(`${this.baseUrl}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
       const data = await response.json().catch(() => null);

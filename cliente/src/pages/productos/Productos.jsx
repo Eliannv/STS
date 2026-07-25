@@ -3,6 +3,7 @@ import { Boxes, CircleDollarSign, Package, PackageX, Printer, TrendingUp, Triang
 import Swal from 'sweetalert2';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSucursal } from '../../context/SucursalContext';
 import useBarcodeScanner from '../../hooks/useBarcodeScanner';
 import JsBarcode from 'jsbarcode';
 import ProductoFormModal from '../../components/productos/ProductoFormModal';
@@ -31,6 +32,7 @@ const searchable = value => String(value || '').toLocaleLowerCase('es');
 
 export default function Productos() {
   const { isAdmin } = useAuth();
+  const { nombreSucursalOperativa, viendoTodas } = useSucursal();
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buscarProd, setBuscarProd] = useState('');
@@ -211,7 +213,13 @@ ${labels.map(l => `<div class="label">
             Productos
             <InfoTooltip title="Agregar Productos">Para agregar nuevos productos al catálogo, crea un nuevo ingreso y agrega los productos desde allí.</InfoTooltip>
           </h1>
-          <p className="page-subtitle">Centro de consulta y valorización del inventario</p>
+          {/* El stock listado es el de la sucursal en curso, no el consolidado:
+              decirlo evita que se interprete un 0 local como falta total de producto. */}
+          <p className="page-subtitle">
+            {viendoTodas
+              ? 'Centro de consulta y valorización del inventario · Stock consolidado de todas las sucursales'
+              : `Centro de consulta y valorización del inventario · Stock en ${nombreSucursalOperativa}`}
+          </p>
         </div>
         <button type="button" onClick={imprimirCodigos} className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
           <Printer size={15} /> Imprimir códigos

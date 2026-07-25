@@ -220,9 +220,9 @@ export default function CajaBancoDetalle() {
       </FilterCard>
 
       {categorias.length > 0 && (
-        <div className="finance-section">
+        <div className="finance-section" style={{ overflow: 'visible' }}>
           <div className="finance-section__header"><h3>Desglose por categoría</h3></div>
-          <div className="table-container" style={{ border: 0, borderRadius: 0 }}>
+          <div className="table-container" style={{ border: 0, borderRadius: 0, overflowX: 'auto' }}>
             <table className="finance-table">
               <thead><tr><th>Categoría</th><th>Total neto</th></tr></thead>
               <tbody>
@@ -282,9 +282,9 @@ export default function CajaBancoDetalle() {
         </table>
       </TableCard>
 
-      <div className="finance-section">
+      <div className="finance-section" style={{ overflow: 'visible' }}>
         <div className="finance-section__header"><h3>Cajas Chicas asociadas</h3></div>
-        <div className="table-container" style={{ border: 0, borderRadius: 0 }}>
+        <div className="table-container" style={{ border: 0, borderRadius: 0, overflowX: 'auto' }}>
           {cajasChicas.length === 0 ? (
             <div className="empty-state">No existen Cajas Chicas asociadas.</div>
           ) : (

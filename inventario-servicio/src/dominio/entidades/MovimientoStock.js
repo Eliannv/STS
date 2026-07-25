@@ -1,3 +1,4 @@
+// inventario-servicio/src/dominio/entidades/MovimientoStock.js
 export const NATURALEZAS_MOVIMIENTO = Object.freeze(['ENTRADA', 'SALIDA', 'NEUTRO']);
 
 export const TIPOS_MOVIMIENTO_STOCK = Object.freeze([
@@ -15,6 +16,16 @@ export const TIPOS_MOVIMIENTO_STOCK = Object.freeze([
   'ANULACION_EGRESO',
   'REVALORIZACION',
   'COMPENSACION',
+  'MERMA',
+  'ROTURA',
+  'ROBO',
+  'PERDIDA',
+  'VENCIMIENTO',
+  'CONSUMO_INTERNO',
+  'MUESTRA',
+  'DONACION',
+  'OBSOLESCENCIA',
+  'RETIRO_CALIDAD',
 ]);
 
 export const ORIGENES_MOVIMIENTO = Object.freeze(['INVENTARIO', 'FACTURACION', 'IMPORTACION', 'MIGRACION', 'SISTEMA']);

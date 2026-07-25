@@ -1,5 +1,4 @@
 // caja-servicio/src/aplicacion/puertos/entrada/OperacionEntradaPuerto.js
-// caja-servicio/src/aplicacion/puertos/entrada/OperacionEntradaPuerto.js
 export default class OperacionEntradaPuerto {
   procesarVenta(params) {
     throw new Error('Not implemented');
@@ -30,6 +29,10 @@ export default class OperacionEntradaPuerto {
   }
 
   procesarAnulacionCompra(params) {
+    throw new Error('Not implemented');
+  }
+
+  procesarDevolucionProveedor(params) {
     throw new Error('Not implemented');
   }
 

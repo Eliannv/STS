@@ -46,4 +46,13 @@ export default class OperacionFinancieraInventarioPgsQueryAdaptador
     });
     return modelos.map(mapear);
   }
+
+  async findByEgresoId(egresoId, options = {}) {
+    const modelos = await ModeloOperacionFinancieraInventario.findAll({
+      where: { egreso_id: egresoId },
+      order: [['created_at', 'ASC'], ['id', 'ASC']],
+      transaction: options.transaction,
+    });
+    return modelos.map(mapear);
+  }
 }

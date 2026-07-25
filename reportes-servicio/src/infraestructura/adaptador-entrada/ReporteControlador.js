@@ -51,7 +51,13 @@ export default class ReporteControlador {
     const traceId = req.get?.('X-Trace-Id') ?? req.traceId ?? null;
 
     try {
-      const filtro = new ReporteFiltro(req.query ?? {});
+      // Un operador solo puede reportar sobre su sucursal: el scope pisa el query param.
+      const filtro = new ReporteFiltro({
+        ...(req.query ?? {}),
+        ...(req.sucursalScope?.puedeVerTodas
+          ? { sucursalId: req.sucursalScope.filtroLectura ?? req.query?.sucursalId ?? null }
+          : { sucursalId: req.sucursalScope?.filtroLectura ?? null }),
+      });
       const resultado = await this.useCases[nombre].ejecutar(
         filtro,
         traceId,

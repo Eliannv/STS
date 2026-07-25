@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { resolverSucursalScope } from './SucursalScopeMiddleware.js';
 
 export const authMiddleware = () => (req, res, next) => {
   const header = req.headers.authorization;
@@ -8,6 +9,7 @@ export const authMiddleware = () => (req, res, next) => {
 
   try {
     req.usuario = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    resolverSucursalScope(req);
     next();
   } catch {
     return res.status(401).json({ success: false, report: null, error: { message: 'Token inválido o expirado' }, traceId: req.traceId });

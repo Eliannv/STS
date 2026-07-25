@@ -1,5 +1,7 @@
+// cliente/src/components/Navbar.jsx
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSucursal } from '../context/SucursalContext';
 import { useNavigate } from 'react-router-dom';
 import './Navbar.css';
 
@@ -16,14 +18,16 @@ const allPages = [
   { label: 'Facturas',        route: '/facturas' },
   { label: 'Venta POS',       route: '/facturas/nueva' },
   { label: 'Venta con Tarjeta',       route: '/ventas/venta-tarjeta' },
-  { label: 'Cobrar deuda',    route: '/facturas/cobrar' },
+  { label: 'Cuentas por cobrar', route: '/cuentas-cobrar' },
   { label: 'Caja Chica',      route: '/caja-chica' },
   { label: 'Caja Banco',      route: '/caja-banco',     adminOnly: true },
   { label: 'Sucursales',      route: '/sucursales' },
+  { label: 'Transferencias',  route: '/transferencias' },
 ];
 
 export default function Navbar() {
   const { usuario, logout, isAdmin } = useAuth();
+  const { sucursales, sucursalActiva, setSucursalActiva, nombreSucursalOperativa, viendoTodas } = useSucursal();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -123,6 +127,29 @@ export default function Navbar() {
       </div>
 
       <div className="navbar-right">
+        {/* Saber en qué sucursal se está operando es crítico: cada venta, movimiento
+            de stock y apertura de caja se registra contra la sucursal mostrada aquí. */}
+        <div className={`navbar-sucursal${viendoTodas ? ' navbar-sucursal-todas' : ''}`} title="Sucursal en la que estás operando">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>
+          </svg>
+          {isAdmin ? (
+            <select
+              className="navbar-sucursal-select"
+              value={sucursalActiva}
+              onChange={e => setSucursalActiva(e.target.value)}
+              aria-label="Cambiar de sucursal"
+            >
+              <option value="">Todas las sucursales</option>
+              {sucursales.map(s => (
+                <option key={s.id} value={s.id}>{s.nombre}</option>
+              ))}
+            </select>
+          ) : (
+            <span className="navbar-sucursal-nombre">{nombreSucursalOperativa}</span>
+          )}
+        </div>
+
         {usuario && (
           <div className="navbar-user">
             <span className="navbar-user-name">

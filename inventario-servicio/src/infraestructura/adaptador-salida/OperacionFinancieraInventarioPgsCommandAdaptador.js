@@ -3,6 +3,7 @@ import sequelize from '../base-dato/Postgresql.js';
 import OperacionFinancieraInventarioSalidaCommandPuerto from '../../aplicacion/puertos/salida/OperacionFinancieraInventarioSalidaCommandPuerto.js';
 import OperacionFinancieraInventario from '../../dominio/entidades/OperacionFinancieraInventario.js';
 import ModeloOperacionFinancieraInventario from '../modelos/ModeloOperacionFinancieraInventario.js';
+import ModeloEgresoMercaderia from '../modelos/ModeloEgresoMercaderia.js';
 import { Ingreso } from '../modelos/Modelos.js';
 
 const mapear = (modelo) => (
@@ -13,6 +14,7 @@ const mapear = (modelo) => (
 
 const operacionDb = (operacion) => ({
   ingreso_id: operacion.getIngresoId(),
+  egreso_id: operacion.getEgresoId(),
   cuenta_pagar_id: operacion.getCuentaPagarId(),
   operacion_id: operacion.getOperacionId(),
   operacion_id_original: operacion.getOperacionIdOriginal(),
@@ -23,6 +25,10 @@ const operacionDb = (operacion) => ({
   caja_tipo: operacion.getCajaTipo(),
   caja_id: operacion.getCajaId(),
   monto_total: operacion.getMontoTotal(),
+  monto: operacion.getMonto(),
+  proveedor_id: operacion.getProveedorId(),
+  proveedor_nombre: operacion.getProveedorNombre(),
+  ingreso_origen_id: operacion.getIngresoOrigenId(),
   fecha_vencimiento: operacion.getFechaVencimiento(),
   estado: operacion.getEstado(),
   intentos: operacion.getIntentos(),
@@ -84,14 +90,25 @@ export default class OperacionFinancieraInventarioPgsCommandAdaptador
         ultimo_error: null,
         updated_at: new Date(),
       }, { transaction });
-      await Ingreso.update({
-        estado_financiero: 'APLICADO',
-        cuenta_pagar_id: cuentaPagarId,
-        updated_at: new Date(),
-      }, {
-        where: { id: operacion.ingreso_id },
-        transaction,
-      });
+      if (operacion.ingreso_id) {
+        await Ingreso.update({
+          estado_financiero: 'APLICADO',
+          cuenta_pagar_id: cuentaPagarId,
+          updated_at: new Date(),
+        }, {
+          where: { id: operacion.ingreso_id },
+          transaction,
+        });
+      }
+      if (operacion.egreso_id) {
+        await ModeloEgresoMercaderia.update({
+          estado_financiero: 'APLICADO',
+          updated_at: new Date(),
+        }, {
+          where: { id: operacion.egreso_id },
+          transaction,
+        });
+      }
       return true;
     });
   }
@@ -130,15 +147,43 @@ export default class OperacionFinancieraInventarioPgsCommandAdaptador
         proximo_reintento_en: null,
         updated_at: new Date(),
       }, { transaction });
-      await Ingreso.update({
-        estado_financiero: 'DESCARTADO',
-        updated_at: new Date(),
-      }, {
-        where: { id: operacion.ingreso_id },
-        transaction,
-      });
+      if (operacion.ingreso_id) {
+        await Ingreso.update({
+          estado_financiero: 'DESCARTADO',
+          updated_at: new Date(),
+        }, {
+          where: { id: operacion.ingreso_id },
+          transaction,
+        });
+      }
+      if (operacion.egreso_id) {
+        await ModeloEgresoMercaderia.update({
+          estado_financiero: 'DESCARTADO',
+          updated_at: new Date(),
+        }, {
+          where: { id: operacion.egreso_id },
+          transaction,
+        });
+      }
       return true;
     });
+  }
+
+  async descartarPendientesPorEgreso(egresoId, motivo, options = {}) {
+    const ejecutar = (transaction) => ModeloOperacionFinancieraInventario.update({
+      estado: 'DESCARTADO',
+      ultimo_error: motivo,
+      motivo_descarte: motivo,
+      descartado_en: new Date(),
+      proximo_reintento_en: null,
+      updated_at: new Date(),
+    }, {
+      where: { egreso_id: egresoId, estado: 'PENDIENTE' },
+      transaction,
+    });
+    return options.transaction
+      ? ejecutar(options.transaction)
+      : sequelize.transaction(ejecutar);
   }
 
   async vincularCuentaPagar(id, cuentaPagarId) {
@@ -148,10 +193,12 @@ export default class OperacionFinancieraInventarioPgsCommandAdaptador
       cuenta_pagar_id: cuentaPagarId,
       updated_at: new Date(),
     });
-    await Ingreso.update({
-      cuenta_pagar_id: cuentaPagarId,
-      updated_at: new Date(),
-    }, { where: { id: operacion.ingreso_id } });
+    if (operacion.ingreso_id) {
+      await Ingreso.update({
+        cuenta_pagar_id: cuentaPagarId,
+        updated_at: new Date(),
+      }, { where: { id: operacion.ingreso_id } });
+    }
     return true;
   }
 }

@@ -1,6 +1,20 @@
 import UsuarioSalidaQueryPuerto from '../../aplicacion/puertos/salida/UsuarioSalidaQueryPuerto.js';
 import { Op } from 'sequelize';
 import ModeloUsuario from '../modelos/ModeloUsuario.js';
+import ModeloSucursal from '../modelos/ModeloSucursal.js';
+
+const conSucursal = async (usuarios) => {
+  const ids = [...new Set(usuarios.map((usuario) => usuario.sucursal_id).filter(Boolean))];
+  const sucursales = ids.length
+    ? await ModeloSucursal.findAll({ where: { id: { [Op.in]: ids } }, attributes: ['id', 'nombre', 'codigo'], raw: true })
+    : [];
+  const porId = new Map(sucursales.map((sucursal) => [Number(sucursal.id), sucursal]));
+  return usuarios.map((usuario) => {
+    const datos = usuario.toJSON();
+    const sucursal = porId.get(Number(datos.sucursal_id));
+    return { ...datos, sucursal_nombre: sucursal?.nombre ?? null, sucursal_codigo: sucursal?.codigo ?? null };
+  });
+};
 
 export default class UsuarioPgsQueryAdaptador extends UsuarioSalidaQueryPuerto {
   async lista(buscar, { limit = 20, offset = 0, incluirInactivos = false } = {}) {
@@ -19,7 +33,7 @@ export default class UsuarioPgsQueryAdaptador extends UsuarioSalidaQueryPuerto {
       limit,
       offset
     });
-    return { estado: 'ok', resultado: usuarios };
+    return { estado: 'ok', resultado: await conSucursal(usuarios) };
   }
 
   async buscarPorId(id) {
@@ -27,8 +41,8 @@ export default class UsuarioPgsQueryAdaptador extends UsuarioSalidaQueryPuerto {
       where: { id, activo: true },
       attributes: { exclude: ['password_hash'] }
     });
-    return usuario
-      ? { estado: 'ok', resultado: usuario }
-      : { estado: 'error', resultado: null };
+    if (!usuario) return { estado: 'error', resultado: null };
+    const [conNombre] = await conSucursal([usuario]);
+    return { estado: 'ok', resultado: conNombre };
   }
 }

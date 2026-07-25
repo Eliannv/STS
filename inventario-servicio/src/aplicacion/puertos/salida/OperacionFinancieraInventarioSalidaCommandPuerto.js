@@ -4,5 +4,6 @@ export default class OperacionFinancieraInventarioSalidaCommandPuerto {
   marcarAplicada(id, respuesta) { throw new Error('Not implemented'); }
   registrarFallo(id, error, proximoReintentoEn) { throw new Error('Not implemented'); }
   marcarDescartada(id, motivo) { throw new Error('Not implemented'); }
+  descartarPendientesPorEgreso(egresoId, motivo, options) { throw new Error('Not implemented'); }
   vincularCuentaPagar(id, cuentaPagarId) { throw new Error('Not implemented'); }
 }

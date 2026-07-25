@@ -1,7 +1,9 @@
+// cliente/src/pages/facturas/VerFactura.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import { solicitarMotivoDestructivo } from '../../utils/confirmaciones';
 import { generarHTMLTicket, imprimirTicketFactura } from '../../utils/ticketVenta';
 import HistorialListModal from '../../components/historial/HistorialListModal';
 import Swal from 'sweetalert2';
@@ -104,27 +106,21 @@ export default function VerFactura() {
   const [anulando, setAnulando] = useState(false);
 
   async function anularFactura() {
-  const confirm = await Swal.fire({
-    title: "Anular factura",
-    html: `¿Anular la factura <strong>${factura.id_personalizado || '#' + factura.id}</strong>?<br><br>Esto marcará la factura como <strong>ANULADA</strong> y restaurará el stock de los productos.`,
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Sí, anular",
-    cancelButtonText: "Cancelar",
-    confirmButtonColor: "#d33",
-    reverseButtons: true,
+  const motivo = await solicitarMotivoDestructivo({
+    title: 'Anular factura',
+    html: `¿Anular la factura <strong>${factura.id_personalizado || `#${factura.id}`}</strong>?<br><br>Se restaurará el stock y se generarán los reversos de caja y cuenta correspondientes.`,
   });
 
-  if (!confirm.isConfirmed) return;
+  if (!motivo) return;
 
   setAnulando(true);
-  const r = await api.put(`/factura/anular/${factura.id}`);
+  const r = await api.put(`/factura/anular/${factura.id}`, { motivo });
 
   if (r.ok) {
     setFactura(prev => ({ ...prev, estado_pago: 'ANULADA', saldo_pendiente: 0 }));
     Swal.fire({
       title: "Factura anulada",
-      text: "El stock de los productos fue restaurado correctamente.",
+      text: r.data?.advertencia || "El stock fue restaurado y los reversos financieros quedaron registrados.",
       icon: "success",
       timer: 2000,
       showConfirmButton: false,
@@ -252,7 +248,7 @@ export default function VerFactura() {
                 <div style={{ fontSize: 11, color: '#856404' }}>Esta factura tiene un saldo sin cancelar.</div>
               </div>
               <button className="btn btn-sm" style={{ marginLeft: 'auto', background: '#ffc107', color: '#000', border: 'none', fontWeight: 700 }}
-                onClick={() => navigate(`/facturas/cobrar?clienteId=${factura.cliente_id}`)}>
+                onClick={() => navigate(`/cuentas-cobrar?facturaId=${factura.id}&clienteId=${factura.cliente_id}`)}>
                 Cobrar
               </button>
             </div>

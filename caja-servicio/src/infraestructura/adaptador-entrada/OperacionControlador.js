@@ -135,6 +135,19 @@ export default class OperacionControlador extends OperacionEntradaPuerto {
     }
   }
 
+  async procesarDevolucionProveedor(req, res) {
+    if (!validarIdempotencia(req, res)) return null;
+    try {
+      const data =
+        await this.operacionCommandUsesCase.procesarDevolucionProveedor(
+          prepararParametros(req),
+        );
+      return res.status(200).json({ ok: true, data });
+    } catch (error) {
+      return res.status(400).json({ ok: false, mensaje: error.message });
+    }
+  }
+
   async procesarAjuste(req, res) {
     if (!validarIdempotencia(req, res)) return null;
     try {

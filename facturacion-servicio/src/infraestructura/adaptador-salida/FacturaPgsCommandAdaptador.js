@@ -2,7 +2,12 @@
 import { Op } from 'sequelize';
 import FacturaSalidaCommandPuerto from '../../aplicacion/puertos/salida/FacturaSalidaCommandPuerto.js';
 import sequelize from '../base-dato/Postgresql.js';
-import { Factura, DetalleFactura, Deuda, VentaTarjeta } from '../modelos/Modelos.js';
+import {
+  AbonoTarjeta,
+  DetalleFactura,
+  Factura,
+  VentaTarjeta,
+} from '../modelos/Modelos.js';
 
 const facturaDb = (venta) => ({
   cliente_id: venta.clienteId,
@@ -20,6 +25,7 @@ const facturaDb = (venta) => ({
   observacion: venta.observacion,
   usuario_id: venta.usuarioId,
   sucursal_id: venta.sucursalId,
+  sucursal_nombre: venta.sucursalNombre,
   updated_at: new Date()
 });
 
@@ -48,9 +54,6 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
     try {
       const factura = await Factura.create({ ...facturaDb(venta), estado_inventario: 'PENDIENTE', fecha: venta.fechaPago || new Date(), created_at: new Date() }, { transaction });
       for (const item of venta.items) await DetalleFactura.create(detalleDb(item, factura.id), { transaction });
-      if (Number(venta.total) - Number(venta.saldoPendiente) > 0) {
-        await Deuda.create({ factura_id: factura.id, factura_id_personalizado: factura.id_personalizado, cliente_id: venta.clienteId, cliente_nombre: venta.nombreCliente || 'Cliente', metodo_pago: venta.metodoPago, fecha_pago: venta.fechaPago || new Date(), monto_pagado: factura.abonado, total_factura: venta.total, saldo_restante: venta.saldoPendiente, estado_pago: venta.estado, es_credito: venta.tipo === 'CREDITO', usuario_id: venta.usuarioId, created_at: new Date() }, { transaction });
-      }
       if (venta.metodoPago?.toUpperCase() === 'TARJETA') {
         const montoTarjeta = Math.max(
           0,
@@ -95,9 +98,81 @@ export default class FacturaPgsCommandAdaptador extends FacturaSalidaCommandPuer
     return cantidad ? { estado: 'ok', resultado: 'Factura marcada como pagada' } : { estado: 'error', resultado: 'Factura no encontrada' };
   }
 
-  async anular(id, estadoInventario = 'REVERSADO') {
-    const [cantidad] = await Factura.update({ estado_pago: 'ANULADA', estado_inventario: estadoInventario, saldo_pendiente: 0, deleted_at: new Date(), updated_at: new Date() }, { where: { id, estado_pago: { [Op.ne]: 'ANULADA' } } });
-    return cantidad ? { estado: 'ok', resultado: 'Factura anulada correctamente' } : { estado: 'error', resultado: 'Factura no encontrada o ya estaba anulada' };
+  async anular(
+    id,
+    estadoInventario = 'REVERSADO',
+    operacionFinanciera = null,
+  ) {
+    try {
+      return await sequelize.transaction(async (transaction) => {
+        const factura = await Factura.findOne({
+          where: { id, estado_pago: { [Op.ne]: 'ANULADA' } },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+        if (!factura) {
+          return {
+            estado: 'error',
+            resultado: 'Factura no encontrada o ya estaba anulada',
+          };
+        }
+
+        let operacionGuardada = null;
+        if (operacionFinanciera) {
+          if (!this.operacionFinancieraCommand) {
+            throw new Error(
+              'El adaptador de operaciones financieras no está configurado',
+            );
+          }
+          operacionGuardada = await this.operacionFinancieraCommand.save(
+            operacionFinanciera,
+            transaction,
+          );
+        }
+
+        await factura.update(
+          {
+            estado_pago: 'ANULADA',
+            estado_inventario: estadoInventario,
+            saldo_pendiente: 0,
+            deleted_at: new Date(),
+            updated_at: new Date(),
+          },
+          { transaction },
+        );
+
+        const ventasTarjeta = await VentaTarjeta.findAll({
+          where: { factura_id: id },
+          attributes: ['id'],
+          transaction,
+        });
+        const ventasTarjetaIds = ventasTarjeta.map((venta) => venta.id);
+        if (ventasTarjetaIds.length > 0) {
+          await VentaTarjeta.update(
+            { estado: 'ANULADA', updated_at: new Date() },
+            {
+              where: { id: { [Op.in]: ventasTarjetaIds } },
+              transaction,
+            },
+          );
+          await AbonoTarjeta.update(
+            { estado: 'REVERTIDO' },
+            {
+              where: { venta_tarjeta_id: { [Op.in]: ventasTarjetaIds } },
+              transaction,
+            },
+          );
+        }
+
+        return {
+          estado: 'ok',
+          resultado: 'Factura anulada correctamente',
+          operacionFinanciera: operacionGuardada,
+        };
+      });
+    } catch (error) {
+      return { estado: 'error', resultado: error.message };
+    }
   }
 
   async eliminar(id) {

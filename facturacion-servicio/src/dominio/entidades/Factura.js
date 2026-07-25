@@ -14,6 +14,7 @@ export default class Factura {
     this.usuarioId = datos.usuarioId ?? null;
     this.usuarioNombre = datos.usuarioNombre ?? null;
     this.sucursalId = datos.sucursalId ?? null;
+    this.sucursalNombre = datos.sucursalNombre ?? null;
     this.historialClinicoId = datos.historialClinicoId ?? null;
     this.fechaPago = datos.fechaPago ?? null;
     this.items = datos.items ?? [];

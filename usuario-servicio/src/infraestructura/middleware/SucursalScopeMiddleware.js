@@ -47,19 +47,34 @@ export const exigirSucursal = (req, res, next) => {
 const NOMBRES_CAMPO = ['sucursal_id', 'sucursalId'];
 
 // Recorre la respuesta buscando identificadores de sucursal. Devuelve todos los
-// encontrados para que un payload con varios registros se valide entero.
+// encontrados para que un payload con varios registros se valide entero, y marca
+// si el payload es una colección: una lista vacía es una respuesta legítima
+// ("este cliente no compró en tu sucursal"), no un recurso inexistente.
 const extraerSucursales = (valor, profundidad = 0) => {
-  if (valor == null || profundidad > 4) return [];
-  if (Array.isArray(valor)) return valor.flatMap((item) => extraerSucursales(item, profundidad + 1));
-  if (typeof valor !== 'object') return [];
+  const vacio = { ids: [], esColeccion: false };
+  if (valor == null || profundidad > 4) return vacio;
+
+  if (Array.isArray(valor)) {
+    return {
+      ids: valor.flatMap((item) => extraerSucursales(item, profundidad + 1).ids),
+      esColeccion: true,
+    };
+  }
+  if (typeof valor !== 'object') return vacio;
 
   for (const campo of NOMBRES_CAMPO) {
-    if (campo in valor) return [valor[campo]];
+    if (campo in valor) return { ids: [valor[campo]], esColeccion: false };
   }
   // Envolturas habituales del proyecto: {resultado}, {data}, {rows}, {caja}
   return ['resultado', 'data', 'rows', 'caja', 'detalles']
     .filter((clave) => clave in valor)
-    .flatMap((clave) => extraerSucursales(valor[clave], profundidad + 1));
+    .reduce((acumulado, clave) => {
+      const interno = extraerSucursales(valor[clave], profundidad + 1);
+      return {
+        ids: [...acumulado.ids, ...interno.ids],
+        esColeccion: acumulado.esColeccion || interno.esColeccion,
+      };
+    }, vacio);
 };
 
 const permitido = (sucursalId, scope) => {
@@ -119,9 +134,11 @@ export const guardaSucursal = (opciones = {}) => async (req, res, next) => {
   res.json = (cuerpo) => {
     // Los errores del controlador se dejan pasar tal cual.
     if (res.statusCode >= 400) return responder(cuerpo);
-    const sucursales = extraerSucursales(cuerpo);
-    if (sucursales.length === 0) return noEncontrado(req, res, responder);
-    if (sucursales.every((id) => permitido(id, scope))) return responder(cuerpo);
+    const { ids, esColeccion } = extraerSucursales(cuerpo);
+    // Colección vacía: el filtro por sucursal ya hizo su trabajo y no hay nada que ocultar.
+    if (ids.length === 0 && esColeccion) return responder(cuerpo);
+    if (ids.length === 0) return noEncontrado(req, res, responder);
+    if (ids.every((id) => permitido(id, scope))) return responder(cuerpo);
     return noEncontrado(req, res, responder);
   };
 

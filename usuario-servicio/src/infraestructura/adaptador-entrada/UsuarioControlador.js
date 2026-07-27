@@ -18,6 +18,11 @@ export class UsuarioControlador extends UsuarioEntradaPuerto {
     return res.status(resultado.estado === 'ok' ? 201 : 400).json({ ...resultado, traceId: req.traceId });
   }
 
+  async catalogo(req, res) {
+    const resultado = await this.query.catalogo();
+    return res.status(200).json({ ...resultado, traceId: req.traceId });
+  }
+
   async lista(req, res) {
     // El listado sigue el scope para que las métricas de empleados cuadren con las
     // ventas y cajas de la sucursal. La administración de usuarios necesita ver el

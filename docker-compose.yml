@@ -54,6 +54,7 @@ services:
     volumes:
       - cliente_postgres_data:/var/lib/postgresql/data
       - ./cliente-servicio/sql/01_cliente_schema.sql:/docker-entrypoint-initdb.d/01_cliente_schema.sql:ro
+      - ./cliente-servicio/sql/02_cliente_ficha.sql:/docker-entrypoint-initdb.d/02_cliente_ficha.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d cliente_db"]
       interval: 5s
@@ -77,6 +78,11 @@ services:
       DB_SSL: "false"
       PORT: 3002
       NODE_ENV: development
+      # La Ficha del Cliente agrega datos de estos servicios reenviando el token
+      # del usuario; sin estas URLs el agregador devuelve los bloques vacíos.
+      FACTURACION_SERVICIO_URL: http://facturacion-servicio:3004
+      CAJA_SERVICIO_URL: http://caja-servicio:3005
+      USUARIO_SERVICIO_URL: http://usuario-servicio:3001
     depends_on:
       cliente-postgres:
         condition: service_healthy

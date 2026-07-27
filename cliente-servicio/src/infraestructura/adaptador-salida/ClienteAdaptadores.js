@@ -1,7 +1,7 @@
 import { Op } from 'sequelize';
 import { ClienteModel } from '../modelos/Modelos.js';
 
-const toDb = (c) => ({ nombres: c.nombres, apellidos: c.apellidos, cedula: c.cedula, telefono: c.telefono, email: c.email, fecha_nacimiento: c.fechaNacimiento, direccion: c.direccion, pais: c.pais, provincia: c.provincia, ciudad: c.ciudad, activo: c.activo, tiene_historial_clinico: c.tieneHistorialClinico, tiene_credito: c.tieneCredito, tiene_deuda: c.tieneDeuda, es_consumidor_final: c.esConsumidorFinal, updated_at: new Date() });
+const toDb = (c) => ({ nombres: c.nombres, apellidos: c.apellidos, cedula: c.cedula, telefono: c.telefono, email: c.email, fecha_nacimiento: c.fechaNacimiento, direccion: c.direccion, pais: c.pais, provincia: c.provincia, ciudad: c.ciudad, activo: c.activo, tiene_historial_clinico: c.tieneHistorialClinico, tiene_credito: c.tieneCredito, tiene_deuda: c.tieneDeuda, es_consumidor_final: c.esConsumidorFinal, whatsapp: c.whatsapp, preferencia_contacto: c.preferenciaContacto, observaciones: c.observaciones, notas_internas: c.notasInternas, ocupacion: c.ocupacion, updated_at: new Date() });
 
 export class ClienteQueryAdaptador {
   async lista(buscar, { limit = 20, offset = 0, estado = 'activos' } = {}) {

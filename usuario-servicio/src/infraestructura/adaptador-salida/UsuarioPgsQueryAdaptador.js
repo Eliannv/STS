@@ -37,6 +37,17 @@ export default class UsuarioPgsQueryAdaptador extends UsuarioSalidaQueryPuerto {
     return { estado: 'ok', resultado: await conSucursal(usuarios) };
   }
 
+  // Catálogo mínimo para resolver nombres de empleado en documentos ya emitidos.
+  // Expone solo id y nombre: ni correo, ni rol, ni sucursal, ni estado.
+  async catalogo() {
+    const usuarios = await ModeloUsuario.findAll({
+      attributes: ['id', 'nombre', 'apellido'],
+      order: [['nombre', 'ASC']],
+      raw: true,
+    });
+    return { estado: 'ok', resultado: usuarios };
+  }
+
   async buscarPorId(id) {
     const usuario = await ModeloUsuario.findOne({
       where: { id, activo: true },

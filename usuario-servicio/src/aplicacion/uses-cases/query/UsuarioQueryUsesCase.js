@@ -7,6 +7,10 @@ export default class UsuarioQueryUsesCase {
     return this.adaptadorBDSalida.lista(buscar, pag);
   }
 
+  async catalogo() {
+    return this.adaptadorBDSalida.catalogo();
+  }
+
   async buscarPorId(id) {
     if (!id) return { estado: 'error', resultado: null };
     return this.adaptadorBDSalida.buscarPorId(id);

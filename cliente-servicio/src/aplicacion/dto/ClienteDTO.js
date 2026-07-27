@@ -7,7 +7,12 @@ export class ClienteDTO {
       pais: datos.pais ?? null, provincia: datos.provincia ?? null, ciudad: datos.ciudad ?? null,
       activo: datos.activo ?? true, tieneHistorialClinico: datos.tieneHistorialClinico ?? false,
       tieneCredito: datos.tieneCredito ?? false, tieneDeuda: datos.tieneDeuda ?? false,
-      esConsumidorFinal: datos.esConsumidorFinal ?? false
+      esConsumidorFinal: datos.esConsumidorFinal ?? false,
+      whatsapp: datos.whatsapp ?? null,
+      preferenciaContacto: datos.preferenciaContacto ?? datos.preferencia_contacto ?? null,
+      observaciones: datos.observaciones ?? null,
+      notasInternas: datos.notasInternas ?? datos.notas_internas ?? null,
+      ocupacion: datos.ocupacion ?? null
     });
   }
 }

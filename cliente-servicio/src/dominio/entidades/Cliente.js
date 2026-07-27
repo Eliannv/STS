@@ -16,5 +16,10 @@ export default class Cliente {
     this.tieneCredito = datos.tieneCredito ?? false;
     this.tieneDeuda = datos.tieneDeuda ?? false;
     this.esConsumidorFinal = datos.esConsumidorFinal ?? false;
+    this.whatsapp = datos.whatsapp ?? null;
+    this.preferenciaContacto = datos.preferenciaContacto ?? null;
+    this.observaciones = datos.observaciones ?? null;
+    this.notasInternas = datos.notasInternas ?? null;
+    this.ocupacion = datos.ocupacion ?? null;
   }
 }

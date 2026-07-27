@@ -12,9 +12,14 @@ const conDetalles = async(factura) => ({...factura.toJSON(),
 });
 
 export default class FacturaPgsQueryAdaptador extends FacturaSalidaQueryPuerto {
-    async listaPorCliente(clienteId) {
+    // El cliente es global, pero sus compras pertenecen a la sucursal donde se
+    // hicieron: sin este filtro la lista mezcla sucursales y la guardia de
+    // pertenencia rechaza la respuesta completa.
+    async listaPorCliente(clienteId, sucursalId = null) {
+        const where = { cliente_id: clienteId, deleted_at: null };
+        if (sucursalId) where.sucursal_id = Number(sucursalId);
         const facturas = await Factura.findAll({
-            where: { cliente_id: clienteId, deleted_at: null },
+            where,
             order: [
                 ['created_at', 'DESC']
             ]
@@ -27,11 +32,20 @@ export default class FacturaPgsQueryAdaptador extends FacturaSalidaQueryPuerto {
         return factura ? { estado: 'ok', resultado: await conDetalles(factura) } : { estado: 'error', resultado: 'Factura no encontrada' };
     }
 
-    async resumenPorCliente(clienteId) {
-        const facturas = await Factura.findAll({ where: { cliente_id: clienteId, deleted_at: null } });
+    async resumenPorCliente(clienteId, sucursalId = null) {
+        const where = { cliente_id: clienteId, deleted_at: null };
+        if (sucursalId) where.sucursal_id = Number(sucursalId);
+        const facturas = await Factura.findAll({ where, order: [['created_at', 'DESC']] });
         const totalFacturado = facturas.reduce((sum, factura) => sum + Number(factura.total || 0), 0);
         const totalPagado = facturas.reduce((sum, factura) => sum + Number(factura.abonado || 0), 0);
-        return { estado: 'ok', resultado: { total_facturado: totalFacturado, total_pagado: totalPagado, deuda_total: facturas.reduce((sum, factura) => sum + Number(factura.saldo_pendiente || 0), 0), cantidad_facturas: facturas.length, ultima_factura: facturas[0] ? created_at ? null : promedio_compra : facturas.length ? Number((totalFacturado / facturas.length).toFixed(2)) : 0 } };
+        return { estado: 'ok', resultado: {
+            total_facturado: totalFacturado,
+            total_pagado: totalPagado,
+            deuda_total: facturas.reduce((sum, factura) => sum + Number(factura.saldo_pendiente || 0), 0),
+            cantidad_facturas: facturas.length,
+            ultima_factura: facturas[0]?.created_at ?? null,
+            promedio_compra: facturas.length ? Number((totalFacturado / facturas.length).toFixed(2)) : 0
+        } };
     }
 
     async listaGeneral({ buscar, estado, tipo, sucursalId, fechaDesde, fechaHasta, limit = 15, offset = 0 } = {}) {

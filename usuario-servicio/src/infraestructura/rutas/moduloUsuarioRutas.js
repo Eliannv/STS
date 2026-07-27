@@ -6,6 +6,9 @@ const router = Router();
 
 router.post('/login', usuarioControlador.login.bind(usuarioControlador));
 router.post('/', authMiddleware('ADMINISTRADOR'), usuarioControlador.crear.bind(usuarioControlador));
+// Catálogo de nombres: cualquier usuario autenticado puede resolver quién emitió
+// un documento. Va antes de '/:id' para que la ruta genérica no lo capture.
+router.get('/catalogo', authMiddleware(), usuarioControlador.catalogo.bind(usuarioControlador));
 router.get('/', authMiddleware('ADMINISTRADOR'), usuarioControlador.lista.bind(usuarioControlador));
 router.get('/:id', authMiddleware('ADMINISTRADOR'), usuarioControlador.buscarPorId.bind(usuarioControlador));
 router.put('/:id', authMiddleware('ADMINISTRADOR'), usuarioControlador.editar.bind(usuarioControlador));

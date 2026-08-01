@@ -1,6 +1,6 @@
 # Sales Technology System - Óptica Macias
 
-<img width="375" height="375" alt="Logo 20" src="https://github.com/user-attachments/assets/d0a73f72-1878-4d63-b6b2-8f76338f540f" />
+<p align="center"><img width="375" height="375" alt="Logo 20" src="https://github.com/user-attachments/assets/d0a73f72-1878-4d63-b6b2-8f76338f540f" /></p>
 
 
 

@@ -1,5 +1,8 @@
 # Sales Technology System - Óptica Macias
 
+<img width="793" height="793" alt="image" src="https://github.com/user-attachments/assets/c01559aa-1b9e-4479-91af-a5dfd6750b2f" />
+
+
 ## Descripción del Problema
 
 La Óptica Macías operaba con un sistema basado en Firebase (Firestore + Auth) que presentaba limitaciones significativas en la ejecución de consultas complejas, control de transacciones ACID, generación de reportes financieros y escalabilidad a mediano plazo. La gestión de inventario, ventas, historial clínico de clientes, cajas y cuentas era fragmentada, generando ineficiencias operativas, inconsistencias en los datos y dificultad para obtener indicadores de negocio en tiempo real.

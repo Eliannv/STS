@@ -135,7 +135,9 @@ Contraseña:
 AdminTemporal_2026!
 
 ## Flujo principal desde el backend
-<img width="982" height="468" alt="image" src="https://github.com/user-attachments/assets/9f3b464a-0474-4740-a913-fc4db520e797" />
+
+<img width="1426" height="467" alt="image" src="https://github.com/user-attachments/assets/abc41d7a-8876-4594-a16b-d8653c2564ef" />
+
 
 ## Funcionalidades
 

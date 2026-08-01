@@ -1,12 +1,8 @@
-# Sistema Óptica Macías
+# Sales Technology System
 
-## Entorno activo
+## Descripción del Problema
 
-El entorno de microservicios se ejecuta con:
-
-```powershell
-docker compose up -d
-```
+La Óptica Macías operaba con un sistema basado en Firebase (Firestore + Auth) que presentaba limitaciones significativas en la ejecución de consultas complejas, control de transacciones ACID, generación de reportes financieros y escalabilidad a mediano plazo. La gestión de inventario, ventas, historial clínico de clientes, cajas y cuentas era fragmentada, generando ineficiencias operativas, inconsistencias en los datos y dificultad para obtener indicadores de negocio en tiempo real.
 
 El tráfico del frontend entra por `bff-servicio` en `http://localhost:3000`.
 
@@ -19,6 +15,14 @@ El tráfico del frontend entra por `bff-servicio` en `http://localhost:3000`.
 | caja-servicio | 3005 | 5437 |
 | bff-servicio | 3000 | — |
 
-## Respaldo legado
+## Contexto
 
-`servidor/` conserva el monolito original y está desactivado por defecto mediante el perfil Compose `legacy`.
+La Óptica Macías es un negocio del sector óptico con múltiples sucursales que requiere gestionar simultáneamente las siguientes áreas operativas:
+
+- Inventario de productos físicos: armazones, lunas, lentes de contacto y líquidos de mantenimiento.
+-	Servicios ópticos con historial clínico de pacientes (prescripciones OD/OI).
+-	Ventas al contado y a crédito con control de deudas y abonos parciales.
+-	Apertura y cierre de cajas chicas y cuentas bancarias diarias.
+-	Relación con proveedores: ingresos y egresos de mercadería con trazabilidad Kardex.
+-	Usuarios con roles diferenciados: Administrador y Operador.
+

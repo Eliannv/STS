@@ -56,6 +56,10 @@ El tráfico del frontend entra por `bff-servicio` en `http://localhost:3000`.
 ## Arquitectura
 El sistema está construido mediante una arquitectura de microservicios siguiendo el patrón Hexagonal (Ports & Adapters).
 
+<p align="center">
+<img alt="arquitectura_optica" src="https://github.com/user-attachments/assets/530fbd2d-7e8d-4dc5-a4ac-d948a6012b81" width="75%"/>
+</p>
+
 ### Comunicación
 
 Complejidad estructural de Card y Glass a nivel arquitectónico: ΣS(i) = 75 · ΣD(i) = 132,74 · ΣC(i) = 207,74.

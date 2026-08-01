@@ -1,4 +1,4 @@
-<img width="416" height="66" alt="image" src="https://github.com/user-attachments/assets/5dc6d034-23e4-4b8e-b76d-ccac58ede93b" /><img width="1446" height="491" alt="image" src="https://github.com/user-attachments/assets/9cec157d-addb-4e6b-994b-a82b501608c2" /># Sales Technology System - Óptica Macias
+# Sales Technology System - Óptica Macias
 
 ## Descripción del Problema
 
@@ -52,7 +52,11 @@ El tráfico del frontend entra por `bff-servicio` en `http://localhost:3000`.
 ## Arquitectura
 El sistema está construido mediante una arquitectura de microservicios siguiendo el patrón Hexagonal (Ports & Adapters).
 
+### Comunicación
 
+Complejidad estructural de Card y Glass a nivel arquitectónico: ΣS(i) = 75 · ΣD(i) = 132,74 · ΣC(i) = 207,74.
+
+<img width="996" height="479" alt="image" src="https://github.com/user-attachments/assets/36217190-3b3f-449e-a35d-2098c6bd7be3" />
 
 ## Tecnologías
 

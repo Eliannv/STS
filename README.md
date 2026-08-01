@@ -4,17 +4,6 @@
 
 La Óptica Macías operaba con un sistema basado en Firebase (Firestore + Auth) que presentaba limitaciones significativas en la ejecución de consultas complejas, control de transacciones ACID, generación de reportes financieros y escalabilidad a mediano plazo. La gestión de inventario, ventas, historial clínico de clientes, cajas y cuentas era fragmentada, generando ineficiencias operativas, inconsistencias en los datos y dificultad para obtener indicadores de negocio en tiempo real.
 
-El tráfico del frontend entra por `bff-servicio` en `http://localhost:3000`.
-
-| Servicio | API | PostgreSQL para pgAdmin |
-|---|---:|---:|
-| usuario-servicio | 3001 | 5433 |
-| cliente-servicio | 3002 | 5434 |
-| inventario-servicio | 3003 | 5435 |
-| facturacion-servicio | 3004 | 5436 |
-| caja-servicio | 3005 | 5437 |
-| bff-servicio | 3000 | — |
-
 ## Contexto
 
 La Óptica Macías es un negocio del sector óptico con múltiples sucursales que requiere gestionar simultáneamente las siguientes áreas operativas:
@@ -26,3 +15,24 @@ La Óptica Macías es un negocio del sector óptico con múltiples sucursales qu
 -	Relación con proveedores: ingresos y egresos de mercadería con trazabilidad Kardex.
 -	Usuarios con roles diferenciados: Administrador y Operador.
 
+## Justificación Técnica
+
+La migración desde Firebase hacia PostgreSQL con una arquitectura hexagonal (Ports & Adapters) permite alcanzar los siguientes beneficios técnicos:
+
+-	Transacciones ACID para garantizar integridad en operaciones críticas como ventas y movimientos de caja.
+-	Separación de responsabilidades mediante capas: Dominio → Aplicación → Infraestructura.
+-	Escalabilidad y mantenibilidad facilitada por la independencia del núcleo de dominio frente a cambios tecnológicos.
+-	Mayor control de seguridad mediante autenticación JWT, hashing de contraseñas con bcrypt y variables de entorno cifradas.
+-	Despliegue reproducible y portable mediante contenedores Docker y docker-compose.
+
+El tráfico del frontend entra por `bff-servicio` en `http://localhost:3000`.
+
+| Servicio | API | PostgreSQL para pgAdmin |
+|---|---:|---:|
+| usuario-servicio | 3001 | 5433 |
+| cliente-servicio | 3002 | 5434 |
+| inventario-servicio | 3003 | 5435 |
+| facturacion-servicio | 3004 | 5436 |
+| caja-servicio | 3005 | 5437 |
+| reportes-servicio | 3006 |  |
+| bff-servicio | 3000 | — |

@@ -1,6 +1,7 @@
 # Sales Technology System - Óptica Macias
 
-<img width="793" height="793" alt="image" src="https://github.com/user-attachments/assets/c01559aa-1b9e-4479-91af-a5dfd6750b2f" />
+<img width="375" height="375" alt="Logo 20" src="https://github.com/user-attachments/assets/d0a73f72-1878-4d63-b6b2-8f76338f540f" />
+
 
 
 ## Descripción del Problema

@@ -1,4 +1,4 @@
-# Sales Technology System
+# Sales Technology System - Óptica Macias
 
 ## Descripción del Problema
 

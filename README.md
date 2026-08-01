@@ -34,5 +34,5 @@ El tráfico del frontend entra por `bff-servicio` en `http://localhost:3000`.
 | inventario-servicio | 3003 | 5435 |
 | facturacion-servicio | 3004 | 5436 |
 | caja-servicio | 3005 | 5437 |
-| reportes-servicio | 3006 |  |
+| reportes-servicio | 3006 | — |
 | bff-servicio | 3000 | — |

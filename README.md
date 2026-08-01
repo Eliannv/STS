@@ -167,9 +167,17 @@ AdminTemporal_2026!
 
 ### Venta
 
+<table>
+<tr>
+<td width="50%">
 <img width="1920" height="1119" alt="Crear Venta" src="https://github.com/user-attachments/assets/328dcbb5-8e99-48ba-aa65-2ba50e2c7d98" />
+</td>
 
+<td width="50%">
 <img width="1600" height="1015" alt="Impresion Ticket" src="https://github.com/user-attachments/assets/cc1af72c-f5cd-4fe5-a465-a0c85dd5910f" />
+</td>
+</tr>
+</table>
 
 ### Ficha del Cliente
 

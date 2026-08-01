@@ -94,28 +94,33 @@ Complejidad estructural de Card y Glass a nivel arquitectónico: ΣS(i) = 75 · 
 - Ports & Adapters
 
 ## Estructura del proyecto
+
+```text
 src/
 ├── dominio/
-│   ├── entidades/          29 archivos
-│   ├── filtros/             4 archivos
-│   └── servicios/           7 archivos
+│   ├── entidades/          (29 archivos)
+│   ├── filtros/            (4 archivos)
+│   └── servicios/          (7 archivos)
+│
 ├── aplicacion/
-│   ├── dto/                20 archivos
+│   ├── dto/                (20 archivos)
 │   ├── puertos/
-│   │   ├── entrada/        23 archivos
-│   │   └── salida/         51 archivos
+│   │   ├── entrada/        (23 archivos)
+│   │   └── salida/         (51 archivos)
 │   └── uses-cases/
-│       ├── command/        24 archivos
-│       └── query/          25 archivos
+│       ├── command/        (24 archivos)
+│       └── query/          (25 archivos)
+│
 └── infraestructura/
-    ├── adaptador-entrada/  29 archivos
-    ├── adaptador-salida/   55 archivos
-    ├── base-dato/           5 archivos
-    ├── contenedor/         22 archivos
-    ├── middleware/         31 archivos
-    ├── modelos/            17 archivos
-    ├── rutas/              27 archivos
-    └── servicio/            2 worker
+    ├── adaptador-entrada/  (29 archivos)
+    ├── adaptador-salida/   (55 archivos)
+    ├── base-dato/          (5 archivos)
+    ├── contenedor/         (22 archivos)
+    ├── middleware/         (31 archivos)
+    ├── modelos/            (17 archivos)
+    ├── rutas/              (27 archivos)
+    └── servicio/           (2 workers)
+```
 
 **Convención de nomenclatura.- El nombre del archivo indica su capa y su rol sin abrirlo.**
 

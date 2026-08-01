@@ -173,12 +173,28 @@ AdminTemporal_2026!
 
 ### Ficha del Cliente
 
-<img width="1851" height="820" alt="image" src="https://github.com/user-attachments/assets/114d4de2-a27c-4fad-9c67-199d369b8e44" />
+<table>
+<tr>
+<td width="50%">
+<img src="https://github.com/user-attachments/assets/114d4de2-a27c-4fad-9c67-199d369b8e44" width="100%">
+</td>
 
-<img width="1850" height="1062" alt="image" src="https://github.com/user-attachments/assets/bbe77db4-0481-4344-a759-a083796010c3" />
+<td width="50%">
+<img src="https://github.com/user-attachments/assets/bbe77db4-0481-4344-a759-a083796010c3" width="100%">
+</td>
+</tr>
 
-<img width="1850" height="1058" alt="image" src="https://github.com/user-attachments/assets/81b189fb-9b72-4cd6-a60f-aa0fdaf19666" />
+<tr>
+<td width="50%">
+<img src="https://github.com/user-attachments/assets/81b189fb-9b72-4cd6-a60f-aa0fdaf19666" width="100%">
+</td>
 
-<img width="1851" height="933" alt="image" src="https://github.com/user-attachments/assets/c9c922ca-6f12-448b-ab0d-e6e6515b1603" />
+<td width="50%">
+<img src="https://github.com/user-attachments/assets/c9c922ca-6f12-448b-ab0d-e6e6515b1603" width="100%">
+</td>
+</tr>
+</table>
 
-<img width="1850" height="1061" alt="image" src="https://github.com/user-attachments/assets/f5f0bb06-0959-4b35-a26c-24f45de433fc" />
+<p align="center">
+<img src="https://github.com/user-attachments/assets/f5f0bb06-0959-4b35-a26c-24f45de433fc" width="70%">
+</p>

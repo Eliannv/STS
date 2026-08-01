@@ -206,3 +206,8 @@ AdminTemporal_2026!
 <p align="center">
 <img src="https://github.com/user-attachments/assets/f5f0bb06-0959-4b35-a26c-24f45de433fc" width="70%">
 </p>
+
+### Clientes
+<p align="center">
+<img src="https://github.com/user-attachments/assets/56bc33fe-7083-46a1-affd-c0c789482202" width="75%"/>
+</p>
